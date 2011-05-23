@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Emu">
+      <UniqueIdentifier>{29c70b04-59a5-4d5b-98f9-3584df137ed1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Gui">
+      <UniqueIdentifier>{98fb6fa5-9a9a-48a6-a6b4-be4b9a69b76e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="rpcs3">
+      <UniqueIdentifier>{47155d25-741d-42c0-8850-f22aafca082a}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="rpcs3.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
