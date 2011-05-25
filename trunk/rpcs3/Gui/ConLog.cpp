@@ -46,7 +46,7 @@ void LogWriter::Task()
 
 void LogWriter::WriteToLog(wxString prefix, wxString value, wxColour colour/*, wxColour bgcolour*/)
 {
-	m_logfile.Write(value + "\n");
+	m_logfile.Write((prefix.IsEmpty() ? wxEmptyString : "[" + prefix + "]: ") + value + "\n");
 
 	//WaitForResult();
 
