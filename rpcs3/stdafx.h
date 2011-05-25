@@ -117,6 +117,15 @@ struct u128
 };
 */
 
+template<typename T>
+static void safe_realloc(T* ptr, uint new_size)
+{
+	if(new_size == 0) return;
+	ptr = (T*)((ptr == NULL) ? malloc(new_size * sizeof(T)) : realloc(ptr, new_size * sizeof(T)));
+}
+
+#define safe_delete(x) free(x);x=NULL
+
 #include <Gui/ConLog.h>
 
 #define _PRGNAME_ "rpcs3"

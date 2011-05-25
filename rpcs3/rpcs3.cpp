@@ -1,8 +1,4 @@
 #include "stdafx.h"
-
-#include "Gui/ConLog.h"
-#include "Gui/MainFrame.h"
-
 #include "rpcs3.h"
 
 IMPLEMENT_APP(TheApp)

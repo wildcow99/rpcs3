@@ -30,8 +30,6 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_)
 	Connect( id_boot_elf, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
 }
 
-ElfLoader elf_loader;
-
 void MainFrame::BootElf(wxCommandEvent& event)
 {
 	wxFileDialog ctrl( this, L"Select boot.bin", wxEmptyString, wxEmptyString, "boot.bin",

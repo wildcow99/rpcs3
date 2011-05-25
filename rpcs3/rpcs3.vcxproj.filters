@@ -24,6 +24,15 @@
     <ClCompile Include="Gui\ConLog.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Memory\Memory.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\ElfLoader.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\MemoryViewer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
