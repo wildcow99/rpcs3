@@ -86,7 +86,7 @@ void MemoryViewerPanel::ShowPC()
 	}
 }
 
-void MemoryViewerPanel::Next (wxCommandEvent& WXUNUSED(event)) { m_PC += 4; ShowPC(); }
-void MemoryViewerPanel::Prev (wxCommandEvent& WXUNUSED(event)) { m_PC -= 4; ShowPC(); }
-void MemoryViewerPanel::fNext(wxCommandEvent& WXUNUSED(event)) { m_PC += 4 * (LINE_COUNT * COL_COUNT); ShowPC(); }
-void MemoryViewerPanel::fPrev(wxCommandEvent& WXUNUSED(event)) { m_PC -= 4 * (LINE_COUNT * COL_COUNT); ShowPC(); }
+void MemoryViewerPanel::Next (wxCommandEvent& WXUNUSED(event)) { m_PC += COL_COUNT; ShowPC(); }
+void MemoryViewerPanel::Prev (wxCommandEvent& WXUNUSED(event)) { m_PC -= COL_COUNT; ShowPC(); }
+void MemoryViewerPanel::fNext(wxCommandEvent& WXUNUSED(event)) { m_PC += LINE_COUNT * COL_COUNT; ShowPC(); }
+void MemoryViewerPanel::fPrev(wxCommandEvent& WXUNUSED(event)) { m_PC -= LINE_COUNT * COL_COUNT; ShowPC(); }

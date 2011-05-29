@@ -8,8 +8,6 @@ wxListView* m_log;
 
 void LogWriter::Init()
 {
-	//StartThread();
-
 	m_logfile.Create(_PRGNAME_ ".log", true);
 	if(!m_logfile.IsOpened())
 	{
@@ -38,7 +36,7 @@ void LogWriter::Task()
 	log.SetItemTextColour(cur_item, m_txtcolour);
 	//log.SetItemBackgroundColour(cur_item, m_bgcolour);
 
-	if(log.GetFocusedItem() == cur_item -1)
+	if(log.GetFocusedItem() == cur_item - 1)
 	{
 		log.Focus(cur_item);
 	}
@@ -48,7 +46,7 @@ void LogWriter::WriteToLog(wxString prefix, wxString value, wxColour colour/*, w
 {
 	m_logfile.Write((prefix.IsEmpty() ? wxEmptyString : "[" + prefix + "]: ") + value + "\n");
 
-	//WaitForResult();
+	Thread::WaitForResult();
 
 	m_txtcolour = colour;
 	//m_bgcolour = bgcolour;
@@ -56,8 +54,7 @@ void LogWriter::WriteToLog(wxString prefix, wxString value, wxColour colour/*, w
 	m_prefix = prefix;
 	m_value = value;
 
-	//Start();
-	Task();
+	Thread::Start();
 }
 
 void LogWriter::Write(const wxString fmt, ...)
