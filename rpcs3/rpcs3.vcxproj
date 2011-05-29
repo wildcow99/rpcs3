@@ -89,9 +89,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Emu\Cell\CPU.cpp" />
     <ClCompile Include="Emu\ElfLoader.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
+    <ClCompile Include="Emu\System.cpp" />
     <ClCompile Include="Gui\ConLog.cpp" />
+    <ClCompile Include="Gui\DisAsmFrame.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="rpcs3.cpp" />

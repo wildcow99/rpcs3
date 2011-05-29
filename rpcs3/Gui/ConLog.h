@@ -1,8 +1,8 @@
 #pragma once
-//#include "Thread.h"
+#include "Thread.h"
 #include <wx/listctrl.h>
 
-class LogWriter //: public Thread
+class LogWriter : public Thread
 {
 	wxFile m_logfile;
 
@@ -17,7 +17,7 @@ class LogWriter //: public Thread
 	virtual void WriteToLog(wxString prefix, wxString value, wxColour colour/*, wxColour bgcolour = wxColour(L"Black")*/);
 
 public:
-	LogWriter() //: Thread()
+	LogWriter() : Thread(true)
 	{
 	}
 
