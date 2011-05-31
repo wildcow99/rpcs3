@@ -42,6 +42,12 @@
     <ClCompile Include="Emu\Cell\CPU.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Display\Display.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Ini.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

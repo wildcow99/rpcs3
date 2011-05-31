@@ -2,7 +2,7 @@
 #include "Thread.h"
 #include <wx/listctrl.h>
 
-class LogWriter : public Thread
+class LogWriter
 {
 	wxFile m_logfile;
 
@@ -17,7 +17,7 @@ class LogWriter : public Thread
 	virtual void WriteToLog(wxString prefix, wxString value, wxColour colour/*, wxColour bgcolour = wxColour(L"Black")*/);
 
 public:
-	LogWriter() : Thread(true)
+	LogWriter()
 	{
 	}
 

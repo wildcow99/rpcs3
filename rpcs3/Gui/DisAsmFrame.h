@@ -14,6 +14,8 @@ class DisAsmFrame : public wxFrame
 	virtual void fPrev(wxCommandEvent& event);
 	virtual void fNext(wxCommandEvent& event);
 
+	virtual void Dump(wxCommandEvent& event);
+
 public:
 	DisAsmFrame();
 	virtual void AddLine(wxString line);

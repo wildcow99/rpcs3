@@ -3,14 +3,26 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/CPU.h"
 #include "Emu/ElfLoader.h"
+#include "Ini.h"
 
 
-SysThread::SysThread() : Thread()
+SysThread::SysThread()
 {
 	m_cur_state = STOP;
-	m_mode = DisAsm;
+	m_mode = 0;
+
+	m_done = true;
+	m_exit = false;
 	
-	Thread::Start();
+	m_hThread = ::CreateThread
+	(
+		NULL,
+		0,
+		SysThread::ThreadStart,
+		(LPVOID)this,
+		0,
+		NULL
+	);
 }
 
 void SysThread::SetSelf(wxString self_patch)
@@ -32,15 +44,19 @@ void SysThread::Run()
 	if(IsPaused())
 	{
 		m_cur_state = RUN;
-		m_mtx_pause.Post();
-		Task();
+		m_sem_wait.Post();
 		return;
 	}
+
+	m_mode = ini.Load("DecoderMode", 1);
+
 	switch(m_mode)
 	{
 	case DisAsm:
-		disasm = new DisAsmOpcodes();
-		decoder = new Decoder(*disasm);
+		decoder = new Decoder(*new DisAsmOpcodes());
+	break;
+	case Interpreter:
+		decoder = new Decoder(*new InterpreterOpcodes());
 	break;
 	};
 
@@ -56,8 +72,7 @@ void SysThread::Run()
 	}
 
 	m_cur_state = RUN;
-	m_mtx_wait.Post();
-	Task();
+	m_sem_wait.Post();
 }
 
 void SysThread::Pause()
@@ -71,38 +86,21 @@ void SysThread::Stop()
 {
 	if(IsStoped()) return;
 
-	if(IsPaused()) Run();
-
 	m_cur_state = STOP;
 	Memory.Close();
 	CPU.Reset();
+
+	delete decoder;
 }
 
 void SysThread::Task()
 {
-
-	/*
-	ConLog.Write("Task");
-	for(;;)
+	while(m_cur_state == RUN)
 	{
-		m_mtx_wait.Wait();
-	*/
+		decoder->DoCode(Memory.Read32(CPU.pc));
 
-		for(;;)
-		{
-			switch(m_cur_state)
-			{
-			case STOP:
-			case PAUSE: //m_mtx_pause.Wait(); break;
-				return;
-			default: break;
-			};
-
-			decoder->DoCode(Memory.Read32(CPU.pc));
-
-			CPU.NextPc();
-		}
-	//}
+		CPU.NextPc();
+	}
 }
 
 SysThread System;

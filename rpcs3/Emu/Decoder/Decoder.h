@@ -20,6 +20,11 @@ public:
 
 	Decoder(Opcodes& op) : m_op(op) {}
 
+	~Decoder()
+	{
+		delete &m_op;
+	}
+
 	void DoCode(const int code)
 	{
 		m_code = code;
@@ -33,7 +38,9 @@ public:
 		case MULLI:		m_op.MULLI	(RS(), RT(), imm_s16()); break;
 		case SUBFIC:	m_op.SUBFIC	(RS(), RT(), imm_s16()); break;
 		case CMPLWI:	m_op.CMPLWI	(RS(), RT(), imm_u16()); break;
-		case CMPWI:		m_op.CMPWI	(RS(), RT(), imm_u16()); break;
+		case CMPWI:		m_op.CMPWI	(RS(), RT(), imm_s16()); break;
+		case ADDIC:		m_op.ADDIC	(RT(), RS(), imm_s16()); break;
+		case ADDIC_:	m_op.ADDIC_	(RT(), RS(), imm_s16()); break;
 		case G1:		m_op.G1();							 break;
 		case ADDIS:		m_op.ADDIS	(RT(), RS(), imm_s16()); break;
 		case G2:		m_op.G2();							 break;
@@ -41,6 +48,7 @@ public:
 		case G3:		m_op.G3();							 break;
 		case BLR:		m_op.BLR();							 break;
 		case RLWINM:	m_op.RLWINM();						 break;
+		case ROTLW:		m_op.ROTLW	(RT(), RS(), RD());		 break;
 		case ORI:		m_op.ORI	(RT(), RS(), imm_u16()); break;
 		case ORIS:		m_op.ORIS	(RT(), RS(), imm_s16()); break;
 		case XORI:		m_op.XORI	(RT(), RS(), imm_u16()); break;
@@ -56,6 +64,7 @@ public:
 		case STB:		m_op.STB	(RS(), RT(), imm_s16()); break;
 		case STBU:		m_op.STBU	(RS(), RT(), imm_u16()); break;
 		case LHZ:		m_op.LHZ	(RS(), RT(), imm_s16()); break;
+		case LHZU:		m_op.LHZU	(RS(), RT(), imm_u16()); break;
 		case STH:		m_op.STH	(RS(), RT(), imm_s16()); break;
 		case STHU:		m_op.STHU	(RS(), RT(), imm_u16()); break;
 		case LFS:		m_op.LFS	(RS(), RT(), imm_s16()); break;

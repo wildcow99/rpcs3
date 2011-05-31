@@ -36,17 +36,12 @@ void LogWriter::Task()
 	log.SetItemTextColour(cur_item, m_txtcolour);
 	//log.SetItemBackgroundColour(cur_item, m_bgcolour);
 
-	if(log.GetFocusedItem() == cur_item - 1)
-	{
-		log.Focus(cur_item);
-	}
+	if(log.GetFocusedItem() == cur_item - 1) log.Focus(cur_item);
 }
 
 void LogWriter::WriteToLog(wxString prefix, wxString value, wxColour colour/*, wxColour bgcolour*/)
 {
 	m_logfile.Write((prefix.IsEmpty() ? wxEmptyString : "[" + prefix + "]: ") + value + "\n");
-
-	Thread::WaitForResult();
 
 	m_txtcolour = colour;
 	//m_bgcolour = bgcolour;
@@ -54,7 +49,7 @@ void LogWriter::WriteToLog(wxString prefix, wxString value, wxColour colour/*, w
 	m_prefix = prefix;
 	m_value = value;
 
-	Thread::Start();
+	Task();
 }
 
 void LogWriter::Write(const wxString fmt, ...)
