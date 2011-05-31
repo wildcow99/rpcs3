@@ -4,6 +4,36 @@
 
 class ElfLoader
 {
+	/*
+	struct PsfHeader
+	{
+		u32 magic; //46535000 (PSF)
+		u64 unknown_0[28];
+		u32 list[34];
+		u32 app_ver[3];
+		u32 attribute;
+		u32 license[129];
+		u32 comm_id[4];
+		u32 unknown_1;
+		u64 plevel;
+		u32 unknown_3[3];
+		u32 name[31];
+		u64 reg[2];
+		u32 ver[3];
+	};
+	*/
+
+	struct PsfHeader
+	{
+		u32 comm_id[4];
+		u32 unknown_1;
+		u64 plevel;
+		u32 unknown_3[3];
+		u32 name[31];
+		u64 reg[2];
+		u32 ver[3];
+	};
+
 	struct SelfHeader
 	{
 		u32 magic;
@@ -25,80 +55,40 @@ class ElfLoader
 		u64 app;
 	};
 
-
-/* Type for a 16-bit quantity.  *//*
-typedef uint16_t Elf32_Half;
-typedef uint16_t Elf64_Half;
-
-/* Types for signed and unsigned 32-bit quantities.  *//*
-typedef uint32_t Elf32_Word;
-typedef	int32_t  Elf32_Sword;
-typedef uint32_t Elf64_Word;
-typedef	int32_t  Elf64_Sword;
-
-/* Types for signed and unsigned 64-bit quantities.  *//*
-typedef uint64_t Elf32_Xword;
-typedef	int64_t  Elf32_Sxword;
-typedef uint64_t Elf64_Xword;
-typedef	int64_t  Elf64_Sxword;
-
-/* Type of addresses.  *//*
-typedef uint32_t Elf32_Addr;
-typedef uint64_t Elf64_Addr;
-
-/* Type of file offsets.  *//*
-typedef uint32_t Elf32_Off;
-typedef uint64_t Elf64_Off;
-
-/* Type for section indices, which are 16-bit quantities.  *//*
-typedef uint16_t Elf32_Section;
-typedef uint16_t Elf64_Section;
-
-/* Type of symbol indices.  *//*
-typedef uint32_t Elf32_Symndx;
-typedef uint64_t Elf64_Symndx;
-
-/* Type for version symbol information.  *//*
-typedef Elf32_Half Elf32_Versym;
-typedef Elf64_Half Elf64_Versym;
-*/
-
 	struct Elf32_Ehdr
 	{
 		u8 e_magic[16];
-		//u64 e_magic;		/* Magic number and other info */
-		u16	e_type;			/* Object file type */
-		u16	e_machine;		/* Architecture */
-		u32	e_version;		/* Object file version */
-		u32	e_entry;		/* Entry point virtual address */
-		u32	e_phoff;		/* Program header table file offset */
-		u32	e_shoff;		/* Section header table file offset */
-		u32	e_flags;		/* Processor-specific flags */
-		u16	e_ehsize;		/* ELF header size in bytes */
-		u16	e_phentsize;	/* Program header table entry size */
-		u16	e_phnum;		/* Program header table entry count */
-		u16	e_shentsize;	/* Section header table entry size */
-		u16	e_shnum;		/* Section header table entry count */
-		u16	e_shstrndx;		/* Section header string table index */
+		u16	e_type;
+		u16	e_machine;
+		u32	e_version;
+		u32	e_entry;
+		u32	e_phoff;
+		u32	e_shoff;
+		u32	e_flags;
+		u16	e_ehsize;
+		u16	e_phentsize;
+		u16	e_phnum;
+		u16	e_shentsize;
+		u16	e_shnum;
+		u16	e_shstrndx;
 	};
 
 	struct Elf64_Ehdr
 	{
 		u8 e_magic[16];
-		//u64 e_magic;		/* Magic number and other info */
-		u16 e_type;         /* Object file type */
-		u16 e_machine;      /* Architecture */
-		u32 e_version;      /* Object file version */
-		u64 e_entry;        /* Entry point virtual address */
-		u64	e_phoff;        /* Program header table file offset */
-		u64 e_shoff;        /* Section header table file offset */
-		u32 e_flags;        /* Processor-specific flags */
-		u16 e_ehsize;       /* ELF header size in bytes */
-		u16 e_phentsize;    /* Program header table entry size */
-		u16 e_phnum;        /* Program header table entry count */
-		u16 e_shentsize;    /* Section header table entry size */
-		u16 e_shnum;        /* Section header table entry count */
-		u16 e_shstrndx;     /* Section header string table index */
+		u16 e_type;
+		u16 e_machine;
+		u32 e_version;
+		u32 e_entry;
+		u32	e_phoff;
+		u32 e_shoff;
+		u32 e_flags;
+		u16 e_ehsize;
+		u16 e_phentsize;
+		u16 e_phnum;
+		u16 e_shentsize;
+		u16 e_shnum;
+		u16 e_shstrndx;
 	};
 
 	struct Elf64_Shdr
@@ -130,12 +120,22 @@ typedef Elf64_Half Elf64_Versym;
 	wxString m_elf_fpatch;
 
 public:
+	uint elf_size;
+
+	ElfLoader()
+	{
+		elf_size = 0;
+	}
+
 	void SetElf(wxString elf_full_patch);
 	void LoadElf();
 	void LoadSelf();
 
+private:
 	uint LoadElf32(Elf32_Ehdr& header, wxFile& elf);
 	uint LoadElf64(Elf64_Ehdr& header, wxFile& elf);
+
+	void LoadPsf();
 };
 
 extern ElfLoader elf_loader;

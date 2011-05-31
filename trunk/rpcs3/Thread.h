@@ -3,26 +3,29 @@
 // -------------------------------------------------------
 // Mutex (TODO)
 
-class Mutex
+class Mutex : public wxMutex
 {
-	wxMutex m_mtx;
 	bool m_wait;
 
 public:
-	Mutex() : m_wait(false) {}
+	Mutex() 
+		: m_wait(false)
+		, wxMutex()
+	{
+	}
 
 	virtual void Wait()
 	{
 		if(m_wait) return;
 		m_wait = true;
-		m_mtx.Lock();
+		wxMutex::Lock();
 	}
 
 	virtual void Post()
 	{
 		if(!m_wait) return;
 		m_wait = false;
-		m_mtx.Unlock();
+		wxMutex::Unlock();
 	}
 };
 
@@ -31,36 +34,11 @@ public:
 // -------------------------------------------------------
 // ThreadBase
 
+//static DWORD gs_tlsThisThread;
+
 class ThreadBase
 {
 public:
-	virtual HANDLE CreateThread( int prior = THREAD_PRIORITY_NORMAL, bool start = false )
-	{
-		/*
-			THREAD_PRIORITY_LOWEST
-			THREAD_PRIORITY_BELOW_NORMAL
-			THREAD_PRIORITY_NORMAL
-			THREAD_PRIORITY_ABOVE_NORMAL
-			THREAD_PRIORITY_HIGHEST
-		*/
-
-		HANDLE ret = ::CreateThread
-		(
-			NULL,
-			0,
-			NULL,
-			(LPVOID)this,
-			CREATE_SUSPENDED,
-			NULL
-		);
-
-		::SetThreadPriority(ret, prior);
-
-		if(start) ResumeThread(ret);
-
-		return ret;
-	}
-
 	virtual bool KillThread( HANDLE thread )
 	{
 		return !!::TerminateThread(thread, (DWORD)-1);
@@ -97,25 +75,28 @@ public:
 
 // -------------------------------------------------------
 // Thread
-
+/*
 class Thread : private ThreadBase
 {
 	volatile bool m_started;
 
 	volatile HANDLE m_hThread;
 
+public:
+
 	wxFile& thread_log;
-	Mutex m_mtx_wait;
-	volatile bool m_done;
+	
 	wxCriticalSection m_critsect;
 
-public:
-	Thread(bool start = false) : thread_log(*new wxFile("Thread.log", wxFile::write))
+	Thread(bool start = false)
+		: thread_log(*new wxFile("Thread.log", wxFile::write))
+		, m_sem_wait(1, 2)
+		, m_sem_done(1, 9000)
 	{
-		m_started = true;
-		m_done = true;
+		m_done = m_started = true;
+		m_exit = false;
 
-		m_hThread = ThreadBase::CreateThread(start);
+		m_hThread = CreateThread(start);
 		
 		if(m_hThread == NULL)
 		{
@@ -123,16 +104,39 @@ public:
 		}
 	}
 
-	virtual void Task()=0;
+	
+
+	virtual HANDLE CreateThread( int prior = THREAD_PRIORITY_NORMAL, bool start = false )
+	{
+		/*
+			THREAD_PRIORITY_LOWEST
+			THREAD_PRIORITY_BELOW_NORMAL
+			THREAD_PRIORITY_NORMAL
+			THREAD_PRIORITY_ABOVE_NORMAL
+			THREAD_PRIORITY_HIGHEST
+		*//*
+
+		HANDLE ret = ::CreateThread
+		(
+			NULL,
+			0,
+			Thread::ThreadStart,
+			(LPVOID)this,
+			/*CREATE_SUSPENDED*//*0,
+			NULL
+		);
+
+		::SetThreadPriority(ret, prior);
+
+		return ret;
+	}
+
+	virtual void* Entry(Thread* thread)=0;
 
 	virtual void Start()
 	{
 		wxCriticalSectionLocker lock(m_critsect);
-
-		m_done = false;
-		Task();
-		m_done = true;
-		m_mtx_wait.Post();
+		m_sem_wait.Post();
 	}
 
 	virtual void StartThread()
@@ -142,7 +146,7 @@ public:
 
 		if(m_hThread == NULL)
 		{
-			m_hThread = ThreadBase::CreateThread(true);
+			m_hThread = CreateThread(true);
 		}
 
 		if(ThreadBase::ResumeThread(m_hThread) == -1)
@@ -158,25 +162,27 @@ public:
 
 	virtual void WaitForResult()
 	{
-		if(!m_done) m_mtx_wait.Wait();
+		if(!m_done) m_sem_done.Wait();
 	}
 
 	virtual void Exit()
 	{
 		m_started = false;
+		m_exit = true;
+		m_sem_wait.Post();
 		ThreadBase::DeleteThread(m_hThread);
 	}
 };
-
+*/
 // -------------------------------------------------------
-
+/*
 class MThread : private ThreadBase
 {
 	volatile int m_threadcount;
 	volatile HANDLE* m_hThreads;
 	volatile uint m_cur_thread;
 	wxCriticalSection m_critsect;
-	Mutex* m_mtx_wait;
+	Mutex* m_mtx_done;
 	volatile bool* m_done;
 
 public:
@@ -203,13 +209,13 @@ public:
 				m_hThreads[i] = ThreadBase::CreateThread();
 			}
 
-			m_mtx_wait = new Mutex[m_threadcount];
+			m_mtx_done = new Mutex[m_threadcount];
 			m_done = new bool[m_threadcount];
 		}
 		else
 		{
 			m_threadcount = 0;
-			m_mtx_wait = new Mutex[1];
+			m_mtx_done = new Mutex[1];
 			m_done = new bool[1];
 		}
 	}
@@ -220,13 +226,17 @@ public:
 	{
 		if(m_threadcount == 0)
 		{
-			if(!m_done[0]) m_mtx_wait[0].Wait();
+			if(!m_done[0]) m_mtx_done[0].Wait();
 		}
 		else
 		{
 			const uint i = m_cur_thread == 0 ? (uint)m_threadcount - 1 : m_cur_thread - 1;
-			if(!m_done[i]) m_mtx_wait[i].Wait();
+			if(!m_done[i]) m_mtx_done[i].Wait();
 		}
+	}
+
+	virtual void* Entry()
+	{
 	}
 
 	virtual void Start()
@@ -244,7 +254,7 @@ public:
 			ThreadBase::DeleteThread(hThread);
 
 			m_done[0] = true;
-			m_mtx_wait[0].Post();
+			m_mtx_done[0].Post();
 		}
 		else
 		{
@@ -261,8 +271,8 @@ public:
 
 			m_done[i] = true;
 
-			m_mtx_wait[i].Post();
+			m_mtx_done[i].Post();
 			
 		}
 	}
-};
+};*/

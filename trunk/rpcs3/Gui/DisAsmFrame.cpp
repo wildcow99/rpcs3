@@ -3,7 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/CPU.h"
 #include "Emu/System.h"
-
+#include "Emu/ElfLoader.h"
 
 DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 {
@@ -19,11 +19,15 @@ DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 	wxButton& b_next	= *new wxButton(this, wxID_ANY, L">");
 	wxButton& b_fnext	= *new wxButton(this, wxID_ANY, L">>");
 
+	wxButton& b_dump	= *new wxButton(this, wxID_ANY, L"Dump code");
+
 	s_b_panel.Add(&b_fprev);
 	s_b_panel.Add(&b_prev);
 	s_b_panel.AddSpacer(5);
 	s_b_panel.Add(&b_next);
 	s_b_panel.Add(&b_fnext);
+	s_b_panel.AddSpacer(8);
+	s_b_panel.Add(&b_dump);
 
 	s_panel.Add(&s_b_panel);
 	s_panel.Add(m_disasm_list);
@@ -40,6 +44,8 @@ DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 	Connect(b_next.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Next));
 	Connect(b_fprev.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::fPrev));
 	Connect(b_fnext.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::fNext));
+
+	Connect(b_dump.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Dump));
 }
 
 void DisAsmFrame::OnResize(wxSizeEvent& event)
@@ -66,6 +72,150 @@ void DisAsmFrame::AddLine(wxString line)
 	}
 
 	m_disasm_list->InsertItem(item_count, line);
+}
+
+
+#ifdef MTHREAD_DUMP
+
+#include "Thread.h"
+
+class DumpThread : public ThreadBase
+{
+	void* m_hThread;
+	bool m_exit;
+	wxMutex m_mtx;
+	wxSemaphore m_sem;
+	Decoder* decoder;
+
+public:
+	DumpThread()
+	{
+	}
+
+	void Create(wxString patch)
+	{
+		decoder = new Decoder(*new DisAsmOpcodes(true, patch));
+
+		m_hThread = ::CreateThread
+		(
+			NULL,
+			0,
+			DumpThread::ThreadStart,
+			(LPVOID)this,
+			0,
+			NULL
+		);
+	}
+
+	~DumpThread()
+	{
+		delete decoder;
+		ThreadBase::DeleteThread(m_hThread);
+	}
+
+	static DWORD __stdcall ThreadStart(void* thread)
+	{
+		return (DWORD)((DumpThread*)thread)->Entry();
+	}
+
+	virtual void Do()
+	{
+		m_sem.Post();
+	}
+
+	virtual void* Entry()
+	{
+		while(!m_exit)
+		{
+			m_sem.Wait();
+			if(m_exit) break;
+			m_mtx.Lock();
+
+			decoder->DoCode(Memory.Read32(CPU.pc));
+
+			m_mtx.Unlock();
+		}
+
+		return NULL;
+	}
+};
+
+#endif
+
+void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event)) 
+{
+	wxFileDialog ctrl( NULL, L"Select output file...",
+		wxEmptyString, "DumpOpcodes.txt", "*.txt", wxFD_SAVE);
+
+	if(ctrl.ShowModal() == wxID_CANCEL) return;
+
+	if(!System.IsStoped()) System.Stop();
+	const uint dump_size = elf_loader.elf_size;
+
+	wxProgressDialog prog_dial
+	(
+		"Dumping...",
+		"Loading...",
+		dump_size,
+		NULL,
+		wxPD_APP_MODAL		|
+		wxPD_ELAPSED_TIME	|
+		wxPD_ESTIMATED_TIME |
+		wxPD_REMAINING_TIME |
+		wxPD_CAN_ABORT		|
+		wxPD_SMOOTH
+	);
+
+	Memory.Init();
+
+	if(System.IsSlef)
+	{
+		elf_loader.LoadSelf();
+	}
+	else
+	{
+		elf_loader.LoadElf();
+	}
+
+#ifdef MTHREAD_DUMP
+	SYSTEM_INFO si;
+	GetSystemInfo(&si);
+
+	if(si.dwNumberOfProcessors < 1) si.dwNumberOfProcessors = 1;
+
+	DumpThread* dump = new DumpThread[si.dwNumberOfProcessors];
+
+	for(uint i=0; i<si.dwNumberOfProcessors; ++i)
+	{
+		dump[i].Create(ctrl.GetPath() + wxString::Format("%d", i));
+	}
+	uint a=0;
+#else
+	Decoder* decoder = new Decoder(*new DisAsmOpcodes(true, ctrl.GetPath()));
+#endif
+
+	while(CPU.pc < dump_size && prog_dial.Update(CPU.pc, wxString::Format("%d of %d", CPU.pc/4, dump_size/4)))
+	{
+#ifdef MTHREAD_DUMP
+		dump[a].Do();
+		if(++a >= si.dwNumberOfProcessors) a = 0;
+#else
+		decoder->DoCode(Memory.Read32(CPU.pc));
+#endif
+		CPU.NextPc();
+	}
+
+#ifdef MTHREAD_DUMP
+	delete dump;
+#else
+	delete decoder;
+#endif
+
+	Memory.Close();
+	CPU.Reset();
+
+	prog_dial.Destroy();
+	wxMessageBox("rpcs3 message", "Dumping done.");
 }
 
 void DisAsmFrame::Prev (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.pc - 4*(LINES_OPCODES+1)); System.Run(); } }

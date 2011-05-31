@@ -16,7 +16,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	for(uint i=0; i<COL_COUNT; ++i)
 	{
 		hex_wind->InsertColumn(i, wxString::Format("%d", i));
-		hex_wind->SetColumnWidth(i, 25);
+		hex_wind->SetColumnWidth(i, 26);
 	}
 
 	hex_wind->InsertColumn(COL_COUNT, wxEmptyString);
@@ -79,7 +79,9 @@ void MemoryViewerPanel::ShowPC()
 			const u8 rmem = Memory.Read8(pc++);
 
 			hex_wind->SetItem(line, item, wxString::Format("%02X", rmem));
-			char_col += wxString::Format("%c", rmem);
+
+			const wxString c_rmem = wxString::Format("%c", rmem);
+			char_col += c_rmem.IsEmpty() ? "." : c_rmem;
 		}
 
 		hex_wind->SetItem(line, COL_COUNT, char_col);

@@ -5,7 +5,7 @@ class CPUCycle
 public:
 	uint pc;
 	uint npc;
-	uint* gpr;
+	uint gpr[32];
 
 	CPUCycle()
 	{
