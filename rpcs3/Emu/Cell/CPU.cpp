@@ -5,18 +5,18 @@ CPUCycle CPU;
 
 void CPUCycle::Reset()
 {
-	pc = 0;
-	npc = pc + 4;
+	cycle = PC = 0;
+	nPC = PC + 4;
 }
 
 void CPUCycle::NextPc()
 {
-	pc = npc;
-	npc = pc + 4;
+	PC = nPC;
+	nPC = PC + 4;
 }
 
 void CPUCycle::SetPc(const uint _pc)
 {
-	pc = _pc;
-	npc = pc + 4;
+	PC = _pc;
+	nPC = PC + 4;
 }

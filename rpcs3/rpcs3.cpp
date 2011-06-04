@@ -15,3 +15,5 @@ bool TheApp::OnInit()
 
 	return true;
 }
+
+GameInfo CurGameInfo;

@@ -4,7 +4,6 @@
 #include "Emu/System.h"
 #include "Ini.h"
 
-
 BEGIN_EVENT_TABLE(MainFrame, wxFrame)
 	EVT_CLOSE(MainFrame::OnQuit)
 END_EVENT_TABLE()
@@ -49,25 +48,48 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_)
 
 void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 {
+	bool stoped = false;
+
+	if(System.IsRunned())
+	{
+		System.Pause();
+		stoped = true;
+	}
+
 	wxDirDialog ctrl( this, L"Select game folder", wxEmptyString);
 
-	if(ctrl.ShowModal() == wxID_CANCEL) return;
+	if(ctrl.ShowModal() == wxID_CANCEL)
+	{
+		if(stoped) System.Resume();
+		return;
+	}
 
 	ConLog.Write("Game: booting...");
 
-	System.SetSelf(ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN");
+	System.SetElf(ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN");
 	System.Run();
 
 	ConLog.Write("Game: boot done.");
 }
 
-
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 {
+	bool stoped = false;
+
+	if(System.IsRunned())
+	{
+		System.Pause();
+		stoped = true;
+	}
+
 	wxFileDialog ctrl( this, L"Select ELF", wxEmptyString, wxEmptyString, "*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
-	if(ctrl.ShowModal() == wxID_CANCEL) return;
+	if(ctrl.ShowModal() == wxID_CANCEL)
+	{
+		if(stoped) System.Resume();
+		return;
+	}
 
 	ConLog.Write("Elf: booting...");
 
@@ -79,10 +101,22 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 {
+	bool stoped = false;
+
+	if(System.IsRunned())
+	{
+		System.Pause();
+		stoped = true;
+	}
+
 	wxFileDialog ctrl( this, L"Select SELF", wxEmptyString, wxEmptyString, "*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
-	if(ctrl.ShowModal() == wxID_CANCEL) return;
+	if(ctrl.ShowModal() == wxID_CANCEL)
+	{
+		if(stoped) System.Resume();
+		return;
+	}
 
 	ConLog.Write("SELF: booting...");
 
@@ -94,6 +128,14 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 {
+	bool stoped = false;
+
+	if(System.IsRunned())
+	{
+		System.Pause();
+		stoped = true;
+	}
+
 	wxDialog* diag = new wxDialog(this, wxID_ANY, "Settings", wxDefaultPosition);
 
 	wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
@@ -126,10 +168,13 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	}
 
 	delete diag;
-}
 
+	if(stoped) System.Resume();
+}
 
 void MainFrame::OnQuit(wxCloseEvent& event)
 {
+	System.Stop();
+
 	Close();
 }

@@ -1,6 +1,62 @@
 #pragma once
 enum SysCalls
 {
+	cellPadClearBuf = 0x0D5F2C14,
+	cellPadInfoPressMode = 0x0E2DFAAD,
+	cellPadInit = 0x1CF98800,
+	cellPadLddRegisterController = 0x20A97BA2,
+	cellPadGetInfo = 0x3AAAD464,
+	cellPadGetRawData = 0x3F797DFF,
+	cellPadEnd = 0x4D9B75D5,
+	cellPadInfoSensorMode = 0x78200559,
+	cellPadGetData = 0x8B72CDA1,
+	cellPadLddDataInsert = 0xBAFD6409,
+	cellPadSetSensorMode = 0xBE5BE3BA,
+	cellPadLddUnregisterController = 0xE442FAA8,
+	cellPadSetPressMode = 0xF83F8182,
+	
+	cellVideoOutConfigure = 0x0BAE8772,
+	cellVideoOutGetDeviceInfo = 0x1E930EEF,
+	cellVideoOutGetNumberOfDevice = 0x75BBB672,
+	cellVideoOutGetState = 0x887572D5,
+	cellVideoOutRegisterCallback = 0x8E8BC444,
+	cellVideoOutGetResolutionAvailability = 0xA322DB75,
+	cellVideoOutDebugSetMonitorType = 0xCFDF24BB,
+
+	cellRescGcmSurface2RescSrc = 0x01220224,
+	cellRescGetNumColorBuffers = 0x0A2069C7,
+	cellRescSetWaitFlip = 0x0D3C22CE,
+	cellRescSetDsts = 0x10DB5B1A,
+	cellRescResetFlipStatus = 0x129922A0,
+	cellRescSetPalInterpolateDropFlexRatio = 0x19A2A967,
+	cellRescGetRegisterCount = 0x1DD3C4CD,
+	cellRescAdjustAspectRatio = 0x22AE06D8,
+	cellRescSetDisplayMode = 0x23134710,
+	cellRescSetConvertAndFlip = 0x25C107E6,
+	cellRescExit = 0x2EA3061E,
+	cellRescSetFlipHandler = 0x2EA94661,
+	cellRescInit = 0x516EE89E,
+	cellRescGetBufferSize = 0x5A338CDB,
+	cellRescGetLastFlipTime = 0x66F5E388,
+	cellRescSetSrc = 0x6CD0F95F,
+	cellRescSetRegisterCount = 0x7AF8A37F,
+	cellRescSetBufferAddress = 0x8107277C,
+	cellRescGetFlipStatus = 0xC47C5C22,
+	cellRescVideoOutResolutionId2RescBufferMode = 0xD1CA0503,
+	cellRescSetVBlankHandler = 0xD3758645,
+	cellRescCreateInterlaceTable = 0xE0CEF79E,
+
+	/*
+	<Entry id="0x0247C69E" name="cellSailGraphicsAdapterGetFrame"/>
+	<Entry id="0x1872331B" name="cellSailGraphicsAdapterPtsToTimePosition"/>
+	<Entry id="0x1C983864" name="cellSailGraphicsAdapterInitialize"/>
+	<Entry id="0x2E3CCB5E" name="cellSailGraphicsAdapterSetPreferredFormat"/>
+	<Entry id="0x44A20E79" name="cellSailGraphicsAdapterUpdateAvSync"/>
+	<Entry id="0x76488BB1" name="cellSailGraphicsAdapterFinalize"/>
+	<Entry id="0xFFD58AA4" name="cellSailGraphicsAdapterGetFormat"/>
+	*/
+
+	/*
 	sys_process_getpid 	= 1,
 	sys_process_wait_for_child 	= 2,
 	sys_process_get_status 	= 4,
@@ -274,4 +330,5 @@ enum SysCalls
 	sys_deci3_close 	= 882,
 	sys_deci3_send 	= 883,
 	sys_deci3_receive = 884,
+	*/
 };

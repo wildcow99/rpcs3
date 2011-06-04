@@ -11,7 +11,7 @@
           |||                |||                |||                |||                ||| 
        _________          _________          _________          _________          _________
       |         |        |         |        |         |        |         |        |         |
-  	  |  ????   | ====== |  ????   | ====== |  MULLI  | ====== | SUBFIC  | ====== |  ????   |
+      |  ????   | ====== |  ????   | ====== |  MULLI  | ====== | SUBFIC  | ====== |  ????   |
       |   05    | ====== |   06    | ====== |   07    | ====== |   08    | ====== |   09    |
       |_________|        |_________|        |_________|        |_________|        |_________|
         
@@ -157,7 +157,7 @@ enum MainOpcodes
 {
 	SPECIAL = 0x00,
 	SPECIAL2 = 0x01,
-	VXOR = 0x04,
+	XOR = 0x04,
 	MULLI = 0x07,
 	SUBFIC = 0x08,
 	CMPLWI = 0x0a,
@@ -202,16 +202,34 @@ enum MainOpcodes
 	G5 = 0x3f,
 };
 
+enum SpecialOpcodes
+{
+	SYSCODE = 0x0c,
+};
+
 class Opcodes
 {
 public:
-	virtual void SPECIAL()=0;
+	virtual void Exit()=0;
+	virtual void Step()=0;
+	virtual bool DoSysCall(const int code)=0;
+
+	virtual void NOP()=0;
+	//SPECIAL OPCODES:
+	virtual void UNK_SPECIAL(const int code, const int rs, const int rt,
+		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
+	//
 	virtual void SPECIAL2()=0;
-	virtual void VXOR(const int rs, const int rt, const int rd)=0;
-	virtual void MULLI(const int rs, const int rt, const int imm_s16)=0;
+
+	//SPECIAL3???
+	//virtual void SPECIAL3()=0;
+	virtual void XOR(const int rd, const int rs, const int rt)=0;
+	//
+
+	virtual void MULLI(const int rt, const int rs, const int imm_s16)=0;
 	virtual void SUBFIC(const int rs, const int rt, const int imm_s16)=0;
-	virtual void CMPLWI(const int rs, const int rt, const int imm_s16)=0;
-	virtual void CMPWI(const int rs, const int rt, const int imm_s16)=0;
+	virtual void CMPLWI(const int rs, const int rt, const int imm_u16)=0;
+	virtual void CMPWI(const int rs, const int rt, const int rd)=0;
 	virtual void ADDIC(const int rs, const int rt, const int imm_s16)=0;
 	virtual void ADDIC_(const int rs, const int rt, const int imm_s16)=0;
 	//g1 - 0e
@@ -231,16 +249,16 @@ public:
 	virtual void RLWINM()=0;
 	virtual void ROTLW(const int rt, const int rs, const int rd)=0;
 	virtual void ORI(const int rt, const int rs, const int imm_u16)=0;
-	virtual void ORIS(const int rt, const int rs, const int imm_s16)=0;
+	virtual void ORIS(const int rt, const int rs, const int imm_u16)=0;
 	virtual void XORI(const int rt, const int rs, const int imm_u16)=0;
-	virtual void XORIS(const int rt, const int rs, const int imm_s16)=0;
+	virtual void XORIS(const int rt, const int rs, const int imm_u16)=0;
 	virtual void CLRLDI(const int rt, const int rs, const int imm_u16)=0;
 	//g4 - 1f
 	virtual void G4()=0;
 	//virtual void MFLR(const int rs)=0;
 	//
 	virtual void LWZ(const int rs, const int rt, const int imm_s16)=0;
-	virtual void LWZU(const int rs, const int rt, const int imm_u16)=0;
+	virtual void LWZU(const int rt, const int rs, const int imm_s16)=0;
 	virtual void LBZ(const int rs, const int rt, const int imm_s16)=0;
 	virtual void LBZU(const int rs, const int rt, const int imm_u16)=0;
 	virtual void STW(const int rs, const int rt, const int imm_s16)=0;
@@ -248,7 +266,7 @@ public:
 	virtual void STB(const int rs, const int rt, const int imm_s16)=0;
 	virtual void STBU(const int rs, const int rt, const int imm_u16)=0;
 	virtual void LHZ(const int rs, const int rt, const int imm_s16)=0;
-	virtual void LHZU(const int rs, const int rt, const int imm_s16)=0;
+	virtual void LHZU(const int rs, const int rt, const int imm_u16)=0;
 	virtual void STH(const int rs, const int rt, const int imm_s16)=0;
 	virtual void STHU(const int rs, const int rt, const int imm_u16)=0;
 	virtual void LFS(const int rs, const int rt, const int imm_s16)=0;

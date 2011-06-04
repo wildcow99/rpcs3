@@ -16,7 +16,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	for(uint i=0; i<COL_COUNT; ++i)
 	{
 		hex_wind->InsertColumn(i, wxString::Format("%d", i));
-		hex_wind->SetColumnWidth(i, 26);
+		hex_wind->SetColumnWidth(i, 28);
 	}
 
 	hex_wind->InsertColumn(COL_COUNT, wxEmptyString);
@@ -49,7 +49,7 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 
 	SetSizerAndFit( &s_panel );
 
-	SetSize(600, 450);
+	SetSize(700, 450);
 
 	Connect( wxEVT_SIZE, wxSizeEventHandler(MemoryViewerPanel::OnResize) );
 
