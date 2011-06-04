@@ -5,7 +5,7 @@
 class MemoryViewerPanel : public wxFrame
 {
 	static const uint LINE_COUNT = 50;
-	static const uint COL_COUNT = 10;
+	static const uint COL_COUNT  = 17;
 
 	uint m_PC;
 	wxListView* hex_wind;

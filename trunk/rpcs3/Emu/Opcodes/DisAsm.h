@@ -19,11 +19,11 @@ class DisAsmOpcodes : public Opcodes
 	{
 		if(m_dump_mode)
 		{
-			wxString mem = wxString::Format("%x		", CPU.pc/4);
-			for(uint i=CPU.pc; i < CPU.pc + 4; ++i)
+			wxString mem = wxString::Format("%x		", CPU.PC);
+			for(uint i=CPU.PC; i < CPU.PC + 4; ++i)
 			{
 				mem += wxString::Format("%02x", Memory.Read8(i));
-				if(i < CPU.npc - 1) mem += " ";
+				if(i < CPU.nPC - 1) mem += " ";
 			}
 
 			op.Write(mem + ": " + value + "\n");
@@ -49,14 +49,40 @@ public:
 		}
 	}
 
+private:
+	virtual void Exit()
+	{
+		if(!m_dump_mode)
+		{
+			disasm_frame->Close();
+			delete disasm_frame;
+		}
+	}
+
+	virtual void Step()
+	{
+	}
+
+	virtual bool DoSysCall(const int WXUNUSED(code))
+	{
+		return false;
+	}
+
 	virtual void NOP()
 	{
 		Write( "NOP" );
 	}
 
-	virtual void SPECIAL()
+	virtual void UNK_SPECIAL(const int code, const int rs, const int rt, const int rd,
+		const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
 	{
-		Write( "SPECIAL (Unimplemented)" );
+		const wxString str = wxString::Format(
+			"Unknown special opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
+			code, func, rs, rt, rd, sa, sa, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
+		);
+
+		if(!m_dump_mode) op.Write(str + "\n");
+		Write(str);
 	}
 
 	virtual void SPECIAL2()
@@ -64,14 +90,14 @@ public:
 		Write( "SPECIAL 2 (Unimplemented)" );
 	}
 
-	virtual void VXOR(const int rs, const int rt, const int rd)
+	virtual void XOR(const int rs, const int rt, const int rd)
 	{
-		Write(wxString::Format( "VXOR v%d,v%d,v%d", rs, rt, rd ));
+		Write(wxString::Format( "XOR r%d,r%d,r%d", rs, rt, rd ));
 	}
 
-	virtual void MULLI(const int rs, const int rt, const int imm_s16)
+	virtual void MULLI(const int rt, const int rs, const int imm_s16)
 	{
-		Write(wxString::Format( "MULLI r%d,r%d,%d", rs, rt, imm_s16 ));
+		Write(wxString::Format( "MULLI r%d,r%d,%d", rt, rs, imm_s16 ));
 	}
 
 	virtual void SUBFIC(const int rs, const int rt, const int imm_s16)
@@ -79,27 +105,27 @@ public:
 		Write(wxString::Format( "SUBFIC r%d,r%d,%d", rs, rt, imm_s16 ));
 	}
 
-	virtual void CMPLWI(const int rs, const int rt, const int imm_s16)
+	virtual void CMPLWI(const int rs, const int rt, const int imm_u16)
 	{
 		if(rs != 0)
 		{
-			Write(wxString::Format( "CMPLWI cr%d,r%d,%d", rs/4, rt, imm_s16 ));
+			Write(wxString::Format( "CMPLWI cr%d,r%d,%d  #%x", rs/4, rt, imm_u16, imm_u16 ));
 		}
 		else
 		{
-			Write(wxString::Format( "CMPLWI r%d,%d", rt, imm_s16 ));
+			Write(wxString::Format( "CMPLWI r%d,%d  #%x", rt, imm_u16, imm_u16 ));
 		}
 	}
 
-	virtual void CMPWI(const int rs, const int rt, const int imm_s16)
+	virtual void CMPWI(const int rs, const int rt, const int rd)
 	{
 		if(rs != 0)
 		{
-			Write(wxString::Format( "CMPWI cr%d,r%d,%d  #%x", rs/4, rt, imm_s16, imm_s16 ));
+			Write(wxString::Format( "CMPWI cr%d,r%d,r%d", rs/4, rt, rd ));
 		}
 		else
 		{
-			Write(wxString::Format( "CMPWI r%d,%d  #%x", rt, imm_s16, imm_s16 ));
+			Write(wxString::Format( "CMPWI r%d,r%d", rt, rd ));
 		}
 	}
 
@@ -135,7 +161,7 @@ public:
 
 	virtual void SC()
 	{
-		Write("SC (???)");
+		Write("SysCall");
 	}
 
 	virtual void G3()
@@ -169,7 +195,7 @@ public:
 		Write(wxString::Format( "ORI r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
 	}
 
-	virtual void ORIS(const int rt, const int rs, const int imm_s16)
+	virtual void ORIS(const int rt, const int rs, const int imm_u16)
 	{
 		if(rt == 0)
 		{
@@ -177,7 +203,7 @@ public:
 			return;
 		}
 
-		Write(wxString::Format( "ORIS r%d,r%d,%d  # %x", rt, rs, imm_s16, imm_s16 ));
+		Write(wxString::Format( "ORIS r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
 	}
 
 	virtual void XORI(const int rt, const int rs, const int imm_u16)
@@ -191,7 +217,7 @@ public:
 		Write(wxString::Format( "XORI r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
 	}
 
-	virtual void XORIS(const int rt, const int rs, const int imm_s16)
+	virtual void XORIS(const int rt, const int rs, const int imm_u16)
 	{
 		if(rt == 0)
 		{
@@ -199,7 +225,7 @@ public:
 			return;
 		}
 
-		Write(wxString::Format( "XORIS r%d,r%d,%d  # %x", rt, rs, imm_s16, imm_s16 ));
+		Write(wxString::Format( "XORIS r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
 	}
 
 	virtual void CLRLDI(const int rt, const int rs, const int imm_u16)
@@ -217,12 +243,12 @@ public:
 		Write( "G4 (Unimplemented)" );
 	}
 
-	virtual void LWZ(const int rs, const int rt, const int imm_s16)
+	virtual void LWZ(const int rt, const int rs, const int imm_s16)
 	{
-		Write(wxString::Format( "LWZ r%d,%d(r%d)  # %x", rs, imm_s16, rt, imm_s16 ));
+		Write(wxString::Format( "LWZ r%d,%d(r%d)  # %x", rt, imm_s16, rs, imm_s16 ));
 	}
 
-	virtual void LWZU(const int rs, const int rt, const int imm_u16)
+	virtual void LWZU(const int rt, const int rs, const int imm_u16)
 	{
 		Write(wxString::Format( "LWZU r%d,%d(r%d)  # %x", rs, imm_u16, rt, imm_u16 ));
 	}
@@ -232,9 +258,9 @@ public:
 		Write(wxString::Format( "LBZ r%d,%d(r%d)  # %x", rs, imm_s16, rt, imm_s16 ));
 	}
 
-	virtual void LBZU(const int rs, const int rt, const int imm_u16)
+	virtual void LBZU(const int rs, const int rt, const int imm_s16)
 	{
-		Write(wxString::Format( "LBZU r%d,%d(r%d)  # %x", rs, imm_u16, rt, imm_u16 ));
+		Write(wxString::Format( "LBZU r%d,%d(r%d)  # %x", rs, imm_s16, rt, imm_s16 ));
 	}
 
 	virtual void STW(const int rs, const int rt, const int imm_s16)
@@ -332,16 +358,11 @@ public:
 		Write( "G5 (Unimplemented)" );
 	}
 
-	virtual void UNK(const int code, const int opcode, const int rs, const int rt, const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{		
-		if(code == 0)
-		{
-			NOP();
-			return;
-		}
-
+	virtual void UNK(const int code, const int opcode, const int rs, const int rt, const int rd,
+		const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
+	{
 		const wxString str = wxString::Format(
-			"Unknown opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm s26: 0x%x : %d",
+			"Unknown opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
 			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
 		);
 

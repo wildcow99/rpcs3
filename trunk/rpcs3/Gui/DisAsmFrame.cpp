@@ -194,13 +194,13 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	Decoder* decoder = new Decoder(*new DisAsmOpcodes(true, ctrl.GetPath()));
 #endif
 
-	while(CPU.pc < dump_size && prog_dial.Update(CPU.pc, wxString::Format("%d of %d", CPU.pc/4, dump_size/4)))
+	while(CPU.PC < dump_size && prog_dial.Update(CPU.PC, wxString::Format("%d of %d", CPU.PC/4, dump_size/4)))
 	{
 #ifdef MTHREAD_DUMP
 		dump[a].Do();
 		if(++a >= si.dwNumberOfProcessors) a = 0;
 #else
-		decoder->DoCode(Memory.Read32(CPU.pc));
+		decoder->DoCode(Memory.Read32(CPU.PC));
 #endif
 		CPU.NextPc();
 	}
@@ -218,7 +218,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	wxMessageBox("rpcs3 message", "Dumping done.");
 }
 
-void DisAsmFrame::Prev (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.pc - 4*(LINES_OPCODES+1)); System.Run(); } }
-void DisAsmFrame::Next (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.pc - 4*(LINES_OPCODES-1)); System.Run(); } }
-void DisAsmFrame::fPrev(wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.pc - (4*LINES_OPCODES)*2); System.Run(); } }
+void DisAsmFrame::Prev (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES+1)); System.Run(); } }
+void DisAsmFrame::Next (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES-1)); System.Run(); } }
+void DisAsmFrame::fPrev(wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - (4*LINES_OPCODES)*2); System.Run(); } }
 void DisAsmFrame::fNext(wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { System.Run(); } }

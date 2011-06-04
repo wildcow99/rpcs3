@@ -5,31 +5,54 @@ MemoryBase Memory;
 
 //TODO: Detect mem
 
-u8* MemoryBase::GetMem(uint& addr)
+u8* MemoryBase::GetMem(u64& addr)
 {
-	u8* Mem = NULL;
-
-	if(addr < 0x0FFFFFFF)
+	if(addr < 0x0FFFFFFFLL)
 	{
-		Mem = MainRam;
-		//ConLog.Warning("MainRam! (%08X)", addr);
+		//ConLog.Warning("MainRam! (%16X)", addr);
+		return MainRam;
 	}
-	else if(addr >= 0x0FFFFFFF && addr < 0x0FFFFFFF + 0x0FFFFFFF)
-	{
-		addr -= 0x0FFFFFFF;
-		Mem = VideoMem;
+	
+	addr -= 0x0FFFFFFFLL;
 
-		ConLog.Warning("VideoMem! (%08X)", addr);
-	}
-	else
+	if(addr >= 0x0FFFFFFFLL && addr < 0x0FBFFFFFLL)
 	{
-		ConLog.Warning("Unknown mem! (%08X)", addr);
+		ConLog.Warning("Video: FrameBuffer! (%16X)", addr);
+		return Video_FrameBuffer;
 	}
 
-	return Mem;
+	addr -= 0x0FBFFFFFLL;
+
+	if(addr >= 0x0FFFFFFFLL && addr < 0x003FFFFFLL)
+	{
+		ConLog.Warning("Video: GPUdata! (%16X)", addr);
+		return Video_GPUdata;
+	}
+
+	ConLog.Warning("Unknown mem! (%16X)", addr);
+	return NULL;
 }
 
-void MemoryBase::Write32(uint addr, const u32 data)
+void MemoryBase::Write8(u64 addr, const u8 data)
+{
+	u8* Mem = GetMem(addr);
+
+	if(Mem == NULL) return;
+
+	Mem[addr] = data;
+}
+
+void MemoryBase::Write16(u64 addr, const u16 data)
+{
+	u8* Mem = GetMem(addr);
+
+	if(Mem == NULL) return;
+
+	Mem[addr+0] = (u8)((data >> 8) & 0xffff);
+	Mem[addr+1] = (u8)((data >> 0) & 0x00ff);
+}
+
+void MemoryBase::Write32(u64 addr, const u32 data)
 {
 	// (0xAABBCCDD << 24) = (ret == AA,			BB == 0, CC == 0, DD == 0)
 	// (0xAABBCCDD << 16) = (ret == AABB,		BB != 0, CC == 0, DD == 0)
@@ -46,7 +69,30 @@ void MemoryBase::Write32(uint addr, const u32 data)
 	Mem[addr+3] = (u8)((data >>  0) & 0x000000ff);
 }
 
-u8 MemoryBase::Read8(uint addr)
+void MemoryBase::Write64(u64 addr, const u64 data)
+{
+	u8* Mem = GetMem(addr);
+
+	if(Mem == NULL) return;
+
+	Mem[addr+0] = (u8)((data >> 56) & 0xffffffffffffffff);
+	Mem[addr+1] = (u8)((data >> 48) & 0x00ffffffffffffff);
+	Mem[addr+2] = (u8)((data >> 40) & 0x0000ffffffffffff);
+	Mem[addr+3] = (u8)((data >> 32) & 0x000000ffffffffff);
+
+	Mem[addr+0] = (u8)((data >> 24) & 0x000000ffffffffff);
+	Mem[addr+1] = (u8)((data >> 16) & 0x0000000000ffffff);
+	Mem[addr+2] = (u8)((data >>  8) & 0x000000000000ffff);
+	Mem[addr+3] = (u8)((data >>  0) & 0x00000000000000ff);
+}
+
+void MemoryBase::Write128(u64 addr, const u128 data)
+{
+	Write64(addr + 0, data.lo);
+	Write64(addr + 8, data.hi);
+}
+
+u8 MemoryBase::Read8(u64 addr)
 {
 	u8* Mem = GetMem(addr);
 	if(Mem == NULL) return NULL;
@@ -54,18 +100,18 @@ u8 MemoryBase::Read8(uint addr)
 	return Mem[addr];
 }
 
-u16 MemoryBase::Read16(uint addr)
+u16 MemoryBase::Read16(u64 addr)
 {
 	u8* Mem = GetMem(addr);
 	if(Mem == NULL) return NULL;
 
 	return
-		((((u32)Mem[addr+0]) & 0xffff) <<  8) |
-		((((u32)Mem[addr+1]) & 0x00ff) <<  0);
+		((((u16)Mem[addr+0]) & 0xffff) << 8) |
+		((((u16)Mem[addr+1]) & 0x00ff) << 0);
 }
 
 
-u32 MemoryBase::Read32(uint addr)
+u32 MemoryBase::Read32(u64 addr)
 {
 	u8* Mem = GetMem(addr);
 	if(Mem == NULL) return NULL;
@@ -77,7 +123,7 @@ u32 MemoryBase::Read32(uint addr)
 		((((u32)Mem[addr+3]) & 0x000000ff) <<  0);
 }
 
-u64 MemoryBase::Read64(uint addr)
+u64 MemoryBase::Read64(u64 addr)
 {
 	u8* Mem = GetMem(addr);
 	if(Mem == NULL) return NULL;
@@ -93,7 +139,7 @@ u64 MemoryBase::Read64(uint addr)
 		((((u64)Mem[addr+7]) & 0x00000000000000ff) <<  0);
 }
 
-u128 MemoryBase::Read128(uint addr)
+u128 MemoryBase::Read128(u64 addr)
 {
 	u8* Mem = GetMem(addr);
 	if(Mem == NULL) return u128::From((u32)0);

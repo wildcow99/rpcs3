@@ -5,6 +5,8 @@
 #include "Emu/Opcodes/DisAsm.h"
 #include "Emu/Opcodes/Interpreter.h"
 
+#include "Gui/MemoryViewer.h"
+
 class SysThread : public ThreadBase
 {
 	enum
@@ -24,6 +26,8 @@ class SysThread : public ThreadBase
 
 	Decoder* decoder;
 	uint m_mode;
+
+	MemoryViewerPanel* m_memory_viewer;
 
 	HANDLE m_hThread;
 	wxSemaphore m_sem_wait;
@@ -48,6 +52,7 @@ public:
 
 	virtual void Run();
 	virtual void Pause();
+	virtual void Resume();
 	virtual void Stop();
 
 	virtual bool IsRunned() const { return m_cur_state == RUN; }
