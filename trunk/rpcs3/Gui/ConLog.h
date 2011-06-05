@@ -47,7 +47,7 @@ public:
 		m_log->InsertColumn(1, "Log");
 		m_log->SetBackgroundColour(wxColour("Black"));
 
-		m_log->SetColumnWidth(0, 15);
+		m_log->SetColumnWidth(0, 18);
 
 		SetSizerAndFit( &s_panel );
 

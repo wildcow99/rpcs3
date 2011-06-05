@@ -36,85 +36,69 @@ class ElfLoader //TODO
 
 	struct SelfHeader
 	{
-		u32 magic;
-		u32 headerVer;
-		u16 flags;
-		u16 type;
-		u32 meta;
-		u64 headerSize;
-		u64 encryptedSize;
-		u64 unknown;
-		u64 AppInfo;
-		u64 elf;
-		u64 phdr;
-		u64 shdr;
-		u64 phdrOffsets;
-		u64 sceversion;
-		u64 digest;
-		u64 digestSize;
-		/*
-		u32		magic;
-		u32		version;
-		u16		attribute;
-		u16		category;
-		u32		metadataInfoOffset;
-		u64		fileOffset;
-		u64		fileSize;
-		u64		id;
-		u64		programInfoOffset;
-		u64		elfHeaderOffset;
-		u64		elfProgramHeadersOffset;
-		u64		elfSectionHeadersOffset;
-		u64		sInfoOffset;
-		u64		versionInfoOffset;
-		u64		controlInfoOffset;
-		u64		controlInfoSize;
-		u64		app;
-		*/
+		u32 se_magic;
+		u32 se_hver;
+		u16 se_flags;
+		u16 se_type;
+		u32 se_meta;
+		u64 se_hsize;
+		u64 se_esize;
+		u64 se_unknown;
+		u64 se_appinfo;
+		u64 se_elf;
+		u64 se_phdr;
+		u64 se_shdr;
+		u64 se_phdroff;
+		u64 se_scever;
+		u64 se_digest;
+		u64 se_digestsize;
 	};
 
 	struct Elf32_Ehdr
 	{
-		u8		e_magic[16];
-		u16		e_type;
-		u16		e_machine;
-		u32		e_version;
-		u32		e_entry;
-		u32		e_phoff;
-		u32		e_shoff;
-		u32		e_flags;
-		u16		e_ehsize;
-		u16		e_phentsize;
-		u16		e_phnum;
-		u16		e_shentsize;
-		u16		e_shnum;
-		u16		e_shstrndx;
+		u32 e_magic;
+		u8  e_class;
+		u8  e_data;
+		u8  e_curver;
+		u8  e_os_abi;
+		u64 e_abi_ver;
+		u16 e_type;
+		u16 e_machine;
+		u32 e_version;
+		u16 e_entry;
+		u32 e_phoff;
+		u32 e_shoff;
+		u32 e_flags;
+		u16 e_ehsize;
+		u16 e_phentsize;
+		u16 e_phnum;
+		u16 e_shentsize;
+		u16 e_shnum;
+		u16 e_shstrndx;
 	};
 
 	struct Elf64_Ehdr
 	{
-		u8 Magic[16];
-		u32 unknown[3];
-		/*
-		u16 Data;
-		u16 CurVersion;
-		u16 OS_ABI;
-		u32 unknown_0;
-		u8 ABI_Version;
-		u32 Type;
-		u32 Machine;
-		u32 Version;
-		*/
-		u32 entry;
-		u64 phoff;
-		u64 shoff;
-		u32 flags;
-		u16 ehsize;
-		u16 phentsize;
-		u16 phnum;
-		u16 shentsize;
-		u16 shnum;
-		u16 shstrndx;
+		u32 e_magic;
+		u8  e_class;
+		u8  e_data;
+		u8  e_curver;
+		u8  e_os_abi;
+		u64 e_abi_ver;
+		u16 e_type;
+		u16 e_machine;
+		u32 e_version;
+		u32 e_unknown;
+		u32 e_entry;
+		u64 e_phoff;
+		u64 e_shoff;
+		u32 e_flags;
+		u16 e_ehsize;
+		u16 e_phentsize;
+		u16 e_phnum;
+		u16 e_shentsize;
+		u16 e_shnum;
+		u16 e_shstrndx;
 	};
 
 	struct Elf64_Shdr
@@ -129,6 +113,18 @@ class ElfLoader //TODO
 		u32     sh_info;
 		u64     sh_addralign;
 		u64     sh_entsize;
+	};
+
+	struct Elf32_Phdr
+	{
+		u32		p_type;
+		u32		p_offset;
+		u32		p_vaddr;
+		u32		p_paddr;
+		u32		p_filesz;
+		u32		p_memsz;
+		u32		p_flags;
+		u32		p_align;
 	};
 
 	struct Elf64_Phdr
@@ -158,8 +154,8 @@ public:
 	void LoadSelf();
 
 private:
-	void LoadElf32(Elf32_Ehdr& header, wxFile& elf);
-	void LoadElf64(Elf64_Ehdr& header, wxFile& elf);
+	void LoadElf32(Elf32_Ehdr& ehdr, wxFile& f);
+	void LoadElf64(Elf64_Ehdr& ehdr, wxFile& f);
 
 	void LoadPsf();
 };

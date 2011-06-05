@@ -122,7 +122,7 @@ u32 Read32(wxFile& f)
 		((((u32)c3) & 0x000000ff) <<  0);
 }
 
-u32 Read64(wxFile& f)
+u64 Read64(wxFile& f)
 {
 	const u32 c0 = Read8(f);
 	const u32 c1 = Read8(f);
@@ -144,6 +144,77 @@ u32 Read64(wxFile& f)
 		((((u64)c7) & 0x00000000000000ff) <<  0);
 }
 
+static const wxChar* DataToString(const u8 data)
+{
+	if(data > 1) return wxString::Format("%d's complement, big endian", data);
+	if(data == 0) return "Data is not found";
+
+	return wxString::Format("%d's complement, small endian", data);
+}
+
+static const wxChar* TypeToString(const u16 type)
+{
+	switch(type)
+	{
+	case 0:  return "NULL";
+	case 2:  return "EXEC (Executable file)";
+	default: ConLog.Error("Unknown type (%d)", type); break;
+	};
+
+	return wxString::Format("Unknown (%d)", type);
+}
+
+static const wxChar* OS_ABIToString(const u8 os_abi)
+{
+	switch(os_abi)
+	{
+	case 0x0 :  return "UNIX System V";
+	case 0x66:  return "Cell OS LV-2";
+	default: ConLog.Error("Unknown OS/ABI (%x)", os_abi); break;
+	};
+
+	return wxString::Format("Unknown (%x)", os_abi);
+}
+
+static const wxChar* MachineToString(const u16 machine)
+{
+	switch(machine)
+	{
+	case 0x15:  return "PowerPC64";
+	case 0x17:  return "SPU";
+	default: ConLog.Error("Unknown machine (%x)", machine); break;
+	};
+
+	return wxString::Format("Unknown (%x)", machine);
+}
+
+static const wxChar* Phdr_FlagsToString(const u32 flags)
+{
+	switch(flags)
+	{
+	case 0x4:  return "R";
+	case 0x7:  return "RWE";
+	default: ConLog.Error("Unknown flags (%x)", flags); break;
+	};
+
+	return wxString::Format("Unknown (%x)", flags);
+}
+
+static const wxChar* Phdr_TypeToString(const u32 type)
+{
+	switch(type)
+	{
+	case 0x00000001: return "LOAD";
+	case 0x00000004: return "NOTE";
+	case 0x00000007: return "TLS";
+	case 0x60000001: return "LOOS+1";
+	case 0x60000002: return "LOOS+2";
+	default: ConLog.Error("Unknown type (%x)", type); break;
+	};
+
+	return wxString::Format("Unknown (%x)", type);
+}
+
 void ElfLoader::SetElf(wxString elf_full_patch)
 {
 	m_elf_fpatch = elf_full_patch;
@@ -154,16 +225,15 @@ void ElfLoader::LoadPsf()
 {
 	const wxString dir = wxFileName(wxFileName(m_elf_fpatch).GetPath()).GetPath();
 	const wxString fpatch = dir + "\\" + "PARAM.SFO";
-	
 
 	if(!wxFile::Access(fpatch, wxFile::read))
 	{
-		ConLog.Error("Error loading %s!", fpatch.c_str());
+		ConLog.Error("Error loading %s: not found!", fpatch.c_str());
 		return;
 	}
 	else
 	{
-		ConLog.Write("Loading %s!", fpatch.c_str());
+		ConLog.Write("Loading %s...", fpatch.c_str());
 	}
 
 	wxFile psf(fpatch);
@@ -176,6 +246,7 @@ void ElfLoader::LoadPsf()
 	if(magic != 0x46535000)
 	{
 		ConLog.Error("%s is not PSF!", fpatch.c_str());
+		psf.Close();
 		return;
 	}
 
@@ -188,13 +259,14 @@ void ElfLoader::LoadPsf()
 	CurGameInfo.name = from32toString_Name(header.name, 31);
 	const wxString serial = from64toString(header.reg, 2);
 
-	//ConLog.Write("magic: %s", from32toString(header.magic).c_str());
-	ConLog.Write("name: %s", CurGameInfo.name.c_str());
-	ConLog.Write("reg: %s", serial.c_str());
+	ConLog.Write("Name: %s", CurGameInfo.name.c_str());
+	ConLog.Write("Serial: %s", serial.c_str());
+	ConLog.Write("Version: %s", from32toString(header.ver, 3).c_str());
+
 	const wxString comm_id = from32toString(header.comm_id, 4).c_str();
-	if(!comm_id.IsEmpty()) ConLog.Write("comm id: %s", comm_id.c_str());
-	//ConLog.Write("app ver: %s", from32toString(header.app_ver, 3).c_str());
-	ConLog.Write("ver: %s", from32toString(header.ver, 3).c_str());
+	if(!comm_id.IsEmpty()) ConLog.Write("ID: %s", comm_id.c_str());
+
+	ConLog.SkipLn();
 
 	if(serial.Length() == 9)
 	{
@@ -206,194 +278,306 @@ void ElfLoader::LoadPsf()
 	}
 }
 
-void ElfLoader::LoadElf32(Elf32_Ehdr& header, wxFile& elf)
+void ElfLoader::LoadElf32(Elf32_Ehdr& ehdr, wxFile& f)
 {
 	CPU.PC = 0;
 
-	ConLog.Warning("Elf 32!!!");
-	//ConLog.Write("magic = %08X", header.e_magic & 0xFFFFFFFFL);
-	ConLog.Write("machine = %08X", header.e_machine & 0xFFFF);
-	ConLog.Write("version = %08X", header.e_version & 0xFFFFFFFFL);
-	ConLog.Write("entry = %08X", header.e_entry & 0xFFFFFFFFL);
-	ConLog.Write("version = %08X", header.e_phoff & 0xFFFFFFFFL);
-	ConLog.Write("shoff = %08X", header.e_shoff & 0xFFFFFFFFL);
-	ConLog.Write("flags = %08X", header.e_flags & 0xFFFFFFFFL);
-	ConLog.Write("ehsize = %08X", header.e_ehsize & 0xFFFF);
-	ConLog.Write("phnum = %08X", header.e_phnum & 0xFFFF);
-	ConLog.Write("phoff = %08X", header.e_phoff & 0xFFFF);
-}
+	ConLog.SkipLn();
+	ConLog.Write("Magic: %08x",							  ehdr.e_magic);
+	ConLog.Write("Class: %s",							  "ELF32");
+	ConLog.Write("Data: %s",							  DataToString(ehdr.e_data));
+	ConLog.Write("Current Version: %d",					  ehdr.e_curver);
+	ConLog.Write("OS/ABI: %s",							  OS_ABIToString(ehdr.e_os_abi));
+	ConLog.Write("Type: %s",							  TypeToString(ehdr.e_type));
+	ConLog.Write("Machine: %s",							  MachineToString(ehdr.e_machine));
+	ConLog.Write("Version: %d",							  ehdr.e_version);
+	ConLog.Write("Entry point address: 0x%x",			  ehdr.e_entry);
+	ConLog.Write("Program headers offset: %d",			  ehdr.e_phoff);
+	ConLog.Write("Section headers offset: %d",			  ehdr.e_shoff);
+	ConLog.Write("Flags: 0x%x",							  ehdr.e_flags);
+	ConLog.Write("Size of this header: %d",				  ehdr.e_ehsize);
+	ConLog.Write("Size of program headers: %d",			  ehdr.e_phentsize);
+	ConLog.Write("Number of program headers: %d",		  ehdr.e_phnum);
+	ConLog.Write("Size of section headers: %d",			  ehdr.e_shentsize);
+	ConLog.Write("Number of section headers: %d",		  ehdr.e_shnum);
+	ConLog.Write("Section header string table index: %d", ehdr.e_shstrndx);
 
-void ElfLoader::LoadElf64(Elf64_Ehdr& header, wxFile& elf)
-{
-	CPU.PC = 0;
+	ConLog.SkipLn();
 
-	ConLog.Write("Class: ELF64");
-	ConLog.Write("Entry point address: 0x%08x", header.entry);
-	ConLog.Write("Program headers offset: %d", header.phoff);
-	ConLog.Write("Section headers offset: %d", header.shoff);
-	ConLog.Write("Flags: %x", header.flags);
-	ConLog.Write("Size of this header: %d", header.ehsize);
-	ConLog.Write("Size of program headers: %d", header.phentsize);
-	ConLog.Write("Number of program headers: %d", header.phnum);
-	ConLog.Write("Size of section headers: %d", header.shentsize);
-	ConLog.Write("Number of section headers: %d", header.shnum);
-	ConLog.Write("Section header string table index: %d", header.shstrndx);
+	int offset = ehdr.e_phoff;
 
-	int offset = header.phoff;
-
-	for(uint i=0; i<header.phnum; ++i)
+	for(uint i=0; i<ehdr.e_phnum; ++i)
 	{
-		Elf64_Phdr phdr;
+		f.Seek(offset);
 
-		elf.Seek(offset);
-		phdr.p_type = Read32(elf);
-		phdr.p_flags = Read32(elf);
-
-		phdr.p_offset = Read64(elf);
-		phdr.p_vaddr = Read64(elf);
-		phdr.p_paddr = Read64(elf);
-		phdr.p_filesz = Read64(elf);
-		phdr.p_memsz = Read64(elf);
-		phdr.p_align = Read64(elf);
+		Elf32_Phdr phdr;
+		phdr.p_type		= Read32(f);
+		phdr.p_offset	= Read32(f);
+		phdr.p_vaddr	= Read32(f);
+		phdr.p_paddr	= Read32(f);
+		phdr.p_filesz	= Read32(f);
+		phdr.p_memsz	= Read32(f);
+		phdr.p_flags	= Read32(f);
+		phdr.p_align	= Read32(f);
 
 		offset += sizeof(phdr);
 
-		const uint size = phdr.p_filesz;
+		ConLog.Write("Type: %s", Phdr_TypeToString(phdr.p_type));
+		ConLog.Write("Offset: 0x%08x", phdr.p_offset);
+		ConLog.Write("Virtual address: 0x%08x", phdr.p_vaddr);
+		ConLog.Write("Physical address: 0x%08x", phdr.p_paddr);
+		ConLog.Write("File size: 0x%08x", phdr.p_filesz);
+		ConLog.Write("Memory size: 0x%08x", phdr.p_memsz);
+		ConLog.Write("Flags: %s", Phdr_FlagsToString(phdr.p_flags));
+		ConLog.Write("Algin: 0x%x", phdr.p_align);
 
-		switch(phdr.p_type)
+		if (phdr.p_vaddr != phdr.p_paddr)
 		{
-		case 0x1:
-			ConLog.Write( L"LOAD" );
-			//if(phdr.p_offset >= length) continue;
-
-			if (phdr.p_vaddr != phdr.p_paddr)
-			{
-				ConLog.Warning( "ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
-					phdr.p_paddr, phdr.p_vaddr);
-			}
-
-			elf.Seek(phdr.p_offset);
-			ConLog.Write("addr = %08X", phdr.p_paddr);
-			elf.Read(&Memory.MainRam[phdr.p_paddr], size);
-
-			if(CPU.PC == 0) CPU.PC = phdr.p_vaddr;
-		break;
-
-		case 0x7: ConLog.Write( L"TLS" );	 break;
-		case 0x60000001: ConLog.Write( L"LOOS+1" ); break;
-		case 0x60000002: ConLog.Write( L"LOOS+2" ); break;
-
-		default: ConLog.Warning("Unknown phdr type! (%X)", phdr.p_type); break;
+			ConLog.Warning
+			( 
+				"ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
+				phdr.p_paddr, phdr.p_vaddr
+			);
 		}
+
+		if(phdr.p_type == 0x00000001) //LOAD
+		{
+			f.Seek(phdr.p_offset);
+			f.Read(&Memory.MainRam[phdr.p_paddr], phdr.p_filesz);
+		}
+
+		ConLog.SkipLn();
 	}
 }
 
-static const uint data_pc = 0;
+void ElfLoader::LoadElf64(Elf64_Ehdr& ehdr, wxFile& f)
+{
+	CPU.PC = 0;
+
+	ConLog.SkipLn();
+	ConLog.Write("Magic: %08x",							  ehdr.e_magic);
+	ConLog.Write("Class: %s",							  "ELF64");
+	ConLog.Write("Data: %s",							  DataToString(ehdr.e_data));
+	ConLog.Write("Current Version: %d",					  ehdr.e_curver);
+	ConLog.Write("OS/ABI: %s",							  OS_ABIToString(ehdr.e_os_abi));
+	ConLog.Write("Type: %s",							  TypeToString(ehdr.e_type));
+	ConLog.Write("Machine: %s",							  MachineToString(ehdr.e_machine));
+	ConLog.Write("Version: %d",							  ehdr.e_version);
+	ConLog.Write("Entry point address: 0x%08x",			  ehdr.e_entry);
+	ConLog.Write("Program headers offset: %d",			  ehdr.e_phoff);
+	ConLog.Write("Section headers offset: %d",			  ehdr.e_shoff);
+	ConLog.Write("Flags: 0x%x",							  ehdr.e_flags);
+	ConLog.Write("Size of this header: %d",				  ehdr.e_ehsize);
+	ConLog.Write("Size of program headers: %d",			  ehdr.e_phentsize);
+	ConLog.Write("Number of program headers: %d",		  ehdr.e_phnum);
+	ConLog.Write("Size of section headers: %d",			  ehdr.e_shentsize);
+	ConLog.Write("Number of section headers: %d",		  ehdr.e_shnum);
+	ConLog.Write("Section header string table index: %d", ehdr.e_shstrndx);
+
+	if(ehdr.e_unknown != 0)
+	{
+		ConLog.Warning("Unknown section is not null! (0x08x)", ehdr.e_unknown);
+	}
+
+	ConLog.SkipLn();
+
+	int offset = ehdr.e_phoff;
+
+	for(uint i=0; i<ehdr.e_phnum; ++i)
+	{
+		f.Seek(offset);
+
+		Elf64_Phdr phdr;
+		phdr.p_type		= Read32(f);
+		phdr.p_flags	= Read32(f);
+		phdr.p_offset	= Read64(f);
+		phdr.p_vaddr	= Read64(f);
+		phdr.p_paddr	= Read64(f);
+		phdr.p_filesz	= Read64(f);
+		phdr.p_memsz	= Read64(f);
+		phdr.p_align	= Read64(f);
+
+		offset += sizeof(phdr);
+
+		ConLog.Write("Type: 0x%x", phdr.p_type);
+		ConLog.Write("Offset: 0x%08x", phdr.p_offset);
+		ConLog.Write("Virtual address: 0x%08x", phdr.p_vaddr);
+		ConLog.Write("Physical address: 0x%08x", phdr.p_paddr);
+		ConLog.Write("File size: 0x%08x", phdr.p_filesz);
+		ConLog.Write("Memory size: 0x%08x", phdr.p_memsz);
+		ConLog.Write("Flags: 0x%x", phdr.p_flags);
+		ConLog.Write("Algin: 0x%x", phdr.p_align);
+
+		if(phdr.p_type == 0x00000001) //LOAD
+		{
+			if (phdr.p_vaddr != phdr.p_paddr)
+			{
+				ConLog.Warning
+				( 
+					"ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
+					phdr.p_paddr, phdr.p_vaddr
+				);
+			}
+
+			f.Seek(phdr.p_offset);
+			f.Read(&Memory.MainRam[phdr.p_paddr], phdr.p_filesz);
+		}
+
+		ConLog.SkipLn();
+	}
+}
 
 void ElfLoader::LoadElf() //TODO
 {
-	wxFile elf(m_elf_fpatch);
 	const wxChar* elf_name = wxFileName(m_elf_fpatch).GetFullName().c_str();
-	if(!elf.IsOpened())
+
+	if(!wxFile::Access(m_elf_fpatch, wxFile::read))
+	{
+		ConLog.Error("Error open %s: not found!", elf_name);
+		return;
+	}
+
+	wxFile f(m_elf_fpatch);
+	if(!f.IsOpened())
 	{
 		ConLog.Error("Error open %s!", elf_name);
 		return;
 	}
 
-	const u64 length = elf.Length();
-	elf_size = length;
+	elf_size = f.Length();
 
-	if(length == 0)
+	if(elf_size == 0)
 	{
 		ConLog.Error("%s is null!", elf_name);
+		f.Close();
 		return;
 	}
 
-	const uint size = wxULongLong(length).GetLo();
-	const uint csize = size * sizeof(u8);
+	f.Seek(sizeof(u8) * 4);
+	u8 _class;
+	f.Read(&_class, sizeof(u8));
+	f.Seek(0);
 
-	elf.Seek(0);
-	u8	ident[16] = {0};
-	elf.Read(ident, sizeof(ident));
-	elf.Seek(0);
-
-	if(ident[4] == 1)
+	if(_class == 1)
 	{
-		ConLog.Error("ELF32");
-		/*
-		Elf32_Ehdr header;
-	
-		elf.Read(&header, sizeof(Elf32_Ehdr));
+		Elf32_Ehdr ehdr;
 
-		if
-		( 
-			header.Magic[0] != 0x7F || header.Magic[1] != 0x45 ||
-			header.Magic[2] != 0x4C || header.Magic[3] != 0x46
-		)
+		ehdr.e_magic	 = Read32(f);
+		ehdr.e_class	 = Read8(f);
+		ehdr.e_data		 = Read8(f);
+		ehdr.e_curver	 = Read8(f);
+		ehdr.e_os_abi	 = Read8(f);
+		ehdr.e_abi_ver	 = Read64(f);
+		ehdr.e_type		 = Read16(f);
+		ehdr.e_machine	 = Read16(f);
+		ehdr.e_version	 = Read32(f);
+		ehdr.e_entry	 = Read32(f);
+		ehdr.e_phoff	 = Read32(f);
+		ehdr.e_shoff	 = Read32(f);
+		ehdr.e_flags	 = Read32(f);
+		ehdr.e_ehsize	 = Read16(f);
+		ehdr.e_phentsize = Read16(f);
+		ehdr.e_phnum	 = Read16(f);
+		ehdr.e_shentsize = Read16(f);
+		ehdr.e_shnum	 = Read16(f);
+		ehdr.e_shstrndx  = Read16(f);
+
+		if(ehdr.e_magic != 0x7F454C46)
 		{
 			ConLog.Error("%s is not correct elf!", elf_name);
+			f.Close();
 			return;
 		}
 
-		LoadElf32(header, elf);
-		*/
+		LoadElf32(ehdr, f);
 	}
-	else if(ident[4] == 2)
+	else if(_class == 2)
 	{
-	
-		Elf64_Ehdr header;
+		Elf64_Ehdr ehdr;
 
-		elf.Read(header.Magic, sizeof(header.Magic));
-		elf.Read(header.unknown, sizeof(header.unknown));
-		header.entry = Read32(elf);
-		header.phoff = Read64(elf);
-		header.shoff = Read64(elf);
+		ehdr.e_magic	 = Read32(f);
+		ehdr.e_class	 = Read8(f);
+		ehdr.e_data		 = Read8(f);
+		ehdr.e_curver	 = Read8(f);
+		ehdr.e_os_abi	 = Read8(f);
+		ehdr.e_abi_ver	 = Read64(f);
+		ehdr.e_type		 = Read16(f);
+		ehdr.e_machine	 = Read16(f);
+		ehdr.e_version	 = Read32(f);
+		ehdr.e_unknown	 = Read32(f);
+		ehdr.e_entry	 = Read32(f);
+		ehdr.e_phoff	 = Read64(f);
+		ehdr.e_shoff	 = Read64(f);
+		ehdr.e_flags	 = Read32(f);
+		ehdr.e_ehsize	 = Read16(f);
+		ehdr.e_phentsize = Read16(f);
+		ehdr.e_phnum	 = Read16(f);
+		ehdr.e_shentsize = Read16(f);
+		ehdr.e_shnum	 = Read16(f);
+		ehdr.e_shstrndx  = Read16(f);
 
-		header.flags = Read32(elf);
-		header.ehsize = Read16(elf);
-		header.phentsize = Read16(elf);
-
-		header.phnum = Read16(elf);
-		header.shentsize = Read16(elf);
-		header.shnum = Read16(elf);
-
-		header.shstrndx = Read16(elf);
-
-		if
-		( 
-			header.Magic[0] != 0x7F || header.Magic[1] != 0x45 ||
-			header.Magic[2] != 0x4C || header.Magic[3] != 0x46
-		)
+		if(ehdr.e_magic != 0x7F454C46)
 		{
 			ConLog.Error("%s is not correct elf!", elf_name);
+			f.Close();
 			return;
 		}
 
-		LoadElf64(header, elf);
+		LoadElf64(ehdr, f);
 	}
 	else
 	{
-		ConLog.Error("Unknown elf class! (%d)", ident[4]);
+		f.Seek(sizeof(Elf64_Ehdr) + 4);
+		f.Read(&Memory.MainRam[0], elf_size);
+
+		ConLog.Error("Unknown elf class! (%d)", _class);
+		f.Close();
 		return;
 	}
 
-	if(CPU.PC == 0)
-	{
-		//const uint data_pc = 0x200;
-		const uint mem_size = length - data_pc;
-		elf_size = mem_size;
-
-		elf.Seek(sizeof(Elf64_Ehdr) + 4);
-		elf.Read(&Memory.MainRam[0], mem_size);
-	}
-
-	elf.Close();
+	f.Close();
 
 	LoadPsf();
 }
 
 void ElfLoader::LoadSelf()
 {
+	wxFile f(m_elf_fpatch);
+	const wxChar* self_name = wxFileName(m_elf_fpatch).GetFullName().c_str();
+	if(!f.IsOpened())
+	{
+		ConLog.Error("Error open %s!", self_name);
+		return;
+	}
+
+	elf_size = f.Length();
+
+	if(elf_size == 0)
+	{
+		ConLog.Error("%s is null!", self_name);
+		f.Close();
+		return;
+	}
+
+	SelfHeader hdr;
+	hdr.se_magic		= Read32(f);
+	hdr.se_hver			= Read32(f);
+	hdr.se_flags		= Read16(f);
+	hdr.se_type			= Read16(f);
+	hdr.se_meta			= Read32(f);
+	hdr.se_hsize		= Read64(f);
+	hdr.se_esize		= Read64(f);
+	hdr.se_unknown		= Read64(f);
+	hdr.se_appinfo		= Read64(f);
+	hdr.se_elf			= Read64(f);
+	hdr.se_phdr			= Read64(f);
+	hdr.se_shdr			= Read64(f);
+	hdr.se_phdroff		= Read64(f);
+	hdr.se_scever		= Read64(f);
+	hdr.se_digest		= Read64(f);
+	hdr.se_digestsize	= Read64(f);
+
+	f.Close();
 }
 
 ElfLoader elf_loader;

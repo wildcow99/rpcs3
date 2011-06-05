@@ -51,8 +51,8 @@ DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 void DisAsmFrame::OnResize(wxSizeEvent& event)
 {
 	const wxSize size(GetClientSize());
-	m_disasm_list->SetSize( size.GetWidth(), size.GetHeight() - 25);
-	m_disasm_list->SetColumnWidth(0, size.GetWidth() - 4);
+	m_disasm_list->SetSize( size.GetWidth(), size.GetHeight() - 25 );
+	m_disasm_list->SetColumnWidth( 0, size.GetWidth() - 4 );
 }
 
 void DisAsmFrame::AddLine(wxString line)
@@ -218,7 +218,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	wxMessageBox("rpcs3 message", "Dumping done.");
 }
 
-void DisAsmFrame::Prev (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES+1)); System.Run(); } }
-void DisAsmFrame::Next (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES-1)); System.Run(); } }
-void DisAsmFrame::fPrev(wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - (4*LINES_OPCODES)*2); System.Run(); } }
-void DisAsmFrame::fNext(wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { System.Run(); } }
+void DisAsmFrame::Prev (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES+1)); System.Resume(); } }
+void DisAsmFrame::Next (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES-1)); System.Resume(); } }
+void DisAsmFrame::fPrev(wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - (4*LINES_OPCODES)*2); System.Resume(); } }
+void DisAsmFrame::fNext(wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { System.Resume(); } }
