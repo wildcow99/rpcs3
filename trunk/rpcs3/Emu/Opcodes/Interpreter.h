@@ -312,7 +312,7 @@ private:
 
 	virtual void STB(const int rs, const int rt, const int imm_s16)
 	{
-		Memory.Write8(CPU.GPR[rs] + imm_s16, CPU.GPR[rs]);
+		Memory.Write8(CPU.GPR[rt] + imm_s16, CPU.GPR[rs]);
 	}
 
 	virtual void STBU(const int rs, const int rt, const int imm_s16)

@@ -64,12 +64,13 @@ void SysThread::Run()
 	{
 		elf_loader.LoadElf();
 	}
-
+	/*
 	if(m_memory_viewer == NULL) m_memory_viewer = new MemoryViewerPanel(NULL);
 
 	m_memory_viewer->SetPC(CPU.PC);
 	m_memory_viewer->Show();
 	m_memory_viewer->ShowPC();
+	*/
 
 	m_cur_state = RUN;
 	m_sem_wait.Post();
@@ -96,7 +97,7 @@ void SysThread::Stop()
 
 	m_cur_state = STOP;
 
-	m_memory_viewer->Hide();
+	if(m_memory_viewer != NULL) m_memory_viewer->Hide();
 	Memory.Close();
 	CPU.Reset();
 	CurGameInfo.Reset();

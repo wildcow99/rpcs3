@@ -16,7 +16,7 @@ class Display
 	int m_pixel_format;
 
 	uint m_width, m_height, m_b_width;
-	u64 m_topaddr;
+	u32 m_topaddr;
 
 public:
 	Display()
@@ -27,7 +27,7 @@ public:
 			return;
 		}
 
-		m_topaddr = 0x0FFFFFFFLL;
+		m_topaddr = 0x0FFFFFFF;
 		m_width = m_height = m_b_width = 0;
 
 		//SDL_TimerInit();
@@ -148,11 +148,10 @@ public:
 
 	virtual void UpdateImage() //FIXME
 	{
-		u64 addr = m_topaddr;
-
 		if(SDL_LockSurface(m_screen) == 0)
 		{
 			u8* p = (u8*)m_screen->pixels;
+			u32 addr = m_topaddr;
 
 			for (uint y = 0; y < m_height; y++)
 			{

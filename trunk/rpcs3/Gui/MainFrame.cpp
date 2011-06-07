@@ -64,9 +64,25 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	ConLog.Write("Game: booting...");
+	const wxString elf = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN";
+	const wxString self = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\EBOOT.BIN";
 
-	System.SetElf(ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN");
+	if(wxFile::Access(elf, wxFile::read))
+	{
+		System.SetElf(elf);
+		ConLog.Write("Elf: booting...");
+	}
+	else if(wxFile::Access(self, wxFile::read))
+	{
+		System.SetSelf(self);
+		ConLog.Warning("Self: booting...");
+	}
+	else
+	{
+		ConLog.Error("Not found ps3 game in selected folder! (%s)", ctrl.GetPath());
+		return;
+	}
+
 	System.Run();
 
 	ConLog.Write("Game: boot done.");
