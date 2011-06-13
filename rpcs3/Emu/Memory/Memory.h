@@ -7,6 +7,13 @@ public:
 	u8* Video_FrameBuffer;
 	u8* Video_GPUdata;
 
+	bool m_inited;
+
+	MemoryBase()
+	{
+		m_inited = false;
+	}
+
 	~MemoryBase()
 	{
 		Close();
@@ -14,6 +21,9 @@ public:
 
 	void Init()
 	{
+		if(m_inited) return;
+		m_inited = true;
+
 		MainRam				= new u8[0x0FFFFFFF]; //256 MB
 		Video_FrameBuffer	= new u8[0x0FBFFFFF]; //252 MB
 		Video_GPUdata		= new u8[0x003FFFFF]; //4 MB
@@ -21,6 +31,9 @@ public:
 
 	void Close()
 	{
+		if(!m_inited) return;
+		m_inited = false;
+
 		safe_delete(MainRam);
 		safe_delete(Video_FrameBuffer);
 		safe_delete(Video_GPUdata);

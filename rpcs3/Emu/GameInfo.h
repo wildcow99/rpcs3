@@ -8,13 +8,14 @@ struct GameInfo
 
 	GameInfo()
 	{
+		Reset();
 	}
 
 	void Reset()
 	{
-		root.Clear();
-		name.Clear();
-		serial.Clear();
+		root = wxEmptyString;
+		name = wxEmptyString;
+		serial = wxEmptyString;
 	}
 };
 
