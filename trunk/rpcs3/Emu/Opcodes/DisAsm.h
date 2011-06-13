@@ -89,11 +89,12 @@ private:
 	{
 		Write( "SPECIAL 2 (Unimplemented)" );
 	}
-
+	/*
 	virtual void XOR(const int rs, const int rt, const int rd)
 	{
 		Write(wxString::Format( "XOR r%d,r%d,r%d", rs, rt, rd ));
 	}
+	*/
 
 	virtual void MULLI(const int rt, const int rs, const int imm_s16)
 	{
@@ -238,10 +239,89 @@ private:
 		Write(wxString::Format( "MFLR r%d", rs ));
 	}
 
-	virtual void G4()
+	//g4 - 1f
+	virtual void CMPW(const int rs, const int rt, const int rd)
 	{
-		Write( "G4 (Unimplemented)" );
+		Write(wxString::Format("CMPW r%d,r%d,r%d", rs, rt, rd));
 	}
+	//g4_g1
+	virtual void CMPLD(const int rs, const int rt, const int rd)
+	{
+		Write(wxString::Format("CMPLD r%d,r%d,r%d", rs, rt, rd));
+	}
+	virtual void SUBF(const int rs, const int rt, const int rd)
+	{
+		Write(wxString::Format("SUBF r%d,r%d,r%d", rs, rt, rd));
+	}
+	virtual void UNK_G4_G1(const int code, const int opcode, const int rs, const int rt,
+		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
+	{
+		const wxString str = wxString::Format(
+			"Unknown G4_G1 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
+			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
+		);
+
+		if(!m_dump_mode) op.Write(str + "\n");
+		Write(str);
+	}
+	//
+	virtual void ADD(const int rs, const int rt, const int rd)
+	{
+		Write(wxString::Format("ADD r%d,r%d,r%d", rs, rt, rd));
+	}
+	virtual void XOR(const int rt, const int rs, const int rd)
+	{
+		Write(wxString::Format("XOR r%d,r%d,r%d", rt, rs, rd));
+	}
+	virtual void MR(const int rt, const int rs)
+	{
+		Write(wxString::Format("MR r%d,r%d", rt, rs));
+	}
+	//g4_g2
+	virtual void MTLR(const int rs)
+	{
+		Write(wxString::Format("MTLR r%d", rs));
+	}
+	virtual void MTCTR(const int rs)
+	{
+		Write(wxString::Format("MTCTR r%d", rs));
+	}
+	virtual void UNK_G4_G2(const int code, const int opcode, const int rs, const int rt,
+		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
+	{
+		const wxString str = wxString::Format(
+			"Unknown G4_G2 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
+			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
+		);
+
+		if(!m_dump_mode) op.Write(str + "\n");
+		Write(str);
+	}
+	//
+	virtual void SRAWI(const int rt, const int rs, const int rd)
+	{
+		Write(wxString::Format("SRAWI r%d,r%d,%d", rt, rs, rd));
+	}
+	virtual void EXTSW(const int rt, const int rs)
+	{
+		Write(wxString::Format("EXTSW r%d,r%d", rt, rs));
+	}
+	virtual void LWZX(const int rs, const int rt, const int rd)
+	{
+		Write(wxString::Format("LWZX r%d,r%d,r%d", rs, rt, rd));
+	}
+	virtual void UNK_G4(const int code, const int opcode, const int rs, const int rt,
+		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
+	{
+		const wxString str = wxString::Format(
+			"Unknown G4 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
+			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
+		);
+
+		if(!m_dump_mode) op.Write(str + "\n");
+		Write(str);
+	}
+	//
 
 	virtual void LWZ(const int rt, const int rs, const int imm_s16)
 	{

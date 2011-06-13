@@ -160,7 +160,7 @@ void ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
 
 			f.Seek(last_pos);
 			
-			if(CPU.PC == 0 || phdr.p_paddr < CPU.PC)
+			if(CPU.PC == 0/* || phdr.p_paddr < CPU.PC*/)
 			{
 				CPU.PC = phdr.p_paddr;
 			}
@@ -199,7 +199,7 @@ void ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 
 			f.Seek(last_pos);
 			
-			if(CPU.PC == 0 || phdr.p_paddr < CPU.PC)
+			if(CPU.PC == 0/* || phdr.p_paddr < CPU.PC*/)
 			{
 				CPU.PC = phdr.p_paddr;
 			}

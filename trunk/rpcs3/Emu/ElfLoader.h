@@ -339,8 +339,7 @@ class ElfLoader //TODO
 		u16 e_type;
 		u16 e_machine;
 		u32 e_version;
-		u32 e_unknown;
-		u32 e_entry;
+		u64 e_entry;
 		u64 e_phoff;
 		u64 e_shoff;
 		u32 e_flags;
@@ -362,8 +361,7 @@ class ElfLoader //TODO
 			e_type		= Read16(f);
 			e_machine	= Read16(f);
 			e_version	= Read32(f);
-			e_unknown	= Read32(f);
-			e_entry		= Read32(f);
+			e_entry		= Read64(f);
 			e_phoff		= Read64(f);
 			e_shoff		= Read64(f);
 			e_flags		= Read32(f);
@@ -395,11 +393,6 @@ class ElfLoader //TODO
 			ConLog.Write("Size of section headers: %d",			  e_shentsize);
 			ConLog.Write("Number of section headers: %d",		  e_shnum);
 			ConLog.Write("Section header string table index: %d", e_shstrndx);
-
-			if(e_unknown != 0)
-			{
-				ConLog.Warning("Unknown section is not null! (0x08x)", e_unknown);
-			}
 		}
 	};
 
