@@ -170,11 +170,11 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 	if(System.IsSlef)
 	{
-		elf_loader.LoadSelf();
+		elf_loader.LoadSelf(true);
 	}
 	else
 	{
-		elf_loader.LoadElf();
+		elf_loader.LoadElf(true);
 	}
 
 #ifdef MTHREAD_DUMP

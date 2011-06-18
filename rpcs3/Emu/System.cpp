@@ -41,18 +41,6 @@ void SysThread::Run()
 	if(IsRunned()) return;
 	if(IsPaused()) Stop();
 
-	m_mode = ini.Load("DecoderMode", 1);
-
-	switch(m_mode)
-	{
-	case DisAsm:
-		decoder = new Decoder(*new DisAsmOpcodes());
-	break;
-	case Interpreter:
-		decoder = new Decoder(*new InterpreterOpcodes());
-	break;
-	};
-
 	Memory.Init();
 	CurGameInfo.Reset();
 
@@ -65,6 +53,18 @@ void SysThread::Run()
 		elf_loader.LoadElf();
 	}
 	
+	m_mode = ini.Load("DecoderMode", 1);
+
+	switch(m_mode)
+	{
+	case DisAsm:
+		decoder = new Decoder(*new DisAsmOpcodes());
+	break;
+	case Interpreter:
+		decoder = new Decoder(*new InterpreterOpcodes());
+	break;
+	};
+
 	if(m_memory_viewer == NULL) m_memory_viewer = new MemoryViewerPanel(NULL);
 
 	m_memory_viewer->SetPC(CPU.PC);

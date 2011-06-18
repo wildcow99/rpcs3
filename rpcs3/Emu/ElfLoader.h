@@ -493,8 +493,8 @@ public:
 	}
 
 	virtual void SetElf(wxString elf_full_patch);
-	virtual void LoadElf();
-	virtual void LoadSelf();
+	virtual void LoadElf(bool IsDump = false);
+	virtual void LoadSelf(bool IsDump = false);
 
 private:
 	virtual void LoadElf32(wxFile& f);
