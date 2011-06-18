@@ -229,34 +229,196 @@ public:
 				switch(temp)
 				{
 				case CMPLD: m_op.CMPLD	(RS(), RT(), RD());	 break;
+				case LVEHX:  m_op.LVEHX	(RS(), RT(), RD());	 break;
+				case LVSR:  m_op.LVSR	(RS(), RT(), RD());	 break;
 				case SUBF:	m_op.SUBF	(RS(), RT(), RD());	 break;
+				case SUBF_:	m_op.SUBF_	(RS(), RT(), RD());	 break;
+				case LDUX:	m_op.LDUX	(RS(), RT(), RD());	 break;
+				case LWZUX:	m_op.LWZUX	(RS(), RT(), RD());	 break;
+				case CNTLZD:m_op.CNTLZD	(RS(), RT());		 break;
+				case ANDC:	m_op.ANDC	(RT(), RS(), RD());	 break;
 
 				default:
-					m_op.UNK_G4_G1(code, opcode, RS(), RT(), RD(), SA(), FUNC(), imm_s16(), imm_u16(), imm_u26());
+					m_op.UNK_G4_G1(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
+				break;
+				};
+			break;
+			case MULHW: m_op.MULHW	(RS(), RT(), RD());		 break;
+			case G4_G2:
+				temp = FUNC();
+				switch(temp)
+				{
+				case LVX:		m_op.LVX	(RS(), RT(), RD());		 break;
+				case NEG:		m_op.NEG	(RS(), RT());			 break;
+				case MTSRDIN:	m_op.MTSRDIN(RS(), RD());			 break;
+				case NOT:		m_op.NOT	(RT(), RD());			 break;
+
+				default:
+					m_op.UNK_G4_G2(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
+				break;
+				};
+			break;
+			case G4_G3:
+				temp = FUNC();
+				switch(temp)
+				{
+				case WRTEE: m_op.WRTEE	(RS());				 break;
+				case STVEBX: m_op.STVEBX(RS(), RT(), RD());	 break;
+				case SUBFE:  m_op.SUBFE	(RS(), RT(), RD());	 break;
+				case SUBFE_: m_op.SUBFE_(RS(), RT(), RD());	 break;
+				case ADDE:   m_op.ADDE	(RS(), RT(), RD());	 break;
+				case ADDE_:  m_op.ADDE_	(RS(), RT(), RD());	 break;
+				case MTOCRF: m_op.MTOCRF(RS());				 break;
+				case STDX:	 m_op.STDX	(RS(), RT(), RD());	 break;
+				case STWCX_: m_op.STWCX_(RS(), RT(), RD());	 break;
+				case STWX:   m_op.STWX	(RS(), RT(), RD());	 break;
+				case SLQ:	 m_op.SLQ	(RT(), RS(), RD());	 break;
+				case SLQ_:   m_op.SLQ_	(RT(), RS(), RD());	 break;
+				case SLE_:   m_op.SLE_	(RT(), RS(), RD());	 break;
+
+				default:
+					m_op.UNK_G4_G3(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
+				break;
+				};
+			break;
+			case STDUX: m_op.STDUX	(RS(), RT(), RD());		 break;
+			case ADDZE: m_op.ADDZE	(RS(), RT());			 break;
+			case G4_G4:
+				temp = FUNC();
+				switch(temp)
+				{
+				case STVX:   m_op.STVX	(RS(), RT(), RD());	 break;
+				case MULLD:  m_op.MULLD	(RS(), RT(), RD());	 break;
+				case ADDME_: m_op.ADDME_(RS(), RT());		 break;
+				case MULLW:	 m_op.MULLW	(RS(), RT(), RD());	 break;
+				case MULLW_: m_op.MULLW_(RS(), RT(), RD());	 break;
+				case DCBTST: m_op.DCBTST(RT(), RD());	     break;
+				case SLLIQ:  m_op.SLLIQ	(RT(), RS(), RD());	 break;
+
+				default:
+					m_op.UNK_G4_G4(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
 				break;
 				};
 			break;
 			case ADD:	m_op.ADD	(RS(), RT(), RD());		 break;
 			case XOR:	m_op.XOR	(RT(), RS(), RD());		 break;
-			case MR:	m_op.MR		(RT(), RS());			 break;
-			case G4_G2:
-				temp = RT();
+			case SRW:	m_op.SRW	(RT(), RS(), RD());		 break;
+			case MFLR:	m_op.MFLR	(RS());					 break;
+			case G4_G5:
+				temp = FUNC();
 				switch(temp)
 				{
-				case MTLR:	m_op.MTLR	(RS());				break;
-				case MTCTR: m_op.MTCTR	(RS());				break;
+				case STHX:	m_op.STHX	(RS(), RT(), RD());	 break;
+				case ORC:	m_op.ORC	(RT(), RS(), RD());	 break;
+				case ORC_:	m_op.ORC_	(RT(), RS(), RD());	 break;
 
-				default:
-					m_op.UNK_G4_G2(code, opcode, RS(), RT(), RD(), SA(), FUNC(), imm_s16(), imm_u16(), imm_u26());
+				default: 
+					m_op.UNK_G4_G5(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
 				break;
 				};
 			break;
+			case LVXL:	m_op.LVXL	(RS(), RT(), RD());		 break;
+			case MR:	m_op.MR		(RT(), RS());			 break;
+			case G4_G6:
+				temp = FUNC();
+				switch(temp)
+				{
+				case MTDCR:	m_op.MTDCR	(RS());				 break;
+				case DCCCI:	m_op.DCCCI	(RT(), RD());		 break;
+				case DIVDU:	m_op.DIVDU	(RS(), RT(), RD());  break;
+				case DIVDU_:m_op.DIVDU_	(RS(), RT(), RD());	 break;
+				case DIVWU:	m_op.DIVWU	(RS(), RT(), RD());  break;
+				case DCBI:	m_op.DCBI	(RT(), RD());		 break;
+				case NAND:	m_op.NAND	(RT(), RS(), RD());  break;
+				case NAND_:	m_op.NAND_	(RT(), RS(), RD());  break;
+				case G4_G6_G1:
+					temp = RT();
+					switch(temp)
+					{
+					case MTSPR:	m_op.MTSPR	(RS());			 break;
+					case MTLR:	m_op.MTLR	(RS());			 break;
+					case MTCTR: m_op.MTCTR	(RS());			 break;
+
+					default:
+						m_op.UNK_G4_G6_G1(code, opcode, RS(), temp, RD(), SA(), FUNC(), imm_s16(), imm_u16(), imm_u26());
+					break;
+					};
+				break;
+
+				default:
+					m_op.UNK_G4_G6(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
+				break;
+				};
+			break;
+			case DIVW:	 m_op.DIVW	(RS(), RT(), RD());		 break;
+			case SUBFO:	 m_op.SUBFO	(RS(), RT(), RD());		 break;
+			case LWSYNC: m_op.LWSYNC();						 break;
+			
+			case G4_G7:
+				temp = FUNC();
+				switch(temp)
+				{
+				case NEGO:  m_op.NEGO();					 break;
+				case MULO:	m_op.MULO	(RS(), RT(), RD());	 break;
+				case MULO_:	m_op.MULO_	(RS(), RT(), RD());	 break;
+				case MFSRI: m_op.MFSRI();					 break;
+				default:
+					m_op.UNK_G4_G7(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
+				break;
+				};
+			break;
+			case STFSX:	m_op.STFSX	(RS(), RT(), RD());		 break;
+			case G4_G8:
+				temp = FUNC();
+				switch(temp)
+				{
+				case STSWI: m_op.STSWI	(RS(), RT(), RD());	 break;
+				case STFDX:	m_op.STFDX	(RS(), RT(), RD());	 break;
+				case SRLQ:	m_op.SRLQ	(RT(), RS(), RD());	 break;
+				case SREQ:	m_op.SREQ	(RT(), RS(), RD());	 break;
+
+				default:
+					m_op.UNK_G4_G8(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
+				break;
+				};
+			break;
+			case G4_G9:
+				temp = FUNC();
+				switch(temp)
+				{
+				case MULLDO:	m_op.MULLDO	(RS(), RT(), RD());	break;
+				case MULLWO:	m_op.MULLWO	(RS(), RT(), RD());	break;
+				case MULLWO_:	m_op.MULLWO_(RS(), RT(), RD());	break;
+
+				default:
+					m_op.UNK_G4_G9(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
+				break;
+				};
+			break;
+			
+			case SRAW:	m_op.SRAW	(RT(), RS(), RD());		 break;
 			case SRAWI: m_op.SRAWI	(RT(), RS(), RD());		 break;
+			case EIEIO: m_op.EIEIO();						 break;
+			case G4_G10:
+				temp = FUNC();
+				switch(temp)
+				{
+				case ABSO_:	m_op.ABSO_();					 break;
+				case DIVSO_:m_op.DIVSO_	(RT(), RS(), RD());	 break;
+
+				default:
+					m_op.UNK_G4_G10(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
+				break;
+				};
+			break;
+			case EXTSH: m_op.EXTSH	(RT(), RS());			 break;
+			case EXTSB: m_op.EXTSB	(RT(), RS());			 break;
 			case EXTSW: m_op.EXTSW	(RT(), RS());			 break;
+			case DCBZ:	m_op.DCBZ	(RT(), RD());			 break;
 			case LWZX:	m_op.LWZX	(RS(), RT(), RD());		 break;
 
 			default:
-				m_op.UNK_G4(code, opcode, RS(), RT(), RD(), SA(), FUNC(), imm_s16(), imm_u16(), imm_u26());
+				m_op.UNK_G4(code, opcode, RS(), RT(), RD(), temp, FUNC(), imm_s16(), imm_u16(), imm_u26());
 			break;
 			};
 		break;

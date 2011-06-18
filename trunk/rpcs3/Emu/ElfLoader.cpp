@@ -209,7 +209,7 @@ void ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 	}
 }
 
-void ElfLoader::LoadElf() //TODO
+void ElfLoader::LoadElf(bool IsDump)
 {
 	const wxString elf_name = wxFileName(m_elf_fpatch).GetFullName();
 
@@ -237,6 +237,13 @@ void ElfLoader::LoadElf() //TODO
 
 	f.Seek(0);
 
+	if(IsDump)
+	{
+		f.Read(&Memory.MainRam[0], elf_size);
+		f.Close();
+		return;
+	}
+
 	const u32 magic = Read32(f);
 	const u8 _class = Read8 (f);
 
@@ -259,10 +266,9 @@ void ElfLoader::LoadElf() //TODO
 	}
 	else
 	{
-		f.Seek(0);
-		f.Read(&Memory.MainRam[0], elf_size);
-
 		ConLog.Error("Unknown elf class! (%d)", _class);
+
+		f.Read(&Memory.MainRam[0], elf_size);
 	}
 
 	f.Close();
@@ -270,7 +276,7 @@ void ElfLoader::LoadElf() //TODO
 	LoadPsf();
 }
 
-void ElfLoader::LoadSelf()
+void ElfLoader::LoadSelf(bool IsDump)
 {
 	wxFile f(m_elf_fpatch);
 	const wxString self_name = wxFileName(m_elf_fpatch).GetFullName();
