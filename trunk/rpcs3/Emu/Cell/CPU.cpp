@@ -9,10 +9,22 @@ void CPUCycle::Reset()
 	nPC = PC + 4;
 }
 
-void CPUCycle::NextPc()
+void CPUCycle::NextBranchPc()
 {
 	PC = nPC;
 	nPC = PC + 4;
+}
+
+void CPUCycle::NextPc()
+{
+	PC += 4;
+	nPC = PC + 4;
+}
+
+void CPUCycle::PrevPc()
+{
+	PC -= 4;
+	nPC -= 4;
 }
 
 void CPUCycle::SetPc(const uint _pc)

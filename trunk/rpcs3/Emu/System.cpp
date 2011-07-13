@@ -5,23 +5,10 @@
 #include "Emu/ElfLoader.h"
 #include "Ini.h"
 
-SysThread::SysThread()
+SysThread::SysThread() : StepThread()
 {
 	m_cur_state = STOP;
 	m_mode = 0;
-
-	m_done = true;
-	m_exit = false;
-	
-	m_hThread = ::CreateThread
-	(
-		NULL,
-		0,
-		SysThread::ThreadStart,
-		(LPVOID)this,
-		0,
-		NULL
-	);
 }
 
 void SysThread::SetSelf(wxString self_patch)
@@ -39,10 +26,9 @@ void SysThread::SetElf(wxString elf_patch)
 void SysThread::Run()
 {
 	if(IsRunned()) return;
-	if(IsPaused()) Stop();
+	if(IsPaused()) Resume();
 
 	Memory.Init();
-	CurGameInfo.Reset();
 
 	if(IsSlef)
 	{
@@ -53,7 +39,7 @@ void SysThread::Run()
 		elf_loader.LoadElf();
 	}
 	
-	m_mode = ini.Load("DecoderMode", 1);
+	m_mode = Ini.Emu.m_DecoderMode.GetValue();
 
 	switch(m_mode)
 	{
@@ -72,7 +58,8 @@ void SysThread::Run()
 	m_memory_viewer->ShowPC();
 
 	m_cur_state = RUN;
-	m_sem_wait.Post();
+	StepThread::Start();
+	StepThread::DoStep();
 }
 
 void SysThread::Pause()
@@ -87,7 +74,7 @@ void SysThread::Resume()
 	if(!IsPaused()) return;
 
 	m_cur_state = RUN;
-	m_sem_wait.Post();
+	StepThread::DoStep();
 }
 
 void SysThread::Stop()
@@ -95,22 +82,40 @@ void SysThread::Stop()
 	if(IsStoped()) return;
 
 	m_cur_state = STOP;
+	StepThread::Exit();
 
-	if(m_memory_viewer != NULL) m_memory_viewer->Show(false);
+	ConLog.Write("Shutdown is started...");
+
+	if(m_memory_viewer && !m_memory_viewer->exit) m_memory_viewer->Hide();
 	Memory.Close();
 	CPU.Reset();
+	CurGameInfo.Reset();
 
-	delete decoder;
+	if(decoder)
+	{
+		safe_delete(decoder);
+	}
 }
 
-void SysThread::Task()
+void SysThread::Step()
 {
 	while(m_cur_state == RUN)
 	{
-		decoder->DoCode(Memory.Read32(CPU.PC));
+		StepThread::SetCancelState(false);
+		{
+			decoder->DoCode(Memory.Read32(CPU.PC));
 
-		CPU.NextPc();
+			CPU.NextPc();
+		}
+		StepThread::SetCancelState(true);
 	}
+
+	ThreadAdv::Sleep(1);
+}
+
+void SysThread::CleanupInThread(void* arg)
+{
+	(*(SysThread*)arg).Stop();
 }
 
 SysThread System;

@@ -12,7 +12,13 @@ class MemoryViewerPanel : public wxFrame
 	uint m_colsize;
 
 public:
+	bool exit;
 	MemoryViewerPanel(wxWindow* parent);
+	~MemoryViewerPanel()
+	{
+		exit = true;
+	}
+
 	virtual void OnResize(wxSizeEvent& event);
 
 	virtual void Next(wxCommandEvent& event);

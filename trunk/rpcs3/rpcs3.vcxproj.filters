@@ -10,6 +10,12 @@
     <Filter Include="rpcs3">
       <UniqueIdentifier>{47155d25-741d-42c0-8850-f22aafca082a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\SysCalls">
+      <UniqueIdentifier>{f306c137-6d2c-4e21-ba79-ac87d0ded22c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Emu\SysCalls\lv2">
+      <UniqueIdentifier>{adfec460-d940-4482-9fdb-18cb0814c3d5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -47,6 +53,12 @@
     </ClCompile>
     <ClCompile Include="Ini.cpp">
       <Filter>rpcs3</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

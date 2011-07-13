@@ -2,160 +2,38 @@
 
 #include "Opcodes/Opcodes.h"
 
-/*
-G4:
----
-7c 08 03 a6: Unknown G4 opcode! - (7c0803a6 - 1f) - rs: r0, rt: r8, rd: r0, sa: 0xe : 14, func: 0x26 : 38, imm s16: 0x3a6 : 934, imm u16: 0x3a6 : 934, imm u26: 0x803a6 : 525222
-7c 08 03 a6 	mtlr    r0
+#define START_OPCODES_GROUP(group, reg) \
+	case(##group##): \
+		temp=##reg##();\
+		switch(temp)\
+		{
 
-mtlr rs (or rd?)
----
+#define END_OPCODES_GROUP(group) \
+		default:\
+			m_op.UNK_##group##(code, opcode, RS(), RT(), RD(), SA(), FUNC(),\
+			imm_s16(), imm_u16(), imm_u26());\
+		break;\
+		}\
+	break
 
----
-7f 83 07 b4: Unknown G4 opcode! - (7f8307b4 - 1f) - rs: r28, rt: r3, rd: r0, sa: 0x1e : 30, func: 0x34 : 52, imm s16: 0x7b4 : 1972, imm u16: 0x7b4 : 1972, imm u26: 0x38307b4 : 58918836
-4d0:	7f 83 07 b4 	extsw   r3,r28
-
-extsw rt, rs
----
-
----
-7c 7d 1b 78: Unknown G4 opcode! - (7c7d1b78 - 1f) - rs: r3, rt: r29, rd: r3, sa: 0xd : 13, func: 0x38 : 56, imm s16: 0x1b78 : 7032, imm u16: 0x1b78 : 7032, imm u26: 0x7d1b78 : 8199032
-7c 7d 1b 78 	mr      r29,r3
-
-mr rt, rs (or rd?)
----
-
----
-7c 09 03 a6: Unknown G4 opcode! - (7c0903a6 - 1f) - rs: r0, rt: r9, rd: r0, sa: 0xe : 14, func: 0x26 : 38, imm s16: 0x3a6 : 934, imm u16: 0x3a6 : 934, imm u26: 0x903a6 : 590758
-7c 09 03 a6 	mtctr   r0
-
-mtctr rs (or rd?)
----
-
----
-7f 98 d8 00: Unknown G4 opcode! - (7f98d800 - 1f) - rs: r28, rt: r24, rd: r27, sa: 0x0 : 0, func: 0x0 : 0, imm s16: 0xffffd800 : -10240, imm u16: 0xd800 : 55296, imm u26: 0x398d800 : 60348416
-7f 98 d8 00 	cmpw    cr7,r24,r27
-
-cmpw rs/4, rt, rd
----
-
----
-7d 3b f2 14: Unknown G4 opcode! - (7d3bf214 - 1f) - rs: r9, rt: r27, rd: r30, sa: 0x8 : 8, func: 0x14 : 20, imm s16: 0xfffff214 : -3564, imm u16: 0xf214 : 61972, imm u26: 0x13bf214 : 20705812
-7d 3b f2 14 	add     r9,r27,r30
-
-add rs, rt, rd
----
-
----
-7d 64 02 78: Unknown G4 opcode! - (7d640278 - 1f) - rs: r11, rt: r4, rd: r0, sa: 0x9 : 9, func: 0x38 : 56, imm s16: 0x278 : 632, imm u16: 0x278 : 632, imm u26: 0x1640278 : 23331448
-7d 64 02 78 	xor     r4,r11,r0
-
-xor rt, rs, rd
----
-
----
-7c 0b fe 70: Unknown G4 opcode! - (7c0bfe70 - 1f) - rs: r0, rt: r11, rd: r31, sa: 0x19 : 25, func: 0x30 : 48, imm s16: 0xfffffe70 : -400, imm u16: 0xfe70 : 65136, imm u26: 0xbfe70 : 786032
-7c 0b fe 70 	srawi   r11,r0,31		# 1f
-
-srawi rt, rs, rd (or opcode?)
----
-
----
-7f bf 40 40: Unknown G4 opcode! - (7fbf4040 - 1f) - rs: r29, rt: r31, rd: r8, sa: 0x1 : 1, func: 0x0 : 0, imm s16: 0x4040 : 16448, imm u16: 0x4040 : 16448, imm u26: 0x3bf4040 : 62865472
-7f bf 40 40 	cmpld   cr7,r31,r8
-
-cmpld rs/4, rt, rd
----
-
----
-7c 8b 20 50: Unknown G4 opcode! - (7c8b2050 - 1f) - rs: r4, rt: r11, rd: r4, sa: 0x1 : 1, func: 0x10 : 16, imm s16: 0x2050 : 8272, imm u16: 0x2050 : 8272, imm u26: 0x8b2050 : 9117776
-7c 8b 20 50 	subf    r4,r11,r4
-
-subf rs, rt, rd (or rd, rt, rs?)
----
-
----
-7c 89 00 2e: Unknown G4 opcode! - (7c89002e - 1f) - rs: r4, rt: r9, rd: r0, sa: 0x0 : 0, func: 0x2e : 46, imm s16: 0x2e : 46, imm u16: 0x2e : 46, imm u26: 0x89002e : 8978478
-7c 89 00 2e 	lwzx    r4,r9,r0
-
-lwzx rs, rt, rd
----
-*/
-
-/*
-7f a8 02 a6: Unknown G4 opcode! - (7fa802a6 - 1f) - rs: r29, rt: r8, rd: r0, sa: 0xa : 10, func: 0x26 : 38, imm s16: 0x2a6 : 678, imm u16: 0x2a6 : 678, imm u26: 0x3a802a6 : 61342374
-7f a8 02 a6 	mflr    r29
-0xa - mflr rs
-
-7c 60 e9 d6: Unknown G4 opcode! - (7c60e9d6 - 1f) - rs: r3, rt: r0, rd: r29, sa: 0x7 : 7, func: 0x16 : 22, imm s16: 0xffffe9d6 : -5674, imm u16: 0xe9d6 : 59862, imm u26: 0x60e9d6 : 6351318
-7c 60 e9 d6 	mullw   r3,r0,r29
-0x7 - mullw rs,rt,rd
-
-7d 90 81 20: Unknown G4 opcode! - (7d908120 - 1f) - rs: r12, rt: r16, rd: r16, sa: 0x4 : 4, func: 0x20 : 32, imm s16: 0xffff8120 : -32480, imm u16: 0x8120 : 33056, imm u26: 0x1908120 : 26247456
-7d 90 81 20 	mtocrf  8,r12
-7d 91 01 20: Unknown G4 opcode! - (7d910120 - 1f) - rs: r12, rt: r17, rd: r0, sa: 0x4 : 4, func: 0x20 : 32, imm s16: 0x120 : 288, imm u16: 0x120 : 288, imm u26: 0x1910120 : 26280224
-7d 91 01 20 	mtocrf  16,r12
-
-7f e1 49 ce: Unknown G4 opcode! - (7fe149ce - 1f) - rs: r31, rt: r1, rd: r9, sa: 0x7 : 7, func: 0xe : 14, imm s16: 0x49ce : 18894, imm u16: 0x49ce : 18894, imm u26: 0x3e149ce : 65096142
-7f e1 49 ce 	stvx    v31,r1,r9
-0x7 - stvx rs,rt,rd
-
-7f e1 00 ce: Unknown G4 opcode! - (7fe100ce - 1f) - rs: r31, rt: r1, rd: r0, sa: 0x3 : 3, func: 0xe : 14, imm s16: 0xce : 206, imm u16: 0xce : 206, imm u26: 0x3e100ce : 65077454
-7f e1 00 ce 	lvx     v31,r1,r0
-0x3 - lvx rs,rt,rd
-
-7c e9 e8 96: Unknown G4 opcode! - (7ce9e896 - 1f) - rs: r7, rt: r9, rd: r29, sa: 0x2 : 2, func: 0x16 : 22, imm s16: 0xffffe896 : -5994, imm u16: 0xe896 : 59542, imm u26: 0xe9e896 : 15329430
-7c e9 e8 96 	mulhw   r7,r9,r29
-0x2 - mulhw rs,rt,rd
-
-7f c6 00 d0: Unknown G4 opcode! - (7fc600d0 - 1f) - rs: r30, rt: r6, rd: r0, sa: 0x3 : 3, func: 0x10 : 16, imm s16: 0xd0 : 208, imm u16: 0xd0 : 208, imm u26: 0x3c600d0 : 63307984
-7f c6 00 d0 	neg     r30,r6
-0x3 - neg rs,rt
-
-7d 24 01 d2: Unknown G4 opcode! - (7d2401d2 - 1f) - rs: r9, rt: r4, rd: r0, sa: 0x7 : 7, func: 0x12 : 18, imm s16: 0x1d2 : 466, imm u16: 0x1d2 : 466, imm u26: 0x12401d2 : 19136978
-7d 24 01 d2 	mulld   r9,r4,r0
-0x7 - mulld r9,r4,r0
-
-7c 8b 20 f8: Unknown G4 opcode! - (7c8b20f8 - 1f) - rs: r4, rt: r11, rd: r4, sa: 0x3 : 3, func: 0x38 : 56, imm s16: 0x20f8 : 8440, imm u16: 0x20f8 : 8440, imm u26: 0x8b20f8 : 9117944
-7c 8b 20 f8 	not     r11,r4
-0x3 - not rt,rs
-
-7d 69 07 74: Unknown G4 opcode! - (7d690774 - 1f) - rs: r11, rt: r9, rd: r0, sa: 0x1d : 29, func: 0x34 : 52, imm s16: 0x774 : 1908, imm u16: 0x774 : 1908, imm u26: 0x1690774 : 23660404
-7d 69 07 74 	extsb   r9,r11
-0x1d - extsb rt,rs
-
-7c e4 01 94: Unknown G4 opcode! - (7ce40194 - 1f) - rs: r7, rt: r4, rd: r0, sa: 0x6 : 6, func: 0x14 : 20, imm s16: 0x194 : 404, imm u16: 0x194 : 404, imm u26: 0xe40194 : 14942612
-7c e4 01 94 	addze   r7,r4
-0x6 - addze rs,rt
-
-7c 64 50 92: Unknown G4 opcode! - (7c645092 - 1f) - rs: r3, rt: r4, rd: r10, sa: 0x2 : 2, func: 0x12 : 18, imm s16: 0x5092 : 20626, imm u16: 0x5092 : 20626, imm u26: 0x645092 : 6574226
-7c 64 50 92 	mulhd   r3,r4,r10
-0x2 - mulhd rs,rt,rd
-
-7d 00 49 10: Unknown G4 opcode! - (7d004910 - 1f) - rs: r8, rt: r0, rd: r9, sa: 0x4 : 4, func: 0x10 : 16, imm s16: 0x4910 : 18704, imm u16: 0x4910 : 18704, imm u26: 0x1004910 : 16795920
-7d 00 49 10 	subfe   r8,r0,r9
-0x4 - subfe rs,rt,rd
-
-7e e3 b0 78: Unknown G4_G1 opcode! - (7ee3b078 - 1f) - rs: r23, rt: r3, rd: r22, sa: 0x1 : 1, func: 0x38 : 56, imm s16: 0xffffb078 : -20360, imm u16: 0xb078 : 45176, imm u26: 0x2e3b078 : 48476280
-7e e3 b0 78 	andc    r3,r23,r22
-0x1 - andc rt,rs,rd
-*/
+#define ADD_OPCODE(name, regs) case(##name##):m_op.##name####regs##; break
+#define ADD_NULL_OPCODE(name) ADD_OPCODE(##name##, ())
 
 class Decoder
 {
 	int m_code;
 	Opcodes& m_op;
 
-	const int RS()		const { return (m_code >> 21) & 0x1F; }
-	const int RT()		const { return (m_code >> 16) & 0x1F; }
-	const int RD()		const { return (m_code >> 11) & 0x1F; }
-	const int SA()		const { return (m_code >>  6) & 0x1F; }
-	const int FUNC()	const { return (m_code & 0x3F); }
-	const int SYS()		const { return (m_code >> 6) & 0x000fffff; }
+	OP_REG RS()			const { return (m_code >> 21) & 0x1F; }
+	OP_REG RT()			const { return (m_code >> 16) & 0x1F; }
+	OP_REG RD()			const { return (m_code >> 11) & 0x1F; }
+	OP_REG SA()			const { return (m_code >>  6) & 0x1F; }
+	OP_REG FUNC()		const { return (m_code & 0x3F); }
+	OP_REG SYS()		const { return (m_code >> 6) & 0x000fffff; }
 
-	const s32 imm_s16() const { return (s32)(s16)(m_code & 0xffff); }
-	const s32 imm_u16() const { return (s32)(m_code & 0xffff); }
-	const int imm_u26() const { return m_code & 0x03ffffff; }
+	const s32 imm_s16()	const { return (s32)(s16)(m_code & 0xffff); }
+	const u32 imm_u16()	const { return m_code & 0xffff; }
+	const u32 imm_u26()	const { return m_code & 0x03ffffff; }
 	
 public:
 	Decoder(Opcodes& op) : m_op(op) {}
@@ -163,7 +41,6 @@ public:
 	~Decoder()
 	{
 		m_op.Exit();
-		delete &m_op;
 	}
 
 	void DoCode(const int code)
@@ -175,277 +52,603 @@ public:
 			return;
 		}
 
-		//if(m_op.DoSysCall(code)) return;
-
 		m_code = code;
 		const u32 opcode = (m_code >> 26) & 0x3f;
+
+		//if(opcode == 0xFFFF) if(m_op.DoSysCall(CPU.PC)) return;
 
 		s32 temp;
 
 		switch(opcode)
 		{
-		case SPECIAL:
+		START_OPCODES_GROUP(SPECIAL, FUNC)
+			//ADD_OPCODE(SYSCALL, (SYS()));
+		END_OPCODES_GROUP(SPECIAL);
+
+		START_OPCODES_GROUP(SPECIAL2, SA)
+		END_OPCODES_GROUP(SPECIAL2);
+
+//		ADD_OPCODE(XOR,		(RD(), RS(), RT()));
+		ADD_OPCODE(MULLI,	(RT(), RS(), imm_s16()));
+		ADD_OPCODE(SUBFIC,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(CMPLDI,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(CMPDI,	(RS(), RT(), RD()));
+		ADD_OPCODE(ADDIC,	(RT(), RS(), imm_s16()));
+		ADD_OPCODE(ADDIC_,	(RT(), RS(), imm_s16()));
+
+		START_OPCODES_GROUP(G_0x04, SA)
+			START_OPCODES_GROUP(G_0x04_0x0, FUNC)
+				ADD_OPCODE(MULHHWU,		(RS(), RT(), RD()));
+				ADD_OPCODE(MULHHWU_,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACHHWU,		(RS(), RT(), RD()));
+				ADD_OPCODE(MACHHWU_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x0);
+
+			START_OPCODES_GROUP(G_0x04_0x1, FUNC)
+				ADD_OPCODE(MULHHW,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULHHW_,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACHHW,	(RS(), RT(), RD()));
+				ADD_OPCODE(NMACHHW,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x1);
+
+			START_OPCODES_GROUP(G_0x04_0x2, FUNC)
+				ADD_OPCODE(MACHHWSU,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACHHWSU_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x2);
+
+			START_OPCODES_GROUP(G_0x04_0x3, FUNC)
+				ADD_OPCODE(MACHHWS,		(RS(), RT(), RD()));
+				ADD_OPCODE(MACHHWS_,	(RS(), RT(), RD()));
+				ADD_OPCODE(NMACHHWS,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x3);
+
+			START_OPCODES_GROUP(G_0x04_0x4, FUNC)
+				ADD_OPCODE(MULCHWU,		(RS(), RT(), RD()));
+				ADD_OPCODE(MULCHWU_,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACCHWU,		(RS(), RT(), RD()));
+				ADD_OPCODE(MACCHWU_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x4);
+
+			START_OPCODES_GROUP(G_0x04_0x5, FUNC)
+				ADD_OPCODE(MULCHW,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACCHW,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x5);
+
+			START_OPCODES_GROUP(G_0x04_0x6, FUNC)
+				ADD_OPCODE(MACCHWSU,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACCHWSU_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x6);
+
+			START_OPCODES_GROUP(G_0x04_0x7, FUNC)
+				ADD_OPCODE(MACCHWS,		(RS(), RT(), RD()));
+				ADD_OPCODE(NMACCHWS,	(RS(), RT(), RD()));
+				ADD_OPCODE(NMACCHWS_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x7);
+
+			START_OPCODES_GROUP(G_0x04_0xc, FUNC)
+				ADD_OPCODE(MULLHWU,		(RS(), RT(), RD()));
+				ADD_OPCODE(MULLHWU_,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACLHWU,		(RS(), RT(), RD()));
+				ADD_OPCODE(MACLHWU_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0xc);
+
+			START_OPCODES_GROUP(G_0x04_0xd, FUNC)
+				ADD_OPCODE(NMACLHW,		(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0xd);
+
+			START_OPCODES_GROUP(G_0x04_0xe, FUNC)
+				ADD_OPCODE(MACLHWSU,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACLHWSU_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0xe);
+
+			START_OPCODES_GROUP(G_0x04_0xf, FUNC)
+				ADD_OPCODE(MACLHWS,		(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0xf);
+
+			START_OPCODES_GROUP(G_0x04_0x10, FUNC)
+				ADD_OPCODE(MACHHWUO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACHHWUO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x10);
+
+			START_OPCODES_GROUP(G_0x04_0x12, FUNC)
+				ADD_OPCODE(MACHHWSUO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACHHWSUO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x12);
+
+			START_OPCODES_GROUP(G_0x04_0x13, FUNC)
+				ADD_OPCODE(MACHHWSO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACHHWSO_,	(RS(), RT(), RD()));
+				ADD_OPCODE(NMACHHWSO,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x13);
+
+			START_OPCODES_GROUP(G_0x04_0x14, FUNC)
+				ADD_OPCODE(MACCHWUO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACCHWUO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x14);
+
+			START_OPCODES_GROUP(G_0x04_0x15, FUNC)
+				ADD_OPCODE(MACCHWO,		(RS(), RT(), RD()));
+				ADD_OPCODE(MACCHWO_,	(RS(), RT(), RD()));
+				ADD_OPCODE(NMACCHWO,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x15);
+
+			START_OPCODES_GROUP(G_0x04_0x16, FUNC)
+				ADD_OPCODE(MACCHWSUO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACCHWSUO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x16);
+
+			START_OPCODES_GROUP(G_0x04_0x17, FUNC)
+				ADD_OPCODE(NMACCHWSO,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x17);
+			START_OPCODES_GROUP(G_0x04_0x18, FUNC)
+				ADD_OPCODE(MFVSCR,	(RS()));
+			END_OPCODES_GROUP	(G_0x04_0x18);
+			START_OPCODES_GROUP(G_0x04_0x1c, FUNC)
+				ADD_OPCODE(MACLHWUO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACLHWUO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x1c);
+
+			START_OPCODES_GROUP(G_0x04_0x1d, FUNC)
+				ADD_OPCODE(NMACLHWO,	(RS(), RT(), RD()));
+				ADD_OPCODE(NMACLHWO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x1d);
+
+			START_OPCODES_GROUP(G_0x04_0x1e, FUNC)
+				ADD_OPCODE(MACLHWSUO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MACLHWSUO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x1e);
+
+			START_OPCODES_GROUP(G_0x04_0x1f, FUNC)
+				ADD_OPCODE(NMACLHWSO,	(RS(), RT(), RD()));
+				ADD_OPCODE(NMACLHWSO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP	(G_0x04_0x1f);
+		END_OPCODES_GROUP	(G_0x04);
+
+		START_OPCODES_GROUP(G1, SA)
+		END_OPCODES_GROUP	(G1);
+		//ADD_OPCODE(ADDIS,	(RT(), RS(), imm_s16()));
+
+		START_OPCODES_GROUP(G_0x0f, SA)
+			START_OPCODES_GROUP(G_0x0f_0x0, FUNC)
+				ADD_OPCODE(ADDIS,	(RT(), RS(), imm_s16()));
+				ADD_OPCODE(LIS,		(RS(), imm_s16()));
+			END_OPCODES_GROUP(G_0x0f_0x0);
+		END_OPCODES_GROUP(G_0x0f);
+
+		START_OPCODES_GROUP(G2, SA)
+		END_OPCODES_GROUP(G2);
+
+		ADD_NULL_OPCODE		(SC);
+
+		START_OPCODES_GROUP(G3, SA)
+		END_OPCODES_GROUP(G3);
+
+		//ADD_NULL_OPCODE	(BLR);
+
+		START_OPCODES_GROUP(G3_S, SA)
+		END_OPCODES_GROUP(G3_S);
+
+		START_OPCODES_GROUP(G3_S0, SA)
+			ADD_NULL_OPCODE		(RLWINM_);
+			ADD_OPCODE(CLRLWI,	(RT(), RS(), imm_u16()));
+			ADD_OPCODE(CLRLWI_,	(RT(), RS(), imm_u16()));
+
+			START_OPCODES_GROUP(G3_S0_G0, FUNC)
+				ADD_NULL_OPCODE		(RLWINM);
+				ADD_OPCODE(ROTLWI,	(RT(), RS(), imm_u16()));
+				ADD_OPCODE(ROTLWI_,	(RT(), RS(), imm_u16()));
+			END_OPCODES_GROUP(G3_S0_G0);
+		END_OPCODES_GROUP(G3_S0);
+		
+		//ADD_NULL_OPCODE		(RLWINM);
+		ADD_OPCODE(ROTLW,	(RT(), RS(), RD()));
+		ADD_OPCODE(ORI,		(RT(), RS(), imm_u16()));
+		ADD_OPCODE(ORIS,	(RT(), RS(), imm_u16()));
+		ADD_OPCODE(XORI,	(RT(), RS(), imm_u16()));
+		ADD_OPCODE(XORIS,	(RT(), RS(), imm_u16()));
+		ADD_OPCODE(ANDI_,	(RT(), RS(), imm_u16()));
+		ADD_OPCODE(ANDIS_,	(RT(), RS(), imm_u16()));
+		//ADD_OPCODE(LRLDIÑ,	(RT(), RS(), imm_u16()));
+		START_OPCODES_GROUP(G_0x1e, SA)
+			START_OPCODES_GROUP(G_0x1e_G_0x14, FUNC)
+				ADD_OPCODE(CLRLDI_,	(RT(), RS(), imm_u16()));
+			END_OPCODES_GROUP(G_0x1e_G_0x14);
+		END_OPCODES_GROUP(G_0x1e);
+
+		START_OPCODES_GROUP(G4, SA)
+			START_OPCODES_GROUP(G4_G0, FUNC)
+				//ADD_OPCODE(CMPW,	(RS(), RT(), RD()));
+				ADD_OPCODE(LVSL,	(RS(), RT(), RD()));
+				ADD_OPCODE(LVEBX,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULHDU,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULHDU_,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADDC,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULHWU,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULHWU_,	(RS(), RT(), RD()));
+				//ADD_OPCODE(MFCR,	(RS()));
+
+				START_OPCODES_GROUP(G4_G0_0x26, RT)
+					ADD_OPCODE(MFCR,	(RS()));
+					ADD_OPCODE(MFOCRF,	(RS(), imm_s16()));
+				END_OPCODES_GROUP(G4_G0_0x26);
+
+				ADD_OPCODE(LWARX,	(RS(), RD(), imm_s16()));
+				ADD_OPCODE(LDX,		(RS(), RT(), RD()));
+				ADD_OPCODE(CNTLZD,	(RT(), RS()));
+				ADD_OPCODE(AND,		(RT(), RS(), RD()));
+				ADD_OPCODE(AND_,	(RT(), RS(), RD()));
+				ADD_OPCODE(MASKG,	(RT(), RS(), RD()));
+			END_OPCODES_GROUP(G4_G0);
+
+			START_OPCODES_GROUP(G4_G1, FUNC)
+				//ADD_OPCODE(CMPLD,	(RS(), RT(), RD()));
+				ADD_OPCODE(LVEHX,	(RS(), RT(), RD()));
+				ADD_OPCODE(LVSR,	(RS(), RT(), RD()));
+				ADD_OPCODE(SUBF,	(RS(), RT(), RD()));
+				ADD_OPCODE(SUBF_,	(RS(), RT(), RD()));
+				ADD_OPCODE(LDUX,	(RS(), RT(), RD()));
+				ADD_OPCODE(LWZUX,	(RS(), RT(), RD()));
+				ADD_OPCODE(CNTLZD,	(RS(), RT()));
+				ADD_OPCODE(ANDC,	(RT(), RS(), RD()));
+			END_OPCODES_GROUP(G4_G1);
+
+			//ADD_OPCODE(MULHW,		(RS(), RT(), RD()));
+
+			START_OPCODES_GROUP	(G4_G_0x2, FUNC)
+				ADD_OPCODE(LVEWX,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULHD,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULHD_,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULHW,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULHW_,	(RS(), RT(), RD()));
+				ADD_OPCODE(DLMZB,	(RT(), RS(), RD()));
+				ADD_OPCODE(DLMZB_,	(RT(), RS(), RD()));
+				ADD_OPCODE(LDARX,	(RT(), RS(), RD()));
+				ADD_OPCODE(DCBF,	(RT(), RS(), RD()));
+				ADD_OPCODE(LBZX,	(RT(), RS(), RD()));
+			END_OPCODES_GROUP(G4_G_0x2);
+
+			START_OPCODES_GROUP	(G4_G2, FUNC)
+				ADD_OPCODE(LVX,		(RS(), RT(), RD()));
+				ADD_OPCODE(NEG,		(RS(), RT()));
+				ADD_OPCODE(MUL,		(RS(), RT(), RD()));
+				ADD_OPCODE(MUL_,	(RS(), RT(), RD()));
+				ADD_OPCODE(MTSRDIN,	(RS(), RD()));
+				//ADD_OPCODE(NOT,		(RT(), RD()));
+			END_OPCODES_GROUP(G4_G2);
+
+			START_OPCODES_GROUP(G4_G3, FUNC)
+				ADD_OPCODE(WRTEE,	(RS()));
+				ADD_OPCODE(STVEBX,	(RS(), RT(), RD()));
+				ADD_OPCODE(SUBFE,	(RS(), RT(), RD()));
+				ADD_OPCODE(SUBFE_,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADDE,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADDE_,	(RS(), RT(), RD()));
+				//ADD_OPCODE(MTOCRF,	(RS()));
+				ADD_OPCODE(STDX,	(RS(), RT(), RD()));
+				ADD_OPCODE(STWCX_,	(RS(), RT(), RD()));
+				ADD_OPCODE(STWX,	(RS(), RT(), RD()));
+				ADD_OPCODE(SLQ,		(RT(), RS(), RD()));
+				ADD_OPCODE(SLQ_,	(RT(), RS(), RD()));
+				ADD_OPCODE(SLE_,	(RT(), RS(), RD()));
+			END_OPCODES_GROUP(G4_G3);
+
+			ADD_OPCODE(STDUX,		(RS(), RT(), RD()));
+			//ADD_OPCODE(ADDZE,		(RS(), RT()));
+
+			START_OPCODES_GROUP(G4_G4, FUNC)
+				ADD_OPCODE(STVX,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULLD,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULLD_,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADDME,	(RS(), RT()));
+				ADD_OPCODE(ADDME_,	(RS(), RT()));
+				ADD_OPCODE(MULLW,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULLW_,	(RS(), RT(), RD()));
+				ADD_OPCODE(DCBTST,	(RT(), RD()));
+				ADD_OPCODE(SLLIQ,	(RT(), RS(), RD()));
+			END_OPCODES_GROUP(G4_G4);
+
+			START_OPCODES_GROUP(G4_G_ADD, FUNC)
+				ADD_OPCODE(ICBT,	(RS(), RT(), RD()));
+				ADD_OPCODE(DOZ,		(RS(), RT(), RD()));
+				ADD_OPCODE(DOZ_,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADD,		(RS(), RT(), RD()));
+				ADD_OPCODE(ADD_,	(RS(), RT(), RD()));
+				ADD_OPCODE(LSCBX,	(RS(), RT(), RD()));
+				ADD_OPCODE(LSCBX_,	(RS(), RT(), RD()));
+				ADD_OPCODE(DCBT,	(RT(), RD()));
+				ADD_OPCODE(LHZX,	(RS(), RT(), RD()));
+				ADD_OPCODE(EQV,		(RS(), RT(), RD()));
+				ADD_OPCODE(EQV_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP(G4_G_ADD);
+
+			START_OPCODES_GROUP(G4_G_ADDZE, FUNC)
+				ADD_OPCODE(ADDZE,		(RS(), RT()));
+				ADD_OPCODE(ADDZE_,		(RS(), RT()));
+			END_OPCODES_GROUP(G4_G_ADDZE);
+
+			//ADD_OPCODE(XOR,		(RT(), RS(), RD()));
+			//ADD_OPCODE(MFLR,		(RS()));
+
+			START_OPCODES_GROUP(G4_G_0x9, FUNC)
+				ADD_OPCODE(DOZI,	(RS(), RT(), imm_s16()));
+				ADD_OPCODE(LHZUX,	(RS(), RT(), RD()));
+				ADD_OPCODE(XOR,		(RT(), RS(), RD()));
+			END_OPCODES_GROUP(G4_G_0x9);
+
+			START_OPCODES_GROUP(G4_G_0xa, FUNC)
+				ADD_OPCODE(MFDCR,	(RS(), RT(), RD()));
+				ADD_OPCODE(DIV,		(RS(), RT(), RD()));
+				ADD_OPCODE(DIV_,	(RS(), RT(), RD()));
+				START_OPCODES_GROUP(G4_G_0xa_0x26, RT)
+					ADD_OPCODE(MFSPR,	(RS(), imm_s16()));
+					ADD_OPCODE(MFLR,	(RS()));
+					ADD_OPCODE(MFCTR,	(RS()));
+				END_OPCODES_GROUP(G4_G_0xa_0x26);
+
+				//ADD_OPCODE(MFCTR,		(RS()));
+				ADD_OPCODE(LWAX,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP(G4_G_0xa);
+
+			START_OPCODES_GROUP(G4_G_0xb, FUNC)
+				ADD_OPCODE(LVXL,	(RS(), RT(), RD()));
+				ADD_OPCODE(MFTB,	(RS()));
+			END_OPCODES_GROUP(G4_G_0xb);
+
+			START_OPCODES_GROUP(G4_G5, FUNC)
+				ADD_OPCODE(STHX,	(RS(), RT(), RD()));
+				ADD_OPCODE(ORC,		(RT(), RS(), RD()));
+				ADD_OPCODE(ORC_,	(RT(), RS(), RD()));
+			END_OPCODES_GROUP(G4_G5);
+
+			//ADD_OPCODE(MR,			(RT(), RS()));
+
+			START_OPCODES_GROUP(G4_G6, FUNC)
+				ADD_OPCODE(MTDCR,	(RS()));
+				ADD_OPCODE(DCCCI,	(RT(), RD()));
+				ADD_OPCODE(DIVDU,	(RS(), RT(), RD()));
+				ADD_OPCODE(DIVDU_,	(RS(), RT(), RD()));
+				ADD_OPCODE(DIVWU,	(RS(), RT(), RD()));
+				ADD_OPCODE(DIVWU_,	(RS(), RT(), RD()));
+				ADD_OPCODE(DCBI,	(RT(), RD()));
+				ADD_OPCODE(NAND,	(RT(), RS(), RD()));
+				ADD_OPCODE(NAND_,	(RT(), RS(), RD()));
+
+				START_OPCODES_GROUP(G4_G6_G1, RT)
+//					ADD_OPCODE(MTSPR,		(RS()));
+					ADD_OPCODE(MTLR,		(RS()));
+					ADD_OPCODE(MTCTR,		(RS()));
+				END_OPCODES_GROUP(G4_G6_G1);
+
+			END_OPCODES_GROUP(G4_G6);
+
+			//ADD_OPCODE(DIVW,		(RS(), RT(), RD()));
+
+			START_OPCODES_GROUP(G4_G_0xf, FUNC)
+				ADD_OPCODE(DIVD,	(RS(), RT(), RD()));
+				ADD_OPCODE(DIVD_,	(RS(), RT(), RD()));
+				ADD_OPCODE(DIVW,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP(G4_G_0xf);
+
+			START_OPCODES_GROUP(G4_G_ADDCO, FUNC)
+				//ADD_OPCODE(SRW,	(RT(), RS(), RD()));
+				ADD_OPCODE(MCRXR,	(RS()));
+				ADD_OPCODE(LVLX,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADDCO,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADDCO_,	(RS(), RT(), RD()));
+				ADD_OPCODE(LSWX,	(RS(), RT(), RD()));
+				ADD_OPCODE(LWBRX,	(RS(), RT(), RD()));
+				ADD_OPCODE(LFSX,	(RS(), RT(), RD()));
+				ADD_OPCODE(MASKIR,	(RT(), RS(), RD()));
+			END_OPCODES_GROUP(G4_G_ADDCO);
+
+			//ADD_OPCODE(SUBFO,		(RS(), RT(), RD()));
+			//ADD_NULL_OPCODE(LWSYNC);
+
+			START_OPCODES_GROUP(G4_G_0x11, FUNC)
+				ADD_OPCODE(LVRX,	(RS(), RT(), RD()));
+				ADD_OPCODE(SUBFO,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP(G4_G_0x11);
+
+			START_OPCODES_GROUP(G4_G_0x12, FUNC)
+
+				START_OPCODES_GROUP(G4_G_0x12_0x26, RT)
+					ADD_OPCODE(MFSR,	(RS(), imm_s16()));
+				END_OPCODES_GROUP(G4_G_0x12_0x26);
+
+				ADD_NULL_OPCODE(LWSYNC);
+				ADD_OPCODE(LFDX,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP(G4_G_0x12);
+
+			START_OPCODES_GROUP(G4_G7, FUNC)
+				ADD_NULL_OPCODE(NEGO);
+				ADD_OPCODE(MULO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULO_,	(RS(), RT(), RD()));
+
+				START_OPCODES_GROUP(G4_G7_0x26, RT)
+					ADD_OPCODE(MFSRI,		(RS(), RT(), RD()));
+				END_OPCODES_GROUP(G4_G7_0x26);
+
+			END_OPCODES_GROUP(G4_G7);
+			//ADD_OPCODE(STFSX,		(RS(), RT(), RD()));
+			START_OPCODES_GROUP(G4_G_ADDEO, FUNC)
+				ADD_OPCODE(ADDEO,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADDEO_,	(RS(), RT(), RD()));
+
+				START_OPCODES_GROUP(G4_G_ADDEO_0x26, RT)
+					ADD_OPCODE(MFSRIN,		(RS(), RD()));
+				END_OPCODES_GROUP(G4_G_ADDEO_0x26);
+
+			END_OPCODES_GROUP(G4_G_ADDEO);
+
+			START_OPCODES_GROUP(G4_G8, FUNC)
+				ADD_OPCODE(ADDZEO_,	(RS(), RT(), RD())); //temp
+				ADD_OPCODE(STSWI,	(RS(), RT(), RD()));
+				ADD_OPCODE(STFDX,	(RS(), RT(), RD()));
+				ADD_OPCODE(SRLQ,	(RT(), RS(), RD()));
+				ADD_OPCODE(SREQ,	(RT(), RS(), RD()));
+			END_OPCODES_GROUP(G4_G8);
+
+			START_OPCODES_GROUP(G4_G_ADDO, FUNC)
+				ADD_OPCODE(LVLXL,	(RS(), RT(), RD()));
+				ADD_OPCODE(DOZO,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADDO,	(RS(), RT(), RD()));
+				ADD_OPCODE(ADDO_,	(RS(), RT(), RD()));
+				ADD_OPCODE(LHBRX,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP(G4_G_ADDO);
+
+			START_OPCODES_GROUP(G4_G9, FUNC)
+				ADD_OPCODE(MULLDO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULLDO_,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULLWO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MULLWO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP(G4_G9);
+
+			//ADD_OPCODE(SRAW,		(RT(), RS(), RD()));
+			ADD_OPCODE(SRAWI,		(RT(), RS(), RD()));
+			//ADD_NULL_OPCODE(EIEIO);
+
+			START_OPCODES_GROUP(G4_G_0x1a, FUNC)
+				ADD_OPCODE(DIVO,	(RT(), RS(), RD()));
+				ADD_OPCODE(DIVO_,	(RT(), RS(), RD()));
+				ADD_NULL_OPCODE(EIEIO);
+			END_OPCODES_GROUP(G4_G_0x1a);
+
+			START_OPCODES_GROUP(G4_G10, FUNC)
+				ADD_NULL_OPCODE(ABSO_);
+				ADD_OPCODE(DIVSO,	(RS(), RT(), RD()));
+				ADD_OPCODE(DIVSO_,	(RS(), RT(), RD()));
+			END_OPCODES_GROUP(G4_G10);
+
+			START_OPCODES_GROUP(G4_G_0x1e, FUNC)
+				ADD_OPCODE(ICCCI,	(RT(), RS(), RD()));
+				ADD_OPCODE(RLDCL_,	(RT(), RS(), RD(), imm_s16()));
+				ADD_OPCODE(DIVDUO,	(RT(), RS(), RD()));
+				ADD_OPCODE(DIVDUO_,	(RT(), RS(), RD()));
+				ADD_OPCODE(DIVWUO,	(RT(), RS(), RD()));
+				ADD_OPCODE(DIVWUO_,	(RT(), RS(), RD()));
+				ADD_OPCODE(ICBI,	(RT(), RS(), RD()));
+				ADD_OPCODE(RLDCL,	(RT(), RS(), RD(), imm_s16()));
+				ADD_OPCODE(EXTSW,	(RT(), RS()));
+				ADD_OPCODE(EXTSW_,	(RT(), RS()));
+			END_OPCODES_GROUP(G4_G_0x1e);
+
+			START_OPCODES_GROUP(G4_G_0x1f, FUNC)
+				ADD_OPCODE(ICREAD,	(RS(), RT(), RD()));
+				ADD_OPCODE(DIVDO,	(RS(), RT(), RD()));
+				ADD_OPCODE(DCBZ,	(RT(), RD()));
+			END_OPCODES_GROUP(G4_G_0x1f);
+
+			ADD_OPCODE(EXTSH,		(RT(), RS()));
+			ADD_OPCODE(EXTSB,		(RT(), RS()));
+			//ADD_OPCODE(EXTSW,		(RT(), RS()));
+			//ADD_OPCODE(DCBZ,		(RT(), RD()));
+			ADD_OPCODE(LWZX,		(RS(), RT(), RD()));
+		END_OPCODES_GROUP(G4);
+
+		ADD_OPCODE(LWZ,		(RT(), RS(), imm_s16()));
+		ADD_OPCODE(LWZU,	(RT(), RS(), imm_s16()));
+		ADD_OPCODE(LBZ,		(RT(), RS(), imm_s16()));
+		ADD_OPCODE(LBZU,	(RT(), RS(), imm_s16()));
+		ADD_OPCODE(STW,		(RS(), RT(), imm_s16()));
+		ADD_OPCODE(STWU,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(STB,		(RS(), RT(), imm_s16()));
+		ADD_OPCODE(STBU,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(LHZ,		(RS(), RT(), imm_s16()));
+		ADD_OPCODE(LHZU,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(LHA,		(RS(), RT(), imm_s16()));
+		ADD_OPCODE(LHAU,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(STH,		(RS(), RT(), imm_s16()));
+		ADD_OPCODE(STHU,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(LMW,		(RS(), RT(), imm_s16()));
+		ADD_OPCODE(LFS,		(RS(), RT(), imm_s16()));
+		ADD_OPCODE(LFSU,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(LFD,		(RS(), RT(), imm_s16()));
+		ADD_OPCODE(LFDU,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(STFS,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(STFSU,	(RS(), RT(), imm_s16()));
+		ADD_OPCODE(STFD,	(RS(), RT(), imm_s16()));
+		//ADD_OPCODE(LD,	(RS(), RT(), imm_s16()));
+		//ADD_OPCODE(FDIVS,	(RS(), RT(), RD()));
+
+		START_OPCODES_GROUP(G_0x3a, FUNC)
+			ADD_OPCODE(LDU,	(RS(), RT(), imm_s16()));
+			ADD_OPCODE(LWA,	(RS(), RT(), imm_s16()));
+			ADD_OPCODE(LD,	(RS(), RT(), imm_s16()));
+		END_OPCODES_GROUP(G_0x3a);
+
+		START_OPCODES_GROUP(G4_S, FUNC)
+			ADD_OPCODE(FSUBS,	(RS(), RT(), RD()));
+			ADD_OPCODE(FSUBS_,	(RS(), RT(), RD()));
+			ADD_OPCODE(FADDS,	(RS(), RT(), RD()));
+			ADD_OPCODE(FSQRTS,	(RS(), RD()));
+			ADD_OPCODE(FRES,	(RS(), RD()));
+			ADD_OPCODE(FMULS,	(RS(), RT(), SA()));
+			ADD_OPCODE(FMULS_,	(RS(), RT(), SA()));
+			ADD_OPCODE(FMADDS,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FMADDS_,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FMSUBS,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FMSUBS_,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FNMSUBS,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FNMSUBS_,(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FNMADDS,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FNMADDS_,(RS(), RT(), SA(), RD()));
+		END_OPCODES_GROUP(G4_S);
+
+		ADD_OPCODE(STD,		(RS(), RT(), imm_s16()));
+
+		START_OPCODES_GROUP(G5, FUNC)
+			START_OPCODES_GROUP(G5_G0x0, SA)
+				ADD_OPCODE(FCMPU,	(RS(), RT(), RD()));
+				ADD_OPCODE(FCMPO,	(RS(), RT(), RD()));
+				ADD_OPCODE(MCRFS,	(RS(), RT()));
+			END_OPCODES_GROUP(G5_G0x0);
+
+			START_OPCODES_GROUP(G5_G0x10, SA)
+				ADD_OPCODE(FNEG,	(RS(), RD()));
+				ADD_OPCODE(FMR,	(RS(), RD()));
+				ADD_OPCODE(FNABS,	(RS(), RD()));
+				ADD_OPCODE(FABS,	(RS(), RD()));
+			END_OPCODES_GROUP(G5_G0x10);
 			
-			temp = FUNC();
-			switch(temp)
-			{
-			case SYSCALL:
-				m_op.DoSysCall(SYS());
-			break;
+			START_OPCODES_GROUP(G5_G0x1c, SA)
+				ADD_OPCODE(FCTIW,	(RS(), RD()));
+				ADD_OPCODE(FCTID,	(RS(), RD()));
+				ADD_OPCODE(FCFID,	(RS(), RD()));
+			END_OPCODES_GROUP(G5_G0x1c);
 
-			default:
-				m_op.UNK_SPECIAL(code, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-			break;
-			}
-		break;
-		case SPECIAL2:	m_op.SPECIAL2();					 break;
-		//case XOR:		m_op.XOR	(RD(), RS(), RT());		 break;
-		case MULLI:		m_op.MULLI	(RT(), RS(), imm_s16()); break;
-		case SUBFIC:	m_op.SUBFIC	(RS(), RT(), imm_s16()); break;
-		case CMPLWI:	m_op.CMPLWI	(RS(), RT(), imm_u16()); break;
-		case CMPWI:		m_op.CMPWI	(RS(), RT(), RD());		 break;
-		case ADDIC:		m_op.ADDIC	(RT(), RS(), imm_s16()); break;
-		case ADDIC_:	m_op.ADDIC_	(RT(), RS(), imm_s16()); break;
-		case G1:		m_op.G1();							 break;
-		case ADDIS:		m_op.ADDIS	(RT(), RS(), imm_s16()); break;
-		case G2:		m_op.G2();							 break;
-		case SC:		m_op.SC();							 break;
-		case G3:		m_op.G3();							 break;
-		case BLR:		m_op.BLR();							 break;
-		case RLWINM:	m_op.RLWINM();						 break;
-		case ROTLW:		m_op.ROTLW	(RT(), RS(), RD());		 break;
-		case ORI:		m_op.ORI	(RT(), RS(), imm_u16()); break;
-		case ORIS:		m_op.ORIS	(RT(), RS(), imm_u16()); break;
-		case XORI:		m_op.XORI	(RT(), RS(), imm_u16()); break;
-		case XORIS:		m_op.XORIS	(RT(), RS(), imm_u16()); break;
-		case CLRLDI:	m_op.CLRLDI	(RT(), RS(), imm_u16()); break;
-		case G4:
-			temp = SA();
-			switch(temp)
-			{
-			case CMPW:	m_op.CMPW	(RS(), RT(), RD());		 break;
-			case G4_G1:
-				temp = FUNC();
-				switch(temp)
-				{
-				case CMPLD: m_op.CMPLD	(RS(), RT(), RD());	 break;
-				case LVEHX:  m_op.LVEHX	(RS(), RT(), RD());	 break;
-				case LVSR:  m_op.LVSR	(RS(), RT(), RD());	 break;
-				case SUBF:	m_op.SUBF	(RS(), RT(), RD());	 break;
-				case SUBF_:	m_op.SUBF_	(RS(), RT(), RD());	 break;
-				case LDUX:	m_op.LDUX	(RS(), RT(), RD());	 break;
-				case LWZUX:	m_op.LWZUX	(RS(), RT(), RD());	 break;
-				case CNTLZD:m_op.CNTLZD	(RS(), RT());		 break;
-				case ANDC:	m_op.ANDC	(RT(), RS(), RD());	 break;
+			START_OPCODES_GROUP(G5_G0x1e, SA)
+				ADD_OPCODE(FCTIWZ,	(RS(), RD()));
+				ADD_OPCODE(FCTIDZ,	(RS(), RD()));
+			END_OPCODES_GROUP(G5_G0x1e);
 
-				default:
-					m_op.UNK_G4_G1(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			case MULHW: m_op.MULHW	(RS(), RT(), RD());		 break;
-			case G4_G2:
-				temp = FUNC();
-				switch(temp)
-				{
-				case LVX:		m_op.LVX	(RS(), RT(), RD());		 break;
-				case NEG:		m_op.NEG	(RS(), RT());			 break;
-				case MTSRDIN:	m_op.MTSRDIN(RS(), RD());			 break;
-				case NOT:		m_op.NOT	(RT(), RD());			 break;
-
-				default:
-					m_op.UNK_G4_G2(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			case G4_G3:
-				temp = FUNC();
-				switch(temp)
-				{
-				case WRTEE: m_op.WRTEE	(RS());				 break;
-				case STVEBX: m_op.STVEBX(RS(), RT(), RD());	 break;
-				case SUBFE:  m_op.SUBFE	(RS(), RT(), RD());	 break;
-				case SUBFE_: m_op.SUBFE_(RS(), RT(), RD());	 break;
-				case ADDE:   m_op.ADDE	(RS(), RT(), RD());	 break;
-				case ADDE_:  m_op.ADDE_	(RS(), RT(), RD());	 break;
-				case MTOCRF: m_op.MTOCRF(RS());				 break;
-				case STDX:	 m_op.STDX	(RS(), RT(), RD());	 break;
-				case STWCX_: m_op.STWCX_(RS(), RT(), RD());	 break;
-				case STWX:   m_op.STWX	(RS(), RT(), RD());	 break;
-				case SLQ:	 m_op.SLQ	(RT(), RS(), RD());	 break;
-				case SLQ_:   m_op.SLQ_	(RT(), RS(), RD());	 break;
-				case SLE_:   m_op.SLE_	(RT(), RS(), RD());	 break;
-
-				default:
-					m_op.UNK_G4_G3(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			case STDUX: m_op.STDUX	(RS(), RT(), RD());		 break;
-			case ADDZE: m_op.ADDZE	(RS(), RT());			 break;
-			case G4_G4:
-				temp = FUNC();
-				switch(temp)
-				{
-				case STVX:   m_op.STVX	(RS(), RT(), RD());	 break;
-				case MULLD:  m_op.MULLD	(RS(), RT(), RD());	 break;
-				case ADDME_: m_op.ADDME_(RS(), RT());		 break;
-				case MULLW:	 m_op.MULLW	(RS(), RT(), RD());	 break;
-				case MULLW_: m_op.MULLW_(RS(), RT(), RD());	 break;
-				case DCBTST: m_op.DCBTST(RT(), RD());	     break;
-				case SLLIQ:  m_op.SLLIQ	(RT(), RS(), RD());	 break;
-
-				default:
-					m_op.UNK_G4_G4(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			case ADD:	m_op.ADD	(RS(), RT(), RD());		 break;
-			case XOR:	m_op.XOR	(RT(), RS(), RD());		 break;
-			case SRW:	m_op.SRW	(RT(), RS(), RD());		 break;
-			case MFLR:	m_op.MFLR	(RS());					 break;
-			case G4_G5:
-				temp = FUNC();
-				switch(temp)
-				{
-				case STHX:	m_op.STHX	(RS(), RT(), RD());	 break;
-				case ORC:	m_op.ORC	(RT(), RS(), RD());	 break;
-				case ORC_:	m_op.ORC_	(RT(), RS(), RD());	 break;
-
-				default: 
-					m_op.UNK_G4_G5(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			case LVXL:	m_op.LVXL	(RS(), RT(), RD());		 break;
-			case MR:	m_op.MR		(RT(), RS());			 break;
-			case G4_G6:
-				temp = FUNC();
-				switch(temp)
-				{
-				case MTDCR:	m_op.MTDCR	(RS());				 break;
-				case DCCCI:	m_op.DCCCI	(RT(), RD());		 break;
-				case DIVDU:	m_op.DIVDU	(RS(), RT(), RD());  break;
-				case DIVDU_:m_op.DIVDU_	(RS(), RT(), RD());	 break;
-				case DIVWU:	m_op.DIVWU	(RS(), RT(), RD());  break;
-				case DCBI:	m_op.DCBI	(RT(), RD());		 break;
-				case NAND:	m_op.NAND	(RT(), RS(), RD());  break;
-				case NAND_:	m_op.NAND_	(RT(), RS(), RD());  break;
-				case G4_G6_G1:
-					temp = RT();
-					switch(temp)
-					{
-					case MTSPR:	m_op.MTSPR	(RS());			 break;
-					case MTLR:	m_op.MTLR	(RS());			 break;
-					case MTCTR: m_op.MTCTR	(RS());			 break;
-
-					default:
-						m_op.UNK_G4_G6_G1(code, opcode, RS(), temp, RD(), SA(), FUNC(), imm_s16(), imm_u16(), imm_u26());
-					break;
-					};
-				break;
-
-				default:
-					m_op.UNK_G4_G6(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			case DIVW:	 m_op.DIVW	(RS(), RT(), RD());		 break;
-			case SUBFO:	 m_op.SUBFO	(RS(), RT(), RD());		 break;
-			case LWSYNC: m_op.LWSYNC();						 break;
-			
-			case G4_G7:
-				temp = FUNC();
-				switch(temp)
-				{
-				case NEGO:  m_op.NEGO();					 break;
-				case MULO:	m_op.MULO	(RS(), RT(), RD());	 break;
-				case MULO_:	m_op.MULO_	(RS(), RT(), RD());	 break;
-				case MFSRI: m_op.MFSRI();					 break;
-				default:
-					m_op.UNK_G4_G7(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			case STFSX:	m_op.STFSX	(RS(), RT(), RD());		 break;
-			case G4_G8:
-				temp = FUNC();
-				switch(temp)
-				{
-				case STSWI: m_op.STSWI	(RS(), RT(), RD());	 break;
-				case STFDX:	m_op.STFDX	(RS(), RT(), RD());	 break;
-				case SRLQ:	m_op.SRLQ	(RT(), RS(), RD());	 break;
-				case SREQ:	m_op.SREQ	(RT(), RS(), RD());	 break;
-
-				default:
-					m_op.UNK_G4_G8(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			case G4_G9:
-				temp = FUNC();
-				switch(temp)
-				{
-				case MULLDO:	m_op.MULLDO	(RS(), RT(), RD());	break;
-				case MULLWO:	m_op.MULLWO	(RS(), RT(), RD());	break;
-				case MULLWO_:	m_op.MULLWO_(RS(), RT(), RD());	break;
-
-				default:
-					m_op.UNK_G4_G9(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			
-			case SRAW:	m_op.SRAW	(RT(), RS(), RD());		 break;
-			case SRAWI: m_op.SRAWI	(RT(), RS(), RD());		 break;
-			case EIEIO: m_op.EIEIO();						 break;
-			case G4_G10:
-				temp = FUNC();
-				switch(temp)
-				{
-				case ABSO_:	m_op.ABSO_();					 break;
-				case DIVSO_:m_op.DIVSO_	(RT(), RS(), RD());	 break;
-
-				default:
-					m_op.UNK_G4_G10(code, opcode, RS(), RT(), RD(), SA(), temp, imm_s16(), imm_u16(), imm_u26());
-				break;
-				};
-			break;
-			case EXTSH: m_op.EXTSH	(RT(), RS());			 break;
-			case EXTSB: m_op.EXTSB	(RT(), RS());			 break;
-			case EXTSW: m_op.EXTSW	(RT(), RS());			 break;
-			case DCBZ:	m_op.DCBZ	(RT(), RD());			 break;
-			case LWZX:	m_op.LWZX	(RS(), RT(), RD());		 break;
-
-			default:
-				m_op.UNK_G4(code, opcode, RS(), RT(), RD(), temp, FUNC(), imm_s16(), imm_u16(), imm_u26());
-			break;
-			};
-		break;
-		case LWZ:		m_op.LWZ	(RT(), RS(), imm_s16()); break;
-		case LWZU:		m_op.LWZU	(RT(), RS(), imm_s16()); break;
-		case LBZ:		m_op.LBZ	(RT(), RS(), imm_s16()); break;
-		case LBZU:		m_op.LBZU	(RT(), RS(), imm_s16()); break;
-		case STW:		m_op.STW	(RS(), RT(), imm_s16()); break;
-		case STWU:		m_op.STWU	(RS(), RT(), imm_s16()); break;
-		case STB:		m_op.STB	(RS(), RT(), imm_s16()); break;
-		case STBU:		m_op.STBU	(RS(), RT(), imm_s16()); break;
-		case LHZ:		m_op.LHZ	(RS(), RT(), imm_s16()); break;
-		case LHZU:		m_op.LHZU	(RS(), RT(), imm_s16()); break;
-		case STH:		m_op.STH	(RS(), RT(), imm_s16()); break;
-		case STHU:		m_op.STHU	(RS(), RT(), imm_s16()); break;
-		case LFS:		m_op.LFS	(RS(), RT(), imm_s16()); break;
-		case LFSU:		m_op.LFSU	(RS(), RT(), imm_s16()); break;
-		case LFD:		m_op.LFD	(RS(), RT(), imm_s16()); break;
-		case STFS:		m_op.STFS	(RS(), RT(), imm_s16()); break;
-		case STFSU:		m_op.STFSU	(RS(), RT(), imm_s16()); break;
-		case STFD:		m_op.STFD	(RS(), RT(), imm_s16()); break;
-		case LD:		m_op.LD		(RS(), RT(), imm_s16()); break;
-		case FDIVS:		m_op.FDIVS	(RS(), RT(), RD());		 break;
-		case STD: 		m_op.STD	(RS(), RT(), imm_s16()); break;
-		case G5: 		m_op.G5();							 break;
+			//ADD_OPCODE(MFFS,	(RS(), RT(), RD()));
+			ADD_OPCODE(FDIV,	(RS(), RT(), RD()));
+			ADD_OPCODE(FDIV_,	(RS(), RT(), RD()));
+			ADD_OPCODE(FSUB,	(RS(), RT(), RD()));
+			ADD_OPCODE(FSUB_,	(RS(), RT(), RD()));
+			ADD_OPCODE(FADD,	(RS(), RT(), RD()));
+			ADD_OPCODE(FADD_,	(RS(), RT(), RD()));
+			ADD_OPCODE(FSQRT,	(RS(), RD()));
+			ADD_OPCODE(FSEL,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FSEL_,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FMUL,	(RS(), RT(), SA()));
+			ADD_OPCODE(FMUL_,	(RS(), RT(), SA()));
+			ADD_OPCODE(FRSQRTE,	(RS(), RD()));
+			ADD_OPCODE(FMSUB,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FMSUB_,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FMADD,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FNMSUB,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FNMSUB_,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FNMADD,	(RS(), RT(), SA(), RD()));
+			ADD_OPCODE(FNMADD_,	(RS(), RT(), SA(), RD()));
+		END_OPCODES_GROUP(G5);
 
 		default: m_op.UNK(code, opcode, RS(), RT(), RD(), SA(), FUNC(), imm_s16(), imm_u16(), imm_u26()); break;
 		};
 	}
 };
+
+#undef START_OPCODES_GROUP
+#undef ADD_OPCODE
+#undef ADD_NULL_OPCODE
+#undef END_OPCODES_GROUP
