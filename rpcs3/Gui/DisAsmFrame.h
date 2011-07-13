@@ -5,7 +5,6 @@ class DisAsmFrame : public wxFrame
 	static const uint LINES_OPCODES = 40;
 
 	wxListView* m_disasm_list;
-	uint m_PC;
 
 	virtual void OnResize(wxSizeEvent& event);
 
@@ -14,9 +13,17 @@ class DisAsmFrame : public wxFrame
 	virtual void fPrev(wxCommandEvent& event);
 	virtual void fNext(wxCommandEvent& event);
 
-	virtual void Dump(wxCommandEvent& event);
+	void Dump(wxCommandEvent& event);
+	void Resume();
+	void MouseWheel(wxMouseEvent& event);
 
 public:
+	bool exit;
 	DisAsmFrame();
-	virtual void AddLine(wxString line);
+	~DisAsmFrame()
+	{
+		exit = true;
+	}
+
+	virtual void AddLine(const wxString line);
 };

@@ -6,6 +6,8 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	: wxFrame(parent, wxID_ANY, L"Memory Viewer", wxDefaultPosition, wxDefaultSize,
 	wxSYSTEM_MENU | wxRESIZE_BORDER | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxCLIP_CHILDREN)
 {
+	exit = false;
+
 	m_PC = 0;
 
 	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );

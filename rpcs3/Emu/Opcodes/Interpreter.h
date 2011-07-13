@@ -8,6 +8,28 @@
 
 #include <wx/generic/progdlgg.h>
 
+#define START_OPCODES_GROUP(x)
+#define END_OPCODES_GROUP(name, name_string)\
+	virtual void UNK_##name##(\
+		const int code, const int opcode, OP_REG rs, OP_REG rt, OP_REG rd, OP_REG sa, const int func, \
+		const int imm_s16, const int imm_u16, const int imm_u26) \
+	{\
+		ConLog.Error\
+		(\
+			"Unknown "##name_string##" opcode! - (%08x - %02x) - " \
+			"rs: r%d, rt: r%d, rd: r%d, " \
+			"sa: 0x%x : %d, func: 0x%x : %d, " \
+			"imm s16: 0x%x : %d, imm u16: 0x%x : %d, " \
+			"imm u26: 0x%x : %d, " \
+			"Branch: 0x%x, Jump: 0x%x",\
+			code, opcode, \
+			rs, rt, rd, sa, func,\
+			imm_s16, imm_s16, imm_u16, imm_u16, \
+			imm_u26, imm_u26, \
+			branchTarget(imm_s16), jumpTarget(imm_u26) \
+		); \
+	}
+
 class InterpreterOpcodes : public Opcodes
 {
 private:
@@ -32,40 +54,15 @@ private:
 
 		if(++CPU.cycle >= max_cycle)
 		{
-			//display->Flip();
+			display->Flip();
 			CPU.cycle = 0;
 		}
 		*/
 	}
 
-	virtual bool DoSysCall(const int code)
+	virtual void SysCall(const int code)
 	{
-		switch(code)
-		{
-		case 225://lv1_gpu_context_attribute
-			ConLog.Write("SYSCALL: lv1_gpu_context_attribute");
-			switch(CPU.GPR[4])
-			{
-			case 0x0100: //Display mode set
-				display->SetMode();
-			break;
-
-			case 0x0101: //Display sync
-				ConLog.Error("SYSCALL: Display sync");
-			break;
-
-			case 0x0102: //Display flip
-				display->Flip();
-			break;
-			};
-
-			CPU.GPR[3] = 0;//OK
-		return true;
-			
-		default: ConLog.Error("Unknown SYSCALL! (%d #%x)", code, code); return false;
-		};
-
-		return false;
+		CPU.GPR[3] = DoSyscall(code);
 	}
 
 	virtual void NOP()
@@ -73,60 +70,40 @@ private:
 		//__asm nop
 	}
 
-	// Special
-	virtual void UNK_SPECIAL(const int code, const int rs, const int rt, const int rd,
-		const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown special opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, func, rs, rt, rd, sa, sa, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//
+	START_OPCODES_GROUP(SPECIAL)
+	END_OPCODES_GROUP(SPECIAL, "special");
 
-	virtual void SPECIAL2()
-	{
-		ConLog.Error("SPECIAL 2");
-	}
-
+	START_OPCODES_GROUP(SPECIAL2)
+	END_OPCODES_GROUP(SPECIAL2, "special 2");
 	/*
-	virtual void XOR(const int rd, const int rs, const int rt)
+	virtual void XOR(OP_REG rd, OP_REG rs, OP_REG rt)
 	{
 		 if (rd != 0) CPU.GPR[rd] = CPU.GPR[rs] ^ CPU.GPR[rt];
 	}
 	*/
-
-	virtual void MULLI(const int rt, const int rs, const int imm_s16)
+	virtual void MULLI(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 	{
 		if (rt != 0) CPU.GPR[rt] = ((s64)CPU.GPR[rs] * (s64)imm_s16) & 0xffffffffLL;
 	}
-
-	virtual void SUBFIC(const int rs, const int rt, const int imm_s16)
+	virtual void SUBFIC(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		ConLog.Error("SUBFIC");
 	}
-
-	virtual void CMPLWI(const int rs, const int rt, const int imm_u16)
+	virtual void CMPLDI(OP_REG rs, OP_REG rt, OP_REG imm_u16)
 	{
-		CPU.UpdateCR0(CPU.GPR[rt], imm_u16);
-		if(rs != 0) for(uint i=0; i<4; ++i) CPU.CR[rs/4][i] = CPU.CR[0][i];
+		ConLog.Error("CMPLDI");
 	}
-
-	virtual void CMPWI(const int rs, const int rt, const int rd)
+	virtual void CMPDI(OP_REG rs, OP_REG rt, OP_REG rd)
 	{
-		CPU.UpdateCR0(CPU.GPR[rt], CPU.GPR[rd]);
-		if(rs != 0) for(uint i=0; i<4; ++i) CPU.CR[rs/4][i] = CPU.CR[0][i];
+		ConLog.Error("CMPDI r%d,r%d,r%d", rs, rt, rd);
 	}
-
-	virtual void ADDIC(const int rs, const int rt, const int imm_s16)
+	virtual void ADDIC(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
 		CPU.GPR[rs] = CPU.GPR[rt] + imm_s16;
 		CPU.XER[XER_CA] = 1;
 	}
-
-	virtual void ADDIC_(const int rs, const int rt, const int imm_s16)
+	virtual void ADDIC_(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
 
@@ -136,15 +113,309 @@ private:
 		CPU.UpdateCR0(value);
 	}
 
-	//g1 - 0e
-	virtual void G1()
-	{
-		ConLog.Error("G1");
-	}
+	START_OPCODES_GROUP(G_0x04)
+		START_OPCODES_GROUP(G_0x04_0x0)
+			virtual void MULHHWU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHHWU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHHWU. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACHHWU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACHHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWU. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x0, "G_0x04_0x0");
+
+		START_OPCODES_GROUP(G_0x04_0x1)
+			virtual void MULHHW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHHW r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHHW_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHHW. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACHHW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHW r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NMACHHW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACHHW r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x1, "G_0x04_0x1");
+
+		START_OPCODES_GROUP(G_0x04_0x2)
+			virtual void MACHHWSU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWSU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACHHWSU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWSU. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x2, "G_0x04_0x2");
+
+		START_OPCODES_GROUP(G_0x04_0x3)
+			virtual void MACHHWS(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWS r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACHHWS_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWS. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NMACHHWS(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACHHWS r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x3, "G_0x04_0x3");
+
+		START_OPCODES_GROUP(G_0x04_0x4)
+			virtual void MULCHWU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULCHWU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULCHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULCHWU. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACCHWU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACCHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWU. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x4, "G_0x04_0x4");
+
+		START_OPCODES_GROUP(G_0x04_0x5)
+			virtual void MULCHW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULCHW r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACCHW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHW r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x5, "G_0x04_0x5");
+
+		START_OPCODES_GROUP(G_0x04_0x6)
+			virtual void MACCHWSU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWSU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACCHWSU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWSU. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x6, "G_0x04_0x6");
+
+		START_OPCODES_GROUP(G_0x04_0x7)
+			virtual void MACCHWS(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWS r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NMACCHWS(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACCHWS r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NMACCHWS_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACCHWS. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x7, "G_0x04_0x7");
+
+		START_OPCODES_GROUP(G_0x04_0xc)
+			virtual void MULLHWU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLHWU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULLHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLHWU. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACLHWU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACLHWU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACLHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACLHWU. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0xc, "G_0x04_0xc");
+
+		START_OPCODES_GROUP(G_0x04_0xd)
+			virtual void NMACLHW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACLHW r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0xd, "G_0x04_0xd");
+
+		START_OPCODES_GROUP(G_0x04_0xe)
+			virtual void MACLHWSU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACLHWSU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACLHWSU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACLHWSU. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0xe, "G_0x04_0xe");
+
+		START_OPCODES_GROUP(G_0x04_0xf)
+			virtual void MACLHWS(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACLHWS r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0xf, "G_0x04_0xf");
+
+		START_OPCODES_GROUP(G_0x04_0x10)
+			virtual void MACHHWUO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWUO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACHHWUO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWUO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x10, "G_0x04_0x10");
+
+		START_OPCODES_GROUP(G_0x04_0x12)
+			virtual void MACHHWSUO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWSUO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACHHWSUO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWSUO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x12, "G_0x04_0x12");
+
+		START_OPCODES_GROUP(G_0x04_0x13)
+			virtual void MACHHWSO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWSO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACHHWSO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACHHWSO. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NMACHHWSO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACHHWSO r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x13, "G_0x04_0x13");
+
+		START_OPCODES_GROUP(G_0x04_0x14)
+			virtual void MACCHWUO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWUO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACCHWUO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWUO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x14, "G_0x04_0x14");
+
+		START_OPCODES_GROUP(G_0x04_0x15)
+			virtual void MACCHWO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACCHWO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWO. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NMACCHWO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACCHWO r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x15, "G_0x04_0x15");
+
+		START_OPCODES_GROUP(G_0x04_0x16)
+			virtual void MACCHWSUO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWSUO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACCHWSUO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACCHWSUO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x16, "G_0x04_0x16");
+
+		START_OPCODES_GROUP(G_0x04_0x17)
+			virtual void NMACCHWSO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACCHWSO r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x17, "G_0x04_0x17");
+
+		START_OPCODES_GROUP(G_0x04_0x18)
+			virtual void MFVSCR(OP_REG rs)
+			{
+				ConLog.Error("MFVSCR r%d", rs);
+			}
+		END_OPCODES_GROUP(G_0x04_0x18, "G_0x04_0x18");
+
+		START_OPCODES_GROUP(G_0x04_0x1c)
+			virtual void MACLHWUO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACLHWUO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACLHWUO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACLHWUO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x1c, "G_0x04_0x1c");
+
+		START_OPCODES_GROUP(G_0x04_0x1d)
+			virtual void NMACLHWO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACLHWO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NMACLHWO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACLHWO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x1d, "G_0x04_0x1d");
+
+		START_OPCODES_GROUP(G_0x04_0x1e)
+			virtual void MACLHWSUO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACLHWSUO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MACLHWSUO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MACLHWSUO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x1e, "G_0x04_0x1e");
+
+		START_OPCODES_GROUP(G_0x04_0x1f)
+			virtual void NMACLHWSO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACLHWSO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NMACLHWSO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACLHWSO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G_0x04_0x1f, "G_0x04_0x1f");
+	END_OPCODES_GROUP(G_0x04, "G_0x04");
+
+	START_OPCODES_GROUP(G1)
+	END_OPCODES_GROUP(G1, "G1");
+	//virtual void ADDI(OP_REG rt, OP_REG rs, OP_REG imm_u16)=0;
 	//
-	//virtual void ADDI(const int rt, const int rs, const int imm_u16)=0;
-	//
-	virtual void ADDIS(const int rt, const int rs, const int imm_s16)
+	/*virtual void ADDIS(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 	{
 		if(rt == 0) return;
 
@@ -156,689 +427,1307 @@ private:
 		{
 			CPU.GPR[rt] = CPU.GPR[rs] + (imm_s16 << 16);
 		}
-	}
-	//g2 - 10
-	virtual void G2()
-	{
-		ConLog.Error("G2");
-	}
+	}*/
+	START_OPCODES_GROUP(G_0x0f)
+		START_OPCODES_GROUP(G_0x0f_0x0)
+			virtual void ADDIS(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
+			{
+				if(rt == 0) return;
 
-	//
+				if(rs == 0)
+				{
+					CPU.GPR[rt] = imm_s16 << 16;
+				}
+				else
+				{
+					CPU.GPR[rt] = CPU.GPR[rs] + (imm_s16 << 16);
+				}
+			}
+			virtual void LIS(OP_REG rs, OP_sREG imm_s16)
+			{
+				ConLog.Error("LIS");
+			}
+		END_OPCODES_GROUP(G_0x0f_0x0, "G_0x0f_0x0");
+	END_OPCODES_GROUP(G_0x0f, "G_0x0f");
+
+	START_OPCODES_GROUP(G2)
+	END_OPCODES_GROUP(G2, "G2");
+	
 	virtual void SC()
 	{
-		//Hmm... Is it really syscall?
-
-		ConLog.Write("SYSCALL: 2!");
-		DoSysCall((Memory.Read32(CPU.PC) >> 6) & 0x000fffff);
-
-		/*
-		CPU.NextPc();
-
-		const u32 code = (Memory.Read32(CPU.PC) >> 6) & 0x000fffff;
-
-		if(DoSysCall(code)) return;
-
-		ConLog.Warning( "SYSCODE: %08X", code );
-		*/
+		const int syscall = (Memory.Read32(CPU.PC) >> 6) & 0x00ffffff;
+		ConLog.Write("SYSCALL_0: %d #%08x!", syscall, syscall);
+		SysCall(syscall);
 	}
 
-	//g3 - 12
-	virtual void G3()
-	{
-		ConLog.Error("G3");
-	}
-	//
-	virtual void BLR()
-	{
-		ConLog.Error("BLR");
-	}
+	START_OPCODES_GROUP(G3)
+	END_OPCODES_GROUP(G3, "G3");
+	START_OPCODES_GROUP(G3_S)
+		//virtual void BLR()
+	END_OPCODES_GROUP(G3_S, "G3_S");
 
-	virtual void RLWINM()
-	{
-		ConLog.Error("RLWINM");
-	}
+	START_OPCODES_GROUP(G3_S0)
+		virtual void RLWINM_()
+		{
+			ConLog.Error("RLWINM.");
+		}
+		virtual void CLRLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+		{
+			if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+		}
+		virtual void CLRLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+		{
+			if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+		}
+	END_OPCODES_GROUP(G3_S0, "G3_S0");
 
-	virtual void ROTLW(const int rt, const int rs, const int rd)
+	START_OPCODES_GROUP(G3_S0_G0)
+		virtual void RLWINM()
+		{
+			ConLog.Error("RLWINM");
+		}
+		virtual void ROTLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+		{
+			if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+		}
+		virtual void ROTLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+		{
+			if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+		}
+	END_OPCODES_GROUP(G3_S0_G0, "G3_S0_G0");
+	//virtual void RLWINM()
+	//{
+	//	ConLog.Error("RLWINM");
+	//}
+	virtual void ROTLW(OP_REG rt, OP_REG rs, OP_REG rd)
 	{
 		ConLog.Error("ROTLW");
 	}
-
-	virtual void ORI(const int rt, const int rs, const int imm_u16)
+	virtual void ORI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 	{
 		if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] | imm_u16;
 	}
-
-	virtual void ORIS(const int rt, const int rs, const int imm_u16)
+	virtual void ORIS(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 	{
 		if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] | (imm_u16 << 16);
 	}
-
-	virtual void XORI(const int rt, const int rs, const int imm_u16)
+	virtual void XORI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 	{
 		if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ imm_u16;
 	}
-
-	virtual void XORIS(const int rt, const int rs, const int imm_u16)
+	virtual void XORIS(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 	{
 		if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
 	}
+	virtual void ANDI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+	{
+		if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+	}
+	virtual void ANDIS_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+	{
+		if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+	}
+	//virtual void LRLDIÑ(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+	//{
+	//	ConLog.Error("LRLDIÑ");
+	//}
+	START_OPCODES_GROUP(G_0x1e)
+		START_OPCODES_GROUP(G_0x1e_G_0x14)
+			virtual void CLRLDI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+			{
+				if (rt == 0) return;
+				CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+				CPU.UpdateCR0(CPU.GPR[rt]);
+			}
+		END_OPCODES_GROUP(G_0x1e_G_0x14, "G_0x1e_G_0x14");
+	END_OPCODES_GROUP(G_0x1e, "G_0x1e");
 
-	virtual void CLRLDI(const int rt, const int rs, const int imm_u16)
-	{
-		ConLog.Error("CLRLDI");
-	}
+	START_OPCODES_GROUP(G4)
+		START_OPCODES_GROUP(G4_G0)
+			//virtual void CMPW(OP_REG rs, OP_REG rt, OP_REG rd)
+			//{
+			//	ConLog.Error("CMPW r%d,r%d,r%d", rs, rt, rd);
+			//}
+			virtual void LVSL(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LVSL r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LVEBX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: LVEBX (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHDU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHDU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHDU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHDU. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADDC(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("ADDC r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHWU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHWU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHWU. r%d,r%d,r%d", rs, rt, rd);
+			}
+			//virtual void MFCR(OP_REG rs)
+			//{
+			//	ConLog.Error("MFCR r%d", rs);
+			//}
+			START_OPCODES_GROUP(G4_G0_0x26)
+				virtual void MFCR(OP_REG rs)
+				{
+					ConLog.Error("MFCR r%d", rs);
+				}
+				virtual void MFOCRF(OP_REG rs, OP_sREG imm_s16)
+				{
+					ConLog.Error("MFOCRF");
+				}
+			END_OPCODES_GROUP(G4_G0_0x26, "G4_G0_0x26");
 
-	//g4 - 1f
-	virtual void CMPW(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("CMPW r%d,r%d,r%d", rs, rt, rd);
-	}
-	//g4_g1
-	virtual void CMPLD(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("CMPLD r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void LVSR(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("LVSR r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void LVEHX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("LVEHX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void SUBF(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("SUBF r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void SUBF_(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("SUBF. r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void LDUX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("LDUX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void LWZUX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("LWZUX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void CNTLZD(const int rs, const int rt)
-	{
-		ConLog.Error("CNTLZD r%d,r%d", rs, rt);
-	}
-	virtual void ANDC(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("ANDC r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void UNK_G4_G1(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G1 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g1
-	virtual void MULHW(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("MULHW r%d,r%d,r%d", rs, rt, rd);
-	}
-	//g4_g2
-	virtual void LVX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("LVX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void NEG(const int rs, const int rt)
-	{
-		ConLog.Error("NEG r%d,r%d", rs, rt);
-	}
-	virtual void MTSRDIN(const int rs, const int rd)
-	{
-		ConLog.Error("MTSRDIN r%d,r%d", rs, rd);
-	}
-	virtual void NOT(const int rt, const int rd)
-	{
-		ConLog.Error("NOT r%d,r%d", rt, rd);
-	}
-	virtual void UNK_G4_G2(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G2 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g2
-	//g4_g3
-	virtual void WRTEE(const int rs)
-	{
-		ConLog.Error("WRTEE r%d", rs);
-	}
-	virtual void STVEBX(const int rs, const int rt, const int rd) //FIXME
-	{
-		ConLog.Error("STVEBX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void SUBFE(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("SUBFE r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void SUBFE_(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("SUBFE. r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void ADDE(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("ADDE r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void ADDE_(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("ADDE. r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void MTOCRF(const int rs) //FIXME
-	{
-		ConLog.Error("Unimplemented: MTOCRF r%d", rs);
-	}
-	virtual void STDX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("STDX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void STWCX_(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("STWCX. r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void STWX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("STWX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void SLQ(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("SLQ r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void SLQ_(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("SLQ. r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void SLE_(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("SLE. r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void UNK_G4_G3(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G3 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g3
-	virtual void STDUX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("STDUX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void ADDZE(const int rs, const int rt)
-	{
-		ConLog.Error("ADDZE r%d,r%d", rs, rt);
-	}
-	//g4_g4
-	virtual void STVX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("STVX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void MULLD(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("MULLD r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void ADDME_(const int rs, const int rt)
-	{
-		ConLog.Error("ADDME. r%d,r%d", rs, rt);
-	}
-	virtual void MULLW(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("MULLW r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void MULLW_(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("MULLW. r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void DCBTST(const int rt, const int rd)
-	{
-		ConLog.Error("DCBTST r%d,r%d", rt, rd);
-	}
-	virtual void SLLIQ(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("SLLIQ r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void UNK_G4_G4(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G4 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g4
-	virtual void ADD(const int rs, const int rt, const int rd)
-	{
-		 if (rs != 0) CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd];
-	}
-	virtual void XOR(const int rt, const int rs, const int rd)
-	{
-		 if (rd != 0) CPU.GPR[rd] = CPU.GPR[rs] ^ CPU.GPR[rt];
-	}
-	virtual void SRW(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("SRW r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void MFLR(const int rs)
-	{
-		ConLog.Error("MFLR r%d", rs);
-	}
-	//g4_g5
-	virtual void STHX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("STHX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void ORC(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("ORC r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void ORC_(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("ORC. r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void UNK_G4_G5(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G5 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g5
-	virtual void LVXL(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("LVXL v%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void MR(const int rt, const int rs)
-	{
-		ConLog.Error("MR r%d,r%d", rt, rs);
-	}
-	//g4_g6
-	virtual void MTDCR(const int rs) //FIXME
-	{
-		ConLog.Error("Unimplemented: MTDCR r%d", rs);
-	}
-	virtual void DCCCI(const int rt, const int rd)
-	{
-		ConLog.Error("DCCCI r%d,r%d", rt, rd);
-	}
-	virtual void DIVDU(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("DIVDU r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void DIVDU_(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("DIVDU. r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void DIVWU(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("DIVWU r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void DCBI(const int rt, const int rd)
-	{
-		ConLog.Error("DCBI r%d,r%d", rt, rd);
-	}
-	virtual void NAND(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("NAND r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void NAND_(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("NAND. r%d,r%d,r%d", rt, rs, rd);
-	}
-	//g4_g6_g1
-	virtual void MTSPR(const int rs)
-	{
-		ConLog.Error("MTSPR r%d", rs);
-	}
-	virtual void MTLR(const int rs)
-	{
-		ConLog.Error("MTLR r%d", rs);
-	}
-	virtual void MTCTR(const int rs)
-	{
-		ConLog.Error("MTCTR r%d", rs);
-	}
-	virtual void UNK_G4_G6_G1(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G6_G1 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g6_g1
-	virtual void UNK_G4_G6(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G6 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g6
-	virtual void DIVW(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("DIVW r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void SUBFO(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("SUBFO r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void LWSYNC() //FIXME
-	{
-		ConLog.Error("Unimplemented: LWSYNC");
-	}
-	
-	//g4_g7
-	virtual void NEGO() //FIXME
-	{
-		ConLog.Error("Unimplemented: NEGO");
-	}
-	virtual void MULO(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("MULO f%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void MULO_(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("MULO. f%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void MFSRI() //FIXME
-	{
-		ConLog.Error("Unimplemented: MFSRI");
-	}
-	virtual void UNK_G4_G7(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G7 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g7
-	virtual void STFSX(const int rs, const int rt, const int rd) //FIXME
-	{
-		ConLog.Error("STFSX f%d,r%d,r%d", rs, rt, rd);
-	}
-	//g4_g8
-	virtual void STSWI(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("STSWI r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void STFDX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("STFDX f%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void SRLQ(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("SRLQ r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void SREQ(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("SREQ r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void UNK_G4_G8(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G8 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g8
-	//g4_g9
-	virtual void MULLDO(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("MULLDO r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void MULLWO(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("MULLWO r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void MULLWO_(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("MULLWO. r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void UNK_G4_G9(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G9 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g9
-	
-	virtual void SRAW(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("SRAW r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void SRAWI(const int rt, const int rs, const int rd)
-	{
-		ConLog.Error("SRAWI r%d,r%d,r%d", rt, rs, rd);
-	}
-	virtual void EIEIO()
-	{
-		ConLog.Error("EIEIO");
-	}
-	//g4_g10
-	virtual void ABSO_() //FIXME
-	{
-		ConLog.Error("Unimplemented: ABSO.");
-	}
-	virtual void DIVSO_(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("DIVSO. r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void UNK_G4_G10(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4_G10 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
-	//end g4_g10
-	virtual void EXTSH(const int rt, const int rs)
-	{
-		ConLog.Error("EXTSH r%d,r%d", rt, rs);
-	}
-	virtual void EXTSB(const int rt, const int rs)
-	{
-		ConLog.Error("EXTSB r%d,r%d", rt, rs);
-	}
-	virtual void EXTSW(const int rt, const int rs)
-	{
-		ConLog.Error("EXTSW r%d,r%d", rt, rs);
-	}
-	virtual void DCBZ(const int rt, const int rd)
-	{
-		ConLog.Error("DCBZ r%d,r%d", rt, rd);
-	}
-	virtual void LWZX(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("LWZX r%d,r%d,r%d", rs, rt, rd);
-	}
-	virtual void UNK_G4(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
-	{
-		ConLog.Error
-		(
-			"Unknown G4 opcode! - (%08x - %02x) - rs: r%d, rt: r%d, rd: r%d, sa: 0x%x : %d, func: 0x%x : %d, imm s16: 0x%x : %d, imm u16: 0x%x : %d, imm u26: 0x%x : %d",
-			code, opcode, rs, rt, rd, sa, sa, func, func, imm_s16, imm_s16, imm_u16, imm_u16, imm_u26, imm_u26
-		);
-	}
+			virtual void LWARX(OP_REG rs, OP_REG rd, OP_sREG imm_s16)
+			{
+				ConLog.Error("LWARX");
+			}
+			virtual void LDX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LDX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void CNTLZW(OP_REG rt, OP_REG rs)
+			{
+				ConLog.Error("CNTLZW r%d,r%d", rt, rs);
+			}
+			virtual void AND(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("AND r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void AND_(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("AND. r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void MASKG(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("MASKG r%d,r%d,r%d", rt, rs, rd);
+			}
+		END_OPCODES_GROUP(G4_G0, "G4_G0");
+
+		START_OPCODES_GROUP(G4_G1)
+			virtual void CMPLD(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("CMPLD r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LVSR(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LVSR r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LVEHX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LVEHX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void SUBF(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("SUBF r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void SUBF_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("SUBF. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LDUX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LDUX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LWZUX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LWZUX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void CNTLZD(OP_REG rs, OP_REG rt)
+			{
+				ConLog.Error("CNTLZD r%d,r%d", rs, rt);
+			}
+			virtual void ANDC(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("ANDC r%d,r%d,r%d", rt, rs, rd);
+			}
+		END_OPCODES_GROUP(G4_G1, "G4_G1");
+		//virtual void MULHW(OP_REG rs, OP_REG rt, OP_REG rd)
+		//{
+		//	ConLog.Error("MULHW r%d,r%d,r%d", rs, rt, rd);
+		//}
+		START_OPCODES_GROUP(G4_G_0x2)
+			virtual void LVEWX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LVEWX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHD(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHD r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHD_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHD. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHW r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULHW_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULHW. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DLMZB(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("DLMZB r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void DLMZB_(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("DLMZB. r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void LDARX(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("LDARX r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void DCBF(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("DCBF r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void LBZX(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("LBZX r%d,r%d,r%d", rt, rs, rd);
+			}
+		END_OPCODES_GROUP(G4_G_0x2, "G4_G_0x2");
+
+		START_OPCODES_GROUP(G4_G2)
+			virtual void LVX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LVX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NEG(OP_REG rs, OP_REG rt)
+			{
+				ConLog.Error("NEG r%d,r%d", rs, rt);
+			}
+			virtual void MUL(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MUL r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MUL_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MUL. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MTSRDIN(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("MTSRDIN r%d,r%d", rs, rd);
+			}
+			//virtual void NOT(OP_REG rt, OP_REG rd)
+			//{
+			//	ConLog.Error("NOT r%d,r%d", rt, rd);
+			//}
+		END_OPCODES_GROUP(G4_G2, "G4_G2");
+
+		START_OPCODES_GROUP(G4_G3)
+			virtual void WRTEE(OP_REG rs)
+			{
+				ConLog.Error("WRTEE r%d", rs);
+			}
+			virtual void STVEBX(OP_REG rs, OP_REG rt, OP_REG rd) //FIXME
+			{
+				ConLog.Error("STVEBX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void SUBFE(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("SUBFE r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void SUBFE_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("SUBFE. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADDE(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("ADDE r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADDE_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("ADDE. r%d,r%d,r%d", rs, rt, rd);
+			}
+			//virtual void MTOCRF(OP_REG rs) //FIXME
+			//{
+			//	ConLog.Error("Unimplemented: MTOCRF r%d", rs);
+			//}
+			virtual void STDX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("STDX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void STWCX_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("STWCX. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void STWX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("STWX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void SLQ(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("SLQ r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void SLQ_(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("SLQ. r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void SLE_(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("SLE. r%d,r%d,r%d", rt, rs, rd);
+			}
+		END_OPCODES_GROUP(G4_G3, "G4_G3");
+		virtual void STDUX(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("STDUX r%d,r%d,r%d", rs, rt, rd);
+		}
+		//virtual void ADDZE(OP_REG rs, OP_REG rt)
+		//{
+		//	ConLog.Error("ADDZE r%d,r%d", rs, rt);
+		//}
+		START_OPCODES_GROUP(G4_G4)
+			virtual void STVX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("STVX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULLD(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLD r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULLD_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLD. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADDME(OP_REG rs, OP_REG rt)
+			{
+				ConLog.Error("ADDME r%d,r%d", rs, rt);
+			}
+			virtual void ADDME_(OP_REG rs, OP_REG rt)
+			{
+				ConLog.Error("ADDME. r%d,r%d", rs, rt);
+			}
+			virtual void MULLW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLW r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULLW_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLW. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DCBTST(OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DCBTST r%d,r%d", rt, rd);
+			}
+			virtual void SLLIQ(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("SLLIQ r%d,r%d,r%d", rt, rs, rd);
+			}
+		END_OPCODES_GROUP(G4_G4, "G4_G4");
+
+		START_OPCODES_GROUP(G4_G_ADD)
+			virtual void ICBT(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: ICBT (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DOZ(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DOZ r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DOZ_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DOZ. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADD(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				 if (rs != 0) CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd];
+			}
+			virtual void ADD_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				 if (rs == 0) return;
+				 CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd];
+				 CPU.UpdateCR0(CPU.GPR[rs]);
+			}
+			virtual void LSCBX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LSCBX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LSCBX_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LSCBX. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DCBT(OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DCBT r%d,r%d", rt, rd);
+			}
+			virtual void LHZX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LHZX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void EQV(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: EQV (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void EQV_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: EQV. (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G4_G_ADD, "G4_G_ADD");
+
+		START_OPCODES_GROUP(G4_G_ADDZE)
+			virtual void ADDZE(OP_REG rs, OP_REG rt)
+			{
+				ConLog.Error("ADDZE r%d,r%d", rs, rt);
+			}
+			virtual void ADDZE_(OP_REG rs, OP_REG rt)
+			{
+				ConLog.Error("ADDZE. r%d,r%d", rs, rt);
+			}
+		END_OPCODES_GROUP(G4_G_ADDZE, "G4_G_ADDZE");
+		//virtual void XOR(OP_REG rt, OP_REG rs, OP_REG rd)
+		//{
+		//	 if (rd != 0) CPU.GPR[rd] = CPU.GPR[rs] ^ CPU.GPR[rt];
+		//}
+		virtual void SRW(OP_REG rt, OP_REG rs, OP_REG rd)
+		{
+			ConLog.Error("SRW r%d,r%d,r%d", rt, rs, rd);
+		}
+		//virtual void MFLR(OP_REG rs)
+		//{
+		//	ConLog.Error("MFLR r%d", rs);
+		//}
+		START_OPCODES_GROUP(G4_G_0x9)
+			virtual void DOZI(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+			{
+				ConLog.Error("DOZI");
+			}
+			virtual void LHZUX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LHZUX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void XOR(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("XOR r%d,r%d,r%d", rt, rs, rd);
+			}
+		END_OPCODES_GROUP(G4_G_0x9, "G4_G_0x9");
+
+		START_OPCODES_GROUP(G4_G_0xa)
+			virtual void MFDCR(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: MFDCR (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIV(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				 if (rs != 0) CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd];
+			}
+			virtual void DIV_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				 if (rs == 0) return;
+				 CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd];
+				 CPU.UpdateCR0(CPU.GPR[rs]);
+			}
+			//virtual void MFCTR(OP_REG rs)
+			//{
+			//	ConLog.Error("MFCTR r%d", rs);
+			//}
+			START_OPCODES_GROUP(G4_G_0xa_0x26)
+				virtual void MFSPR(OP_REG rs, OP_sREG imm_s16)
+				{
+					ConLog.Error("MFSPR");
+				}
+				virtual void MFLR(OP_REG rs)
+				{
+					ConLog.Error("MFLR r%d", rs);
+				}
+				virtual void MFCTR(OP_REG rs)
+				{
+					ConLog.Error("MFCTR r%d", rs);
+				}
+			END_OPCODES_GROUP(G4_G_0xa_0x26, "G4_G_0xa_0x26");
+
+			virtual void LWAX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LWAX r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G4_G_0xa, "G4_G_0xa");
+
+		START_OPCODES_GROUP(G4_G_0xb)
+			virtual void LVXL(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("LVXL v%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void MFTB(OP_REG rs)
+		{
+			ConLog.Error("MFTB r%d", rs);
+		}
+		END_OPCODES_GROUP(G4_G_0xb, "G4_G_0xb");
+
+		START_OPCODES_GROUP(G4_G5)
+			virtual void STHX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("STHX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ORC(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("ORC r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void ORC_(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("ORC. r%d,r%d,r%d", rt, rs, rd);
+			}
+		END_OPCODES_GROUP(G4_G5, "G4_G5");
+		//virtual void MR(OP_REG rt, OP_REG rs)
+		//{
+		//	ConLog.Error("MR r%d,r%d", rt, rs);
+		//}
+		START_OPCODES_GROUP(G4_G6)
+			virtual void MTDCR(OP_REG rs) //FIXME
+			{
+				ConLog.Error("Unimplemented: MTDCR r%d", rs);
+			}
+			virtual void DCCCI(OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DCCCI r%d,r%d", rt, rd);
+			}
+			virtual void DIVDU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVDU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVDU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVDU. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVWU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVWU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVWU_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVWU. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DCBI(OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DCBI r%d,r%d", rt, rd);
+			}
+			virtual void NAND(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("NAND r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void NAND_(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("NAND. r%d,r%d,r%d", rt, rs, rd);
+			}
+			START_OPCODES_GROUP(G4_G6_G1)
+				//virtual void MTSPR(OP_REG rs)
+				//{
+				//	ConLog.Error("MTSPR r%d", rs);
+				//}
+				virtual void MTLR(OP_REG rs)
+				{
+					ConLog.Error("MTLR r%d", rs);
+				}
+				virtual void MTCTR(OP_REG rs)
+				{
+					ConLog.Error("MTCTR r%d", rs);
+				}
+			END_OPCODES_GROUP(G4_G6_G1, "G4_G6_G1");
+		END_OPCODES_GROUP(G4_G6, "G4_G6");
+		//virtual void DIVW(OP_REG rs, OP_REG rt, OP_REG rd)
+		//{
+		//	ConLog.Error("DIVW r%d,r%d,r%d", rs, rt, rd);
+		//}
+		START_OPCODES_GROUP(G4_G_0xf)
+			virtual void DIVD(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVD r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVD_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVD. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVW r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G4_G_0xf, "G4_G_0xf");
+
+		START_OPCODES_GROUP(G4_G_ADDCO)
+			virtual void MCRXR(OP_REG rs)
+			{
+				ConLog.Error("MCRXR r%d", rs);
+			}
+			virtual void LVLX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LVLX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADDCO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("ADDCO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADDCO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("ADDCO. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LSWX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: LSWX (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LWBRX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: LWBRX (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LFSX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LFSX r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MASKIR(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("MASKIR r%d,r%d,r%d", rt, rs, rd);
+			}
+		END_OPCODES_GROUP(G4_G_ADDCO, "G4_G_ADDCO");
+		//virtual void SUBFO(OP_REG rs, OP_REG rt, OP_REG rd)
+		//{
+		//	ConLog.Error("SUBFO r%d,r%d,r%d", rs, rt, rd);
+		//}
+		//virtual void LWSYNC() //FIXME
+		//{
+		//	ConLog.Error("Unimplemented: LWSYNC");
+		//}
+		START_OPCODES_GROUP(G4_G_0x11)
+			virtual void LVRX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LVRX f%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void SUBFO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("SUBFO r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G4_G_0x11, "G4_G_0x11");
+		
+		START_OPCODES_GROUP(G4_G_0x12)
+			START_OPCODES_GROUP(G4_G_0x12_0x26)
+				virtual void MFSR(OP_REG rs, OP_sREG imm_s16)
+				{
+					ConLog.Error("MFSR");
+				}
+			END_OPCODES_GROUP(G4_G_0x12_0x26, "G4_G_0x12_0x26");
+
+			virtual void LWSYNC() //FIXME
+			{
+				ConLog.Error("Unimplemented: LWSYNC");
+			}
+			virtual void LFDX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LFDX f%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G4_G_0x12, "G4_G_0x12");
+
+		START_OPCODES_GROUP(G4_G7)
+			virtual void NEGO() //FIXME
+			{
+				ConLog.Error("Unimplemented: NEGO");
+			}
+			virtual void MULO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULO f%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULO. f%d,r%d,r%d", rs, rt, rd);
+			}
+
+			START_OPCODES_GROUP(G4_G7_0x26)
+				virtual void MFSRI(OP_REG rs, OP_REG rt, OP_REG rd)
+				{
+					ConLog.Error("MFSRI f%d,r%d,r%d", rs, rt, rd);
+				}
+			END_OPCODES_GROUP(G4_G7_0x26, "G4_G7_0x26");
+		END_OPCODES_GROUP(G4_G7, "G4_G7");
+		//virtual void STFSX(OP_REG rs, OP_REG rt, OP_REG rd) //FIXME
+		//{
+		//	ConLog.Error("STFSX f%d,r%d,r%d", rs, rt, rd);
+		//}
+		START_OPCODES_GROUP(G4_G_ADDEO)
+			virtual void ADDEO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("ADDEO f%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADDEO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("ADDEO. f%d,r%d,r%d", rs, rt, rd);
+			}
+
+			START_OPCODES_GROUP(G4_G_ADDEO_0x26)
+				virtual void MFSRIN(OP_REG rs, OP_REG rd)
+				{
+					ConLog.Error("MFSRIN f%d,r%d", rs, rd);
+				}
+			END_OPCODES_GROUP(G4_G_ADDEO_0x26, "G4_G_ADDEO_0x26");
+		END_OPCODES_GROUP(G4_G_ADDEO, "G4_G_ADDEO");
+
+		START_OPCODES_GROUP(G4_G8)
+			virtual void ADDZEO_(OP_REG rs, OP_REG rt, OP_REG rd) //temp
+			{
+				ConLog.Error("Unimplemented: ADDZEO. (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void STSWI(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("STSWI r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void STFDX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("STFDX f%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void SRLQ(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("SRLQ r%d,r%d,r%d", rt, rs, rd);
+			}
+			virtual void SREQ(OP_REG rt, OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("SREQ r%d,r%d,r%d", rt, rs, rd);
+			}
+		END_OPCODES_GROUP(G4_G8, "G4_G8");
+
+		START_OPCODES_GROUP(G4_G_ADDO)
+			virtual void LVLXL(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LVLXL f%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DOZO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DOZO f%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADDO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("ADDO f%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ADDO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("ADDO. f%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void LHBRX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LHBRX f%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G4_G_ADDO, "G4_G_ADDO");
+
+		START_OPCODES_GROUP(G4_G9)
+			virtual void MULLDO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLDO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULLDO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLDO. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULLWO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLWO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MULLWO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("MULLWO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G4_G9, "G4_G9");
+		//virtual void SRAW(OP_REG rt, OP_REG rs, OP_REG rd)
+		//{
+		//	ConLog.Error("SRAW r%d,r%d,r%d", rt, rs, rd);
+		//}
+		virtual void SRAWI(OP_REG rt, OP_REG rs, OP_REG rd)
+		{
+			ConLog.Error("SRAWI r%d,r%d,r%d", rt, rs, rd);
+		}
+		//virtual void EIEIO()
+		//{
+		//	ConLog.Error("EIEIO");
+		//}
+		START_OPCODES_GROUP(G4_G_0x1a)
+			virtual void DIVO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVO. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void EIEIO()
+			{
+				ConLog.Error("EIEIO");
+			}
+		END_OPCODES_GROUP(G4_G_0x1a, "G4_G_0x1a");
+
+		START_OPCODES_GROUP(G4_G10)
+			virtual void ABSO_() //FIXME
+			{
+				ConLog.Error("Unimplemented: ABSO.");
+			}
+			virtual void DIVSO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVSO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVSO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVSO. r%d,r%d,r%d", rs, rt, rd);
+			}
+		END_OPCODES_GROUP(G4_G10, "G4_G10");
+
+		START_OPCODES_GROUP(G4_G_0x1e)
+			virtual void ICCCI(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: ICCCI (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void RLDCL_(OP_REG rt, OP_REG rs, OP_REG rd, OP_sREG imm_s16)
+			{
+				ConLog.Error("RLDCL.");
+			}
+			virtual void DIVDUO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVDUO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVDUO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVDUO. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVWUO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVWUO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVWUO_(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVWUO. r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void ICBI(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: ICBI (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void RLDCL(OP_REG rt, OP_REG rs, OP_REG rd, OP_sREG imm_s16)
+			{
+				ConLog.Error("RLDCL");
+			}
+			virtual void EXTSW(OP_REG rt, OP_REG rs)
+			{
+				ConLog.Error("EXTSW r%d,r%d", rt, rs);
+			}
+			virtual void EXTSW_(OP_REG rt, OP_REG rs)
+			{
+				ConLog.Error("EXTSW. r%d,r%d", rt, rs);
+			}
+		END_OPCODES_GROUP(G4_G_0x1e, "G4_G_0x1e");
+
+		START_OPCODES_GROUP(G4_G_0x1f)
+			virtual void ICREAD(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("Unimplemented: ICREAD (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DIVDO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DIVDO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void DCBZ(OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("DCBZ r%d,r%d", rt, rd);
+			}
+		END_OPCODES_GROUP(G4_G_0x1f, "G4_G_0x1f");
+
+		virtual void EXTSH(OP_REG rt, OP_REG rs)
+		{
+			ConLog.Error("EXTSH r%d,r%d", rt, rs);
+		}
+		virtual void EXTSB(OP_REG rt, OP_REG rs)
+		{
+			ConLog.Error("EXTSB r%d,r%d", rt, rs);
+		}
+		//virtual void EXTSW(OP_REG rt, OP_REG rs)
+		//{
+		//	ConLog.Error("EXTSW r%d,r%d", rt, rs);
+		//}
+		//virtual void DCBZ(OP_REG rt, OP_REG rd)
+		//{
+		//	ConLog.Error("DCBZ r%d,r%d", rt, rd);
+		//}
+		virtual void LWZX(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("LWZX r%d,r%d,r%d", rs, rt, rd);
+		}
+	END_OPCODES_GROUP(G4, "G4");
+	//virtual void MFLR(OP_REG rs)=0;
 	//
-
-	//virtual void MFLR(const int rs)=0;
-	//
-	virtual void LWZ(const int rs, const int rt, const int imm_s16)
+	virtual void LWZ(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
+		if(rs == 0) return;
 		CPU.GPR[rs] = Memory.Read32(CPU.GPR[rt] + imm_s16);
 	}
-
-	virtual void LWZU(const int rt, const int rs, const int imm_s16)
+	virtual void LWZU(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 	{
 		if(rs == 0 || rs == rt) return;
 
-		const int addr = CPU.GPR[rs] + imm_s16;
+		OP_REG addr = CPU.GPR[rs] + imm_s16;
 
 		CPU.GPR[rt] = Memory.Read32(addr);
 		CPU.GPR[rs] = addr;
 	}
-
-	virtual void LBZ(const int rs, const int rt, const int imm_s16)
+	virtual void LBZ(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
+		if(rs == 0) return;
 		CPU.GPR[rs] = Memory.Read8(CPU.GPR[rt] + imm_s16);
 	}
-
-	virtual void LBZU(const int rt, const int rs, const int imm_s16)
+	virtual void LBZU(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 	{
 		if(rs == 0 || rs == rt) return;
 
-		const int addr = CPU.GPR[rs] + imm_s16;
+		OP_REG addr = CPU.GPR[rs] + imm_s16;
 
 		CPU.GPR[rt] = Memory.Read8(addr);
 		CPU.GPR[rs] = addr;
 	}
-
-	virtual void STW(const int rs, const int rt, const int imm_s16)
+	virtual void STW(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		Memory.Write32(CPU.GPR[rt] + imm_s16, CPU.GPR[rs]);
+		if(rs == 0) return;
+		Memory.Write32(CPU.GPR[rs] + imm_s16, CPU.GPR[rt]);
 	}
-
-	virtual void STWU(const int rs, const int rt, const int imm_s16)
+	virtual void STWU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
 
-		const int addr = CPU.GPR[rt] + imm_s16;
+		OP_REG addr = CPU.GPR[rs] + imm_s16;
 
-		Memory.Write32(addr, CPU.GPR[rs]);
-		CPU.GPR[rs] = addr;
+		Memory.Write32(addr, CPU.GPR[rt]);
+		CPU.GPR[rt] = addr;
 	}
-
-	virtual void STB(const int rs, const int rt, const int imm_s16)
+	virtual void STB(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		Memory.Write8(CPU.GPR[rt] + imm_s16, CPU.GPR[rs]);
+		if(rs == 0) return;
+		Memory.Write8(CPU.GPR[rs] + imm_s16, CPU.GPR[rt]);
 	}
-
-	virtual void STBU(const int rs, const int rt, const int imm_s16)
+	virtual void STBU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
 
-		const int addr = CPU.GPR[rt] + imm_s16;
+		OP_REG addr = CPU.GPR[rs] + imm_s16;
 
-		Memory.Write8(addr, CPU.GPR[rs]);
-		CPU.GPR[rs] = addr;
+		Memory.Write8(addr, CPU.GPR[rt]);
+		CPU.GPR[rt] = addr;
 	}
-
-	virtual void LHZ(const int rs, const int rt, const int imm_s16)
+	virtual void LHZ(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
+		if(rs == 0) return;
 		CPU.GPR[rs] = Memory.Read16(CPU.GPR[rt] + imm_s16);
 	}
-
-	virtual void LHZU(const int rs, const int rt, const int imm_s16)
+	virtual void LHZU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0 || rs == rt) return;
 
-		const int addr = CPU.GPR[rs] + imm_s16;
+		OP_REG addr = CPU.GPR[rs] + imm_s16;
 
 		CPU.GPR[rt] = Memory.Read16(addr);
 		CPU.GPR[rs] = addr;
 	}
-
-	virtual void STH(const int rs, const int rt, const int imm_s16)
+	virtual void LHA(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		Memory.Write16(CPU.GPR[rt] + imm_s16, CPU.GPR[rs]);
+		if(rs == 0) return;
+		CPU.GPR[rs] = Memory.Read16(CPU.GPR[rt] + imm_s16);
 	}
+	virtual void LHAU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+	{
+		if(rs == 0 || rs == rt) return;
 
-	virtual void STHU(const int rs, const int rt, const int imm_s16)
+		const uint addr = CPU.GPR[rt] + imm_s16;
+
+		CPU.GPR[rs] = Memory.Read16(addr);
+		CPU.GPR[rt] = addr;
+	}
+	virtual void STH(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+	{
+		if(rs == 0) return;
+		Memory.Write16(CPU.GPR[rs] + imm_s16, CPU.GPR[rt]);
+	}
+	virtual void STHU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
 
-		const int addr = CPU.GPR[rt] + imm_s16;
+		OP_REG addr = CPU.GPR[rs] + imm_s16;
 
-		Memory.Write16(addr, CPU.GPR[rs]);
-		CPU.GPR[rs] = addr;
+		Memory.Write16(addr, CPU.GPR[rt]);
+		CPU.GPR[rt] = addr;
 	}
-
-	virtual void LFS(const int rs, const int rt, const int imm_s16)
+	virtual void LMW(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+	{
+		ConLog.Error("LMW");
+	}
+	virtual void LFS(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		ConLog.Error("LFS");
 	}
-
-	virtual void LFSU(const int rs, const int rt, const int imm_u16)
+	virtual void LFSU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		ConLog.Error("LFSU");
 	}
-
-	virtual void LFD(const int rs, const int rt, const int imm_s16)
+	virtual void LFD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		ConLog.Error("LFD");
 	}
-
-	virtual void STFS(const int rs, const int rt, const int imm_s16)
+	virtual void LFDU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+	{
+		ConLog.Error("LFDU");
+	}
+	virtual void STFS(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		ConLog.Error("STFS");
 	}
-
-	virtual void STFSU(const int rs, const int rt, const int imm_u16)
+	virtual void STFSU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		ConLog.Error("STFSU");
 	}
-
-	virtual void STFD(const int rs, const int rt, const int imm_s16)
+	virtual void STFD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		ConLog.Error("STFD");
 	}
+	//virtual void LD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+	//{
+	//	if(rs == 0) return;
+	//	CPU.GPR[rs] = Memory.Read64(CPU.GPR[rt] + imm_s16);
+	//}
+	START_OPCODES_GROUP(G_0x3a)
+		virtual void LDU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+		{
+			if(rs == 0 || rs == rt) return;
 
-	virtual void LD(const int rs, const int rt, const int imm_s16)
+			const uint addr = CPU.GPR[rs] + imm_s16;
+
+			CPU.GPR[rs] = Memory.Read64(addr);
+			CPU.GPR[rt] = addr;
+		}
+		virtual void LWA(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+		{
+			if(rs == 0) return;
+			CPU.GPR[rs] = Memory.Read32(CPU.GPR[rt] + imm_s16);
+		}
+		virtual void LD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+		{
+			if(rs == 0) return;
+			CPU.GPR[rs] = Memory.Read64(CPU.GPR[rt] + imm_s16);
+		}
+	END_OPCODES_GROUP(G_0x3a, "G_0x3a");
+
+	START_OPCODES_GROUP(G4_S)
+		//virtual void FDIVS(OP_REG rs, OP_REG rt, OP_REG rd)
+		virtual void FSUBS(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("FSUBS r%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void FSUBS_(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("FSUBS. r%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void FADDS(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("FADDS r%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void FSQRTS(OP_REG rs, OP_REG rd)
+		{
+			ConLog.Error("FSQRTS r%d,r%d", rs, rd);
+		}
+		virtual void FRES(OP_REG rs, OP_REG rd)
+		{
+			ConLog.Error("FRES r%d,r%d", rs, rd);
+		}
+		virtual void FMULS(OP_REG rs, OP_REG rt, OP_REG sa)
+		{
+			ConLog.Error("FMULS r%d,r%d,r%d", rs, rt, sa);
+		}
+		virtual void FMULS_(OP_REG rs, OP_REG rt, OP_REG sa)
+		{
+			ConLog.Error("FMULS. r%d,r%d,r%d", rs, rt, sa);
+		}
+		virtual void FMADDS(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FMADDS r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FMADDS_(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FMADDS. r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FMSUBS(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FMSUBS r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FMSUBS_(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FMSUBS. r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FNMSUBS(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FNMSUBS r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FNMSUBS_(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FNMSUBS. r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FNMADDS(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FNMADDS r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FNMADDS_(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FNMADDS. r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+	END_OPCODES_GROUP(G4_S, "G4_S");
+
+	virtual void STD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
-		CPU.GPR[rs] = Memory.Read64(CPU.GPR[rt] + imm_s16);
+		Memory.Write32(CPU.GPR[rs] + imm_s16, CPU.GPR[rt]);
 	}
 
-	virtual void FDIVS(const int rs, const int rt, const int rd)
-	{
-		ConLog.Error("FDIVS");
-	}
+	START_OPCODES_GROUP(G5)
+		START_OPCODES_GROUP(G5_G0x0)
+			virtual void FCMPU(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("FCMPU r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void FCMPO(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("FCMPO r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MCRFS(OP_REG rs, OP_REG rt)
+			{
+				ConLog.Error("MCRFS r%d,r%d", rs, rt);
+			}
+		END_OPCODES_GROUP(G5_G0x0, "G5_G0x0");
 
-	virtual void STD(const int rs, const int rt, const int imm_s16)
-	{
-		Memory.Write32(CPU.GPR[rt] + imm_s16, CPU.GPR[rs]);
-	}
+		START_OPCODES_GROUP(G5_G0x10)
+			virtual void FNEG(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("FNEG r%d,r%d", rs, rd);
+			}
+			virtual void FMR(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("FMR r%d,r%d", rs, rd);
+			}
+			virtual void FNABS(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("FNABS r%d,r%d", rs, rd);
+			}
+			virtual void FABS(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("FABS r%d,r%d", rs, rd);
+			}
+		END_OPCODES_GROUP(G5_G0x10, "G5_G0x10");
 
-	//g5 - 3f
-	virtual void G5()
-	{
-		ConLog.Error("G5");
-	}
-	//virtual void FCFID(const int rs, const int rd)=0;
-	//
+		START_OPCODES_GROUP(G5_G0x1c)
+			virtual void FCTIW(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("FCTIW r%d,r%d", rs, rd);
+			}
+			virtual void FCTID(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("FCTID r%d,r%d", rs, rd);
+			}
+			virtual void FCFID(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("FCFID r%d,r%d", rs, rd);
+			}
+		END_OPCODES_GROUP(G5_G0x1c, "G5_G0x1c");
+
+		START_OPCODES_GROUP(G5_G0x1e)
+			virtual void FCTIWZ(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("FCTIWZ r%d,r%d", rs, rd);
+			}
+			virtual void FCTIDZ(OP_REG rs, OP_REG rd)
+			{
+				ConLog.Error("FCTIDZ r%d,r%d", rs, rd);
+			}
+		END_OPCODES_GROUP(G5_G0x1e, "G5_G0x1e");
+		//virtual void MFFS(OP_REG rs, OP_REG rt, OP_REG rd)
+		//{
+		//	ConLog.Error("Unimplemented: MFFS (unk, rs/rt/rd) r%d,r%d,r%d", rs, rt, rd);
+		//}
+		virtual void FDIV(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("FDIV r%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void FDIV_(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("FDIV. r%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void FSUB(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("FSUB r%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void FSUB_(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("FSUB. r%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void FADD(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("FADD r%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void FADD_(OP_REG rs, OP_REG rt, OP_REG rd)
+		{
+			ConLog.Error("FADD. r%d,r%d,r%d", rs, rt, rd);
+		}
+		virtual void FSQRT(OP_REG rs, OP_REG rd)
+		{
+			ConLog.Error("FSQRT r%d,r%d", rs, rd);
+		}
+		virtual void FSEL(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FSEL r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FSEL_(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FSEL. r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FMUL(OP_REG rs, OP_REG rt, OP_REG sa)
+		{
+			ConLog.Error("FMUL r%d,r%d,r%d", rs, rt, sa);
+		}
+		virtual void FMUL_(OP_REG rs, OP_REG rt, OP_REG sa)
+		{
+			ConLog.Error("FMUL. r%d,r%d,r%d", rs, rt, sa);
+		}
+		virtual void FRSQRTE(OP_REG rs, OP_REG rd)
+		{
+			ConLog.Error("FRSQRTE r%d,r%d", rs, rd);
+		}
+		virtual void FMSUB(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FMSUB r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FMSUB_(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FMSUB. r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FMADD(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FMADD r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FNMSUB(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FNMSUB r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FNMSUB_(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FNMSUB. r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FNMADD(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FNMADD r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+		virtual void FNMADD_(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd)
+		{
+			ConLog.Error("FNMADD. r%d,r%d,r%d,r%d", rs, rt, sa, rd);
+		}
+	END_OPCODES_GROUP(G5, "G5");
 	
-	virtual void UNK(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)
+	virtual void UNK(OP_REG code, OP_REG opcode, OP_REG rs, OP_REG rt,
+		OP_REG rd, OP_REG sa, OP_REG func, OP_sREG imm_s16, OP_REG imm_u16, OP_REG imm_u26)
 	{
 		ConLog.Error
 		(
@@ -847,3 +1736,6 @@ private:
 		);
 	}
 };
+
+#undef START_OPCODES_GROUP
+#undef END_OPCODES_GROUP

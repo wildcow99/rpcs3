@@ -16,7 +16,8 @@ enum IDs
 	id_config_emu,
 };
 
-MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_)
+MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_, 
+	Ini.Gui.m_MainWindow.GetValue().position, Ini.Gui.m_MainWindow.GetValue().size)
 {
 	wxMenuBar& menubar(*new wxMenuBar());
 
@@ -34,10 +35,6 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_)
 	menu_conf.Append(id_config_emu, "Settings");
 
 	SetMenuBar(&menubar);
-
-	SetSize(wxSize(280, 180));
-
-	ConLog.Init();
 
 	Connect( id_boot_game, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
 	Connect( id_boot_elf,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
@@ -64,17 +61,41 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	const wxString elf = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN";
-	const wxString self = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\EBOOT.BIN";
+	const wxString elf0  = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN";
+	const wxString elf1  = ctrl.GetPath() + "\\USRDIR\\BOOT.BIN";
+	const wxString elf2  = ctrl.GetPath() + "\\BOOT.BIN";
+	const wxString self0 = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\EBOOT.BIN";
+	const wxString self1 = ctrl.GetPath() + "\\USRDIR\\EBOOT.BIN";
+	const wxString self2 = ctrl.GetPath() + "\\EBOOT.BIN";
 
-	if(wxFile::Access(elf, wxFile::read))
+	if(wxFile::Access(elf0, wxFile::read))
 	{
-		System.SetElf(elf);
+		System.SetElf(elf0);
 		ConLog.Write("Elf: booting...");
 	}
-	else if(wxFile::Access(self, wxFile::read))
+	else if(wxFile::Access(elf1, wxFile::read))
 	{
-		System.SetSelf(self);
+		System.SetElf(elf1);
+		ConLog.Write("Elf: booting...");
+	}
+	else if(wxFile::Access(elf2, wxFile::read))
+	{
+		System.SetElf(elf2);
+		ConLog.Write("Elf: booting...");
+	}
+	else if(wxFile::Access(self0, wxFile::read))
+	{
+		System.SetSelf(self0);
+		ConLog.Warning("Self: booting...");
+	}
+	else if(wxFile::Access(self1, wxFile::read))
+	{
+		System.SetSelf(self1);
+		ConLog.Warning("Self: booting...");
+	}
+	else if(wxFile::Access(self2, wxFile::read))
+	{
+		System.SetSelf(self2);
 		ConLog.Warning("Self: booting...");
 	}
 	else
@@ -109,6 +130,8 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 
 	ConLog.Write("Elf: booting...");
 
+	if(stoped) System.Stop();
+
 	System.SetElf(ctrl.GetPath());
 	System.Run();
 
@@ -136,6 +159,8 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 
 	ConLog.Write("SELF: booting...");
 
+	if(stoped) System.Stop();
+
 	System.SetSelf(ctrl.GetPath());
 	System.Run();
 
@@ -144,27 +169,41 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 {
-	bool stoped = false;
+	//TODO
+
+	bool paused = false;
 
 	if(System.IsRunned())
 	{
 		System.Pause();
-		stoped = true;
+		paused = true;
 	}
 
 	wxDialog* diag = new wxDialog(this, wxID_ANY, "Settings", wxDefaultPosition);
 
 	wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
-	wxStaticBoxSizer* s_round( new wxStaticBoxSizer( wxVERTICAL, diag, _("Decoder") ) );
 
-	wxComboBox* com_box = new wxComboBox(diag, wxID_ANY);
+	wxStaticBoxSizer* s_round_decoder( new wxStaticBoxSizer( wxVERTICAL, diag, _("Decoder") ) );
 
-	com_box->Append("DisAsm");
-	com_box->Append("Interpreter");
+	wxStaticBoxSizer* s_round_video( new wxStaticBoxSizer( wxHORIZONTAL, diag, _("Video") ) );
+	wxStaticBoxSizer* s_round_video_render( new wxStaticBoxSizer( wxVERTICAL, diag, _("Render") ) );
 
-	com_box->SetSelection(ini.Load("DecoderMode", 1));
+	wxComboBox* cbox_decoder = new wxComboBox(diag, wxID_ANY);
+	wxComboBox* cbox_video_render = new wxComboBox(diag, wxID_ANY);
 
-	s_round->Add(com_box);
+	cbox_decoder->Append("DisAsm");
+	cbox_decoder->Append("Interpreter");
+
+	cbox_video_render->Append("Software");
+	cbox_video_render->Append("OGL");
+
+	cbox_decoder->SetSelection(Ini.Emu.m_DecoderMode.GetValue());
+	cbox_video_render->SetSelection(Ini.Emu.m_RenderMode.GetValue());
+
+	s_round_decoder->Add(cbox_decoder);
+
+	s_round_video_render->Add(cbox_video_render);
+	s_round_video->Add(s_round_video_render);
 
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
@@ -172,7 +211,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_b_panel->AddSpacer(5);
 	s_b_panel->Add(new wxButton(diag, wxID_CANCEL));
 
-	s_panel->Add(s_round);
+	s_panel->Add(s_round_decoder);
+	s_panel->AddSpacer(5);
+	s_panel->Add(s_round_video);
 	s_panel->AddSpacer(8);
 	s_panel->Add(s_b_panel, wxRIGHT);
 
@@ -180,17 +221,17 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	
 	if(diag->ShowModal() == wxID_OK)
 	{
-		ini.Save("DecoderMode", com_box->GetSelection());
+		Ini.Emu.m_DecoderMode.SetValue(cbox_decoder->GetSelection());
+		Ini.Emu.m_RenderMode.SetValue(cbox_video_render->GetSelection());
 	}
 
 	delete diag;
 
-	if(stoped) System.Resume();
+	if(paused) System.Resume();
 }
 
 void MainFrame::OnQuit(wxCloseEvent& event)
 {
-	System.Stop();
-
-	Close();
+	Ini.Gui.m_MainWindow.SetValue(WindowInfo(GetSize(), GetPosition()));
+	TheApp->Exit();
 }

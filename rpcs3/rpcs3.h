@@ -4,13 +4,15 @@
 #include "Gui/MainFrame.h"
 #include "Emu/GameInfo.h"
 
-class TheApp : public wxApp
+class Rpcs3App : public wxApp
 {
-public:
-	LogFrame* m_log;
 	MainFrame* m_main;
 
+public:
     virtual bool OnInit();
+	virtual void CleanUp();
+	virtual void Exit();
 };
 
+extern Rpcs3App* TheApp;
 static const u64 PS3_CLK = 3200000000;

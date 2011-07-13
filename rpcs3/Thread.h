@@ -1,278 +1,242 @@
 #pragma once
 
-// -------------------------------------------------------
-// Mutex (TODO)
+#include "stdafx.h"
+#include <pthread.h>
+#include <semaphore.h>
 
-class Mutex : public wxMutex
+class Semaphore
 {
-	bool m_wait;
+	sem_t semaphore;
 
 public:
-	Mutex() 
-		: m_wait(false)
-		, wxMutex()
+	Semaphore(bool is_create = true)
 	{
+		if(is_create) Create();
+	}
+
+	virtual void Create()
+	{
+		sem_init(&semaphore, 0, 0);
 	}
 
 	virtual void Wait()
 	{
-		if(m_wait) return;
-		m_wait = true;
-		wxMutex::Lock();
+		sem_wait(&semaphore);
 	}
 
-	virtual void Post()
+	virtual bool Wait( const wxTimeSpan& wtime )
 	{
-		if(!m_wait) return;
-		m_wait = false;
-		wxMutex::Unlock();
+		const wxDateTime stime( wxDateTime::UNow() + wtime );
+		const timespec fstime = { stime.GetTicks(), stime.GetMillisecond() * 1000000 };
+
+		return sem_timedwait( &semaphore, &fstime ) == 0;
+	}
+
+	virtual void Post(const u32 count = 1)
+	{
+		if(count > 1)
+		{
+			sem_post_multiple(&semaphore, count);
+		}
+		else
+		{
+			sem_post(&semaphore);
+		}
+	}
+
+	virtual void Destroy()
+	{
+		sem_destroy(&semaphore);
 	}
 };
-
-// -------------------------------------------------------
-
-// -------------------------------------------------------
-// ThreadBase
-
-//static DWORD gs_tlsThisThread;
 
 class ThreadBase
 {
 public:
-	virtual bool KillThread( HANDLE thread )
+    pthread_t thread;
+
+private:
+	volatile bool isStarted;
+	volatile bool isDetached;
+	wxString name;
+    static void* StartThread(void* arg)   { ((ThreadBase*)arg)->Task(); return NULL; }
+ 
+public: 
+	ThreadBase() : name("Unknown thread")
 	{
-		return !!::TerminateThread(thread, (DWORD)-1);
+		isStarted = false;
 	}
 
-	virtual int SuspendThread( HANDLE thread )
+	~ThreadBase()
 	{
-		return (int)::SuspendThread(thread);
+		if(isStarted) Exit();
 	}
 
-	virtual int ResumeThread( HANDLE thread )
+    virtual void Task() = 0;
+ 
+    const bool Start(bool is_detach = false)
 	{
-		return (int)::ResumeThread(thread);
+		if(isStarted) return false;
+
+		isStarted = true;
+		isDetached = is_detach;
+
+		if(isDetached)
+		{
+			pthread_attr_t attr;
+
+			pthread_attr_init(&attr);
+			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+			const bool ret = pthread_create(&thread, &attr, ThreadBase::StartThread, (void*)this) == 0;
+
+			pthread_attr_destroy(&attr);
+
+			return ret;
+		}
+
+		return pthread_create(&thread, NULL, ThreadBase::StartThread, (void*)this) == 0;
 	}
 
-	virtual bool DeleteThread( HANDLE thread )
+	const bool Exit()
 	{
-		bool ret = true;
+		if(!isStarted) return false;
+		isStarted = false;
 
-		ret = !!SuspendThread( thread ) && ret;
+		return pthread_cancel(thread) == 0;
+	}
 
-		if( thread != NULL )
-        {
-            ret = !!::CloseHandle(thread) && ret;
+	const bool SetCancelState(bool enable, int* prev_state = NULL)
+	{
+		if(enable)
+		{
+			return pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, prev_state) == 0;
+		}
 
-            thread = 0;
-        }
+		return pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, prev_state) == 0;
+	}
 
-		return ret;
+	void SetName(wxString name)
+	{
+		this->name = name;
+	}
+
+	wxString GetName()
+	{
+		return name;
+	}
+
+	const bool IsStarted() const { return isStarted; }
+	const bool IsDetached() const { return isDetached; }
+};
+
+struct ThreadAdv
+{
+	static void Sleep(const int ms)
+	{
+		::Sleep( ms );
+	}
+
+	static void SpinWait()
+	{
+		_asm pause
+	}
+
+	static void StoreFence()
+	{
+		__asm sfence
+	}
+
+	static ptw32_cleanup_t* CleanUpPush(void (*func)(void*), void* arg = NULL)
+	{
+		if(func == NULL) return NULL;
+
+		ptw32_cleanup_t* _cleanup = NULL;
+        ptw32_push_cleanup( _cleanup, (ptw32_cleanup_callback_t) (func), arg );
+
+		return _cleanup;
+	}
+
+	static ptw32_cleanup_t* CleanUpPop(const int execute = 1)
+	{
+		return ptw32_pop_cleanup( execute );
+	}
+
+	static void ExitAndPostArg(void* arg)
+	{
+		pthread_exit(arg);
+	}
+
+	static void* WaitForExitAndGetPostedArg(ThreadBase& thr)
+	{
+		if(!thr.IsStarted())
+		{
+			wxMessageBox("Error wait for exit: Thread is not started!", "Thread " + thr.GetName() + " error");
+			return NULL;
+		}
+
+		if(thr.IsDetached())
+		{
+			wxMessageBox("Error wait for exit: Thread is detached!", "Thread " + thr.GetName() + " error");
+			return NULL;
+		}
+
+		void* arg;
+		const int r = pthread_join(thr.thread, &arg);
+		if(r != 0)
+		{
+			wxMessageBox(wxString::Format("Error join to thread: [%d] %s", r, strerror(r)),
+				"Thread " + thr.GetName() + " error");
+			return NULL;
+		}
+
+		return arg;
+	}
+
+	static void Exit()
+	{
+		pthread_exit(NULL);
+	}
+
+	static void TestCancel()
+	{
+		pthread_testcancel();
 	}
 };
 
-// -------------------------------------------------------
-
-// -------------------------------------------------------
-// Thread
-/*
-class Thread : private ThreadBase
+class StepThread : public ThreadBase
 {
-	volatile bool m_started;
+	Semaphore m_main_sem;
+	bool doCleanupEveryStep;
 
-	volatile HANDLE m_hThread;
+protected:
+	StepThread()
+	{
+	}
+
+private:
+	virtual void Task()
+	{
+		for(;;)
+		{
+			m_main_sem.Wait();
+
+			//CleanUpPush(_CleanupInThread, this);
+
+			Step();
+
+			//CleanUpPop(doCleanupEveryStep ? 1 : 0);
+			//TestCancel();
+		}
+	}
+
+	static void _CleanupInThread(void* arg) {((StepThread*)arg)->CleanupInThread();}
+	virtual void CleanupInThread() {}
+	virtual void Step()=0;
 
 public:
-
-	wxFile& thread_log;
-	
-	wxCriticalSection m_critsect;
-
-	Thread(bool start = false)
-		: thread_log(*new wxFile("Thread.log", wxFile::write))
-		, m_sem_wait(1, 2)
-		, m_sem_done(1, 9000)
+	void DoStep()
 	{
-		m_done = m_started = true;
-		m_exit = false;
-
-		m_hThread = CreateThread(start);
-		
-		if(m_hThread == NULL)
-		{
-			thread_log.Write("Error create thread\n");
-		}
-	}
-
-	
-
-	virtual HANDLE CreateThread( int prior = THREAD_PRIORITY_NORMAL, bool start = false )
-	{
-		/*
-			THREAD_PRIORITY_LOWEST
-			THREAD_PRIORITY_BELOW_NORMAL
-			THREAD_PRIORITY_NORMAL
-			THREAD_PRIORITY_ABOVE_NORMAL
-			THREAD_PRIORITY_HIGHEST
-		*//*
-
-		HANDLE ret = ::CreateThread
-		(
-			NULL,
-			0,
-			Thread::ThreadStart,
-			(LPVOID)this,
-			/*CREATE_SUSPENDED*//*0,
-			NULL
-		);
-
-		::SetThreadPriority(ret, prior);
-
-		return ret;
-	}
-
-	virtual void* Entry(Thread* thread)=0;
-
-	virtual void Start()
-	{
-		wxCriticalSectionLocker lock(m_critsect);
-		m_sem_wait.Post();
-	}
-
-	virtual void StartThread()
-	{
-		if(m_started) return;
-		m_started = true;
-
-		if(m_hThread == NULL)
-		{
-			m_hThread = CreateThread(true);
-		}
-
-		if(ThreadBase::ResumeThread(m_hThread) == -1)
-		{
-			thread_log.Write("Error resume thread\n");
-		}
-	}
-
-	virtual void Suspend()
-	{
-		ThreadBase::SuspendThread(m_hThread);
-	}
-
-	virtual void WaitForResult()
-	{
-		if(!m_done) m_sem_done.Wait();
-	}
-
-	virtual void Exit()
-	{
-		m_started = false;
-		m_exit = true;
-		m_sem_wait.Post();
-		ThreadBase::DeleteThread(m_hThread);
+		m_main_sem.Post();
 	}
 };
-*/
-// -------------------------------------------------------
-/*
-class MThread : private ThreadBase
-{
-	volatile int m_threadcount;
-	volatile HANDLE* m_hThreads;
-	volatile uint m_cur_thread;
-	wxCriticalSection m_critsect;
-	Mutex* m_mtx_done;
-	volatile bool* m_done;
-
-public:
-	MThread(bool setByCPUCount = true)
-	{
-		m_cur_thread = 0;
-
-		if(setByCPUCount)
-		{
-			SYSTEM_INFO si;
-			GetSystemInfo(&si);
-
-			m_threadcount = si.dwNumberOfProcessors;
-
-			if(m_threadcount < 1)
-			{
-				m_threadcount = 2;
-			}
-
-			m_hThreads = new HANDLE[m_threadcount];
-
-			for(int i=0; i<m_threadcount; ++i)
-			{
-				m_hThreads[i] = ThreadBase::CreateThread();
-			}
-
-			m_mtx_done = new Mutex[m_threadcount];
-			m_done = new bool[m_threadcount];
-		}
-		else
-		{
-			m_threadcount = 0;
-			m_mtx_done = new Mutex[1];
-			m_done = new bool[1];
-		}
-	}
-
-	virtual void Task()=0;
-
-	virtual void WaitForResult()
-	{
-		if(m_threadcount == 0)
-		{
-			if(!m_done[0]) m_mtx_done[0].Wait();
-		}
-		else
-		{
-			const uint i = m_cur_thread == 0 ? (uint)m_threadcount - 1 : m_cur_thread - 1;
-			if(!m_done[i]) m_mtx_done[i].Wait();
-		}
-	}
-
-	virtual void* Entry()
-	{
-	}
-
-	virtual void Start()
-	{
-		wxCriticalSectionLocker lock(m_critsect);
-
-		if(m_threadcount == 0)
-		{
-			m_done[0] = false;
-
-			volatile HANDLE hThread = ThreadBase::CreateThread(true);
-
-			Task();
-
-			ThreadBase::DeleteThread(hThread);
-
-			m_done[0] = true;
-			m_mtx_done[0].Post();
-		}
-		else
-		{
-			const volatile uint i = m_cur_thread++;
-			if(m_cur_thread >= (uint)m_threadcount) m_cur_thread=0;
-
-			m_done[i] = false;
-
-			ThreadBase::ResumeThread(m_hThreads[i]);
-
-			Task();
-
-			ThreadBase::SuspendThread(m_hThreads[i]);
-
-			m_done[i] = true;
-
-			m_mtx_done[i].Post();
-			
-		}
-	}
-};*/

@@ -8,11 +8,12 @@ struct GameInfo
 
 	GameInfo()
 	{
-		Reset();
 	}
 
 	void Reset()
 	{
+		//ConLog.Write("Resetting Game Info...");
+
 		root = wxEmptyString;
 		name = wxEmptyString;
 		serial = wxEmptyString;

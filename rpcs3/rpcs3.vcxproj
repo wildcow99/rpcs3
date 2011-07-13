@@ -46,7 +46,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;$(IncludePath)</IncludePath>
+    <IncludePath>.\;..\wxWidgets\include;..\SDL-1.3.0-5538\include;..\SDL_image-1.2.10;..\pthreads-2.8.0;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
@@ -82,7 +82,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>adv.lib;base.lib;core.lib;gl.lib;SDL.lib;SDL_image.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pthreadVC2_2.8.0.lib;opengl32.lib;glu32.lib;adv.lib;base.lib;core.lib;SDL.lib;SDL_image.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -93,6 +93,8 @@
     <ClCompile Include="Emu\Display\Display.cpp" />
     <ClCompile Include="Emu\ElfLoader.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp" />
     <ClCompile Include="Emu\System.cpp" />
     <ClCompile Include="Gui\ConLog.cpp" />
     <ClCompile Include="Gui\DisAsmFrame.cpp" />

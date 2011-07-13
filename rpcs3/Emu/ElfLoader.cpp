@@ -39,7 +39,7 @@ u64 Read64(wxFile& f)
 void ElfLoader::SetElf(wxString elf_full_patch)
 {
 	m_elf_fpatch = elf_full_patch;
-	CurGameInfo.root = wxFileName(wxFileName(m_elf_fpatch).GetPath()).GetPath();
+	CurGameInfo.root = wxFileName(wxFileName(elf_full_patch).GetPath()).GetPath();
 }
 
 void ElfLoader::LoadPsf()
@@ -133,11 +133,27 @@ void ElfLoader::LoadElf64(wxFile& f)
 
 void ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
 {
+	if(ehdr.e_phoff == 0)
+	{
+		ConLog.Error("LoadPhdr32 error: Program header offset is null!");
+		return;
+	}
+
 	for(uint i=0; i<ehdr.e_phnum; ++i)
 	{
 		Elf32_Phdr phdr;
+		f.Seek(offset + ehdr.e_phoff + (ehdr.e_phentsize * i));
 		phdr.Load(f);
 		phdr.Show();
+
+		/*
+		if(phdr.p_offset == 0)
+		{
+			ConLog.Error("LoadPhdr32 warning: Skipping program header with null offset!");
+			ConLog.SkipLn();
+			continue;
+		}
+		*/
 
 		if(phdr.p_type == 0x00000001) //LOAD
 		{
@@ -150,19 +166,14 @@ void ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
 				);
 			}
 
-			const wxFileOffset last_pos = f.Tell();
-
 			f.Seek(offset + phdr.p_offset);
 
-			u32 addr = phdr.p_paddr;
-			u8* mem = Memory.GetMem(addr);
-			f.Read(&mem[addr], phdr.p_filesz);
-
-			f.Seek(last_pos);
+			MemoryBlock& mem = Memory.GetMemByAddr(phdr.p_paddr);
+			f.Read(mem.GetMemFromAddr(phdr.p_paddr - mem.GetStartAddr()), phdr.p_filesz);
 			
-			if(CPU.PC == 0/* || phdr.p_paddr < CPU.PC*/)
+			if(CPU.PC == 0 /*|| phdr.p_paddr < CPU.PC*/)
 			{
-				CPU.PC = phdr.p_paddr;
+				CPU.SetPc(phdr.p_paddr);
 			}
 		}
 
@@ -172,11 +183,27 @@ void ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
 
 void ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 {
+	if(ehdr.e_phoff == 0)
+	{
+		ConLog.Error("LoadPhdr64 error: Program header offset is null!");
+		return;
+	}
+
 	for(uint i=0; i<ehdr.e_phnum; ++i)
 	{
 		Elf64_Phdr phdr;
+		f.Seek(offset + ehdr.e_phoff + (ehdr.e_phentsize * i));
 		phdr.Load(f);
 		phdr.Show();
+		
+		/*
+		if(phdr.p_offset == 0)
+		{
+			ConLog.Warning("LoadPhdr64 warning: Skipping program header with null offset!");
+			ConLog.SkipLn();
+			continue;
+		}
+		*/
 
 		if(phdr.p_type == 0x00000001) //LOAD
 		{
@@ -189,19 +216,14 @@ void ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 				);
 			}
 
-			const wxFileOffset last_pos = f.Tell();
-
 			f.Seek(offset + phdr.p_offset);
 
-			u32 addr = phdr.p_paddr;
-			u8* mem = Memory.GetMem(addr);
-			f.Read(&mem[addr], phdr.p_filesz);
-
-			f.Seek(last_pos);
+			MemoryBlock& mem = Memory.GetMemByAddr(phdr.p_paddr);
+			f.Read(mem.GetMemFromAddr(phdr.p_paddr - mem.GetStartAddr()), phdr.p_filesz);
 			
-			if(CPU.PC == 0/* || phdr.p_paddr < CPU.PC*/)
+			if(CPU.PC == 0 /*|| phdr.p_paddr < CPU.PC*/)
 			{
-				CPU.PC = phdr.p_paddr;
+				CPU.SetPc(phdr.p_paddr);
 			}
 		}
 
@@ -239,7 +261,7 @@ void ElfLoader::LoadElf(bool IsDump)
 
 	if(IsDump)
 	{
-		f.Read(&Memory.MainRam[0], elf_size);
+		f.Read(Memory.MainRam.GetMem(), elf_size);
 		f.Close();
 		return;
 	}
@@ -268,7 +290,7 @@ void ElfLoader::LoadElf(bool IsDump)
 	{
 		ConLog.Error("Unknown elf class! (%d)", _class);
 
-		f.Read(&Memory.MainRam[0], elf_size);
+		f.Read(Memory.MainRam.GetMem(), elf_size);
 	}
 
 	f.Close();
@@ -352,7 +374,7 @@ void ElfLoader::LoadSelf(bool IsDump)
 	else
 	{
 		f.Seek(0);
-		f.Read(&Memory.MainRam[0], elf_size);
+		f.Read(Memory.MainRam.GetMem(), elf_size);
 
 		ConLog.Error("Unknown elf class! (%d)", _class);
 	}

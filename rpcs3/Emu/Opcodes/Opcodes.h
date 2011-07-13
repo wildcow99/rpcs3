@@ -1,29 +1,48 @@
 #pragma once
 
+#include "Emu/Cell/CPU.h"
+
+#define OP_REG const unsigned int
+#define OP_sREG const int
+#define START_OPCODES_GROUP(x)
+#define ADD_OPCODE(name, regs) virtual void(##name##)##regs##=0
+#define ADD_NULL_OPCODE(name) virtual void(##name##)()=0
+#define END_OPCODES_GROUP(x) \
+	virtual void UNK_##x##( \
+		const int code, const int opcode, OP_REG rs, OP_REG rt, OP_REG rd, OP_REG sa, const int func, \
+		const int imm_s16, const int imm_u16, const int imm_u26)=0
+
 enum MainOpcodes
 {
 	SPECIAL = 0x00,
 	SPECIAL2 = 0x01,
 	//XOR = 0x04,
+	G_0x04 = 0x04,
 	MULLI = 0x07,
 	SUBFIC = 0x08,
-	CMPLWI = 0x0a,
-	CMPWI = 0x0b,
+	CMPLDI = 0x0a,
+	CMPDI = 0x0b,
 	ADDIC = 0x0c,
 	ADDIC_ = 0x0d,
 	G1 = 0x0e,
-	ADDIS = 0x0f,
+	//ADDIS = 0x0f,
+	G_0x0f = 0x0f,
 	G2 = 0x10,
 	SC = 0x11,
 	G3 = 0x12,
-	BLR = 0x13,
-	RLWINM = 0x15,
+	//BLR = 0x13,
+	G3_S = 0x13,
+	//RLWINM = 0x15,
+	G3_S0 = 0x15,
 	ROTLW = 0x17,
 	ORI = 0x18,
 	ORIS = 0x19,
 	XORI = 0x1a,
 	XORIS = 0x1b,
-	CLRLDI = 0x1e,
+	ANDI_ = 0x1c,
+	ANDIS_ = 0x1d,
+	G_0x1e, //temp
+	//LRLDIÑ = 0x1e,
 	G4 = 0x1f,
 	LWZ = 0x20,
 	LWZU = 0x21,
@@ -35,16 +54,22 @@ enum MainOpcodes
 	STBU = 0x27,
 	LHZ = 0x28,
 	LHZU = 0x29,
+	LHA = 0x2a,
+	LHAU = 0x2b,
 	STH = 0x2c,
 	STHU = 0x2d,
+	LMW = 0x2e,
 	LFS = 0x30,
 	LFSU = 0x31,
 	LFD = 0x32,
+	LFDU = 0x33,
 	STFS = 0x34,
 	STFSU = 0x35,
 	STFD = 0x36,
-	LD = 0x3a,
-	FDIVS = 0x3b,
+	//LD = 0x3a,
+	G_0x3a = 0x3a,
+	//FDIVS = 0x3b,
+	G4_S = 0x3b,
 	STD = 0x3e,
 	G5 = 0x3f,
 };
@@ -54,45 +79,328 @@ enum SpecialOpcodes //func
 	SYSCALL = 0x0c,
 };
 
+enum Special2Opcodes //sa??
+{
+};
+
+enum G_0x04 //sa???
+{
+	G_0x04_0x0 = 0x0,
+	G_0x04_0x1 = 0x1,
+	G_0x04_0x2 = 0x2,
+	G_0x04_0x3 = 0x3,
+	G_0x04_0x4 = 0x4,
+	G_0x04_0x5 = 0x5,
+	G_0x04_0x6 = 0x6,
+	G_0x04_0x7 = 0x7,
+	G_0x04_0xc = 0xc,
+	G_0x04_0xd = 0xd,
+	G_0x04_0xe = 0xe,
+	G_0x04_0xf = 0xf,
+	G_0x04_0x10 = 0x10,
+	G_0x04_0x12 = 0x12,
+	G_0x04_0x13 = 0x13,
+	G_0x04_0x14 = 0x14,
+	G_0x04_0x15 = 0x15,
+	G_0x04_0x16 = 0x16,
+	G_0x04_0x17 = 0x17,
+	G_0x04_0x18 = 0x18,
+	G_0x04_0x1c = 0x1c,
+	G_0x04_0x1d = 0x1d,
+	G_0x04_0x1e = 0x1e,
+	G_0x04_0x1f = 0x1f,
+};
+
+enum G_0x04_0x0 //func
+{
+	MULHHWU = 0x10, //sa0x0
+	MULHHWU_ = 0x11, //sa0x0
+	MACHHWU = 0x18, //sa0x0
+	MACHHWU_ = 0x19, //sa0x0
+};
+
+enum G_0x04_0x1 //func
+{
+	MULHHW = 0x10,
+	MULHHW_ = 0x11,
+	MACHHW = 0x18, //sa0x1
+	NMACHHW = 0x1c,
+};
+
+enum G_0x04_0x2 //func
+{
+	MACHHWSU = 0x18, //sa0x2
+	MACHHWSU_ = 0x19, //sa0x2
+};
+
+enum G_0x04_0x3 //func
+{
+	MACHHWS = 0x18, //sa0x3
+	MACHHWS_ = 0x19, //sa0x3
+	NMACHHWS = 0x1c,
+};
+
+enum G_0x04_0x4 //func
+{
+	MULCHWU = 0x10,
+	MULCHWU_ = 0x11,
+	MACCHWU = 0x18, //sa0x4
+	MACCHWU_ = 0x19, //sa0x4
+};
+
+enum G_0x04_0x5 //func
+{
+	MULCHW = 0x10,
+	MACCHW = 0x18, //sa0x5
+};
+
+enum G_0x04_0x6 //func
+{
+	MACCHWSU = 0x18, //sa0x6
+	MACCHWSU_ = 0x19, //sa0x6
+};
+
+enum G_0x04_0x7 //func
+{
+	MACCHWS = 0x18, //sa0x7
+	NMACCHWS = 0x1c,
+	NMACCHWS_ = 0x1d,
+};
+
+enum G_0x04_0xc //func
+{
+	MULLHWU = 0x10, //sa0xc
+	MULLHWU_ = 0x11, //sa0xc
+	MACLHWU = 0x18, //sa0xc
+	MACLHWU_ = 0x19, //sa0xc
+};
+
+enum G_0x04_0xd //func
+{
+	NMACLHW = 0x1c, //sa0xd,
+};
+
+enum G_0x04_0xe //func
+{
+	MACLHWSU = 0x18, //sa0xe
+	MACLHWSU_ = 0x19, //sa0xe
+};
+
+enum G_0x04_0xf //func
+{
+	MACLHWS = 0x1c,
+};
+
+
+enum G_0x04_0x10 //func
+{
+	MACHHWUO = 0x18, //sa0x10
+	MACHHWUO_ = 0x19, //sa0x10
+};
+
+enum G_0x04_0x12 //func
+{
+	MACHHWSUO = 0x18, //sa0x12
+	MACHHWSUO_ = 0x19, //sa0x12
+};
+
+enum G_0x04_0x13 //func
+{
+	MACHHWSO = 0x18, //sa0x13
+	MACHHWSO_ = 0x19, //sa0x13
+	NMACHHWSO = 0x1c,
+};
+
+enum G_0x04_0x14 //func
+{
+	MACCHWUO = 0x18, //sa0x14
+	MACCHWUO_ = 0x19, //sa0x14
+};
+
+enum G_0x04_0x15 //func
+{
+	MACCHWO = 0x18, //sa0x15
+	MACCHWO_ = 0x19, //sa0x15
+	NMACCHWO = 0x1c, 
+};
+
+enum G_0x04_0x16 //func
+{
+	MACCHWSUO = 0x18, //sa0x16
+	MACCHWSUO_ = 0x19, //sa0x16
+};
+
+enum G_0x04_0x17 //func
+{
+	NMACCHWSO = 0x1c,
+};
+
+enum G_0x04_0x18 //func
+{
+	MFVSCR = 0x4,
+};
+
+enum G_0x04_0x1c //func
+{
+	MACLHWUO = 0x18, //sa0x1c
+	MACLHWUO_ = 0x19, //sa0x1c
+};
+
+enum G_0x04_0x1d //func
+{
+	NMACLHWO = 0x1c,
+	NMACLHWO_ = 0x1d,
+};
+
+enum G_0x04_0x1e //func
+{
+	MACLHWSUO = 0x18, //sa0x1e
+	MACLHWSUO_ = 0x19, //sa0x1e
+};
+
+enum G_0x04_0x1f //func
+{
+	NMACLHWSO = 0x1c,
+	NMACLHWSO_ = 0x1d,
+};
+
+enum G1Opcodes //rd??
+{
+};
+
+enum G_0x0f //sa??
+{
+	G_0x0f_0x0 = 0x0,
+};
+
+enum G_0x0f_0x0 //func??
+{
+	ADDIS = 0x3,
+	LIS = 0x20,
+};
+
+enum G2Opcodes //sa??
+{
+};
+
+enum G3Opcodes //sa??
+{
+};
+
+enum G3_SOpcodes //sa
+{
+};
+
+enum G3_S0Opcodes //sa
+{
+	G3_S0_G0 = 0x0,
+	RLWINM_ = 0x5,
+	CLRLWI = 0x18,
+	CLRLWI_ = 0x1a,
+};
+
+enum G3_S0_G0 //func
+{
+	RLWINM = 0x3a,
+	ROTLWI = 0x3e,
+	ROTLWI_ = 0x3f,
+};
+
+enum G_0x1e //sa
+{
+	G_0x1e_G_0x14 = 0x14,
+};
+
+enum G_0x1e_G_0x14 //func
+{
+	CLRLDI_ = 0x21,
+};
+
 enum G4Opcodes //sa
 {
-	CMPW = 0x0,
+	G4_G0 = 0x0,
 	G4_G1 = 0x1,
-	MULHW = 0x2,
+	//MULHW = 0x2,
+	G4_G_0x2 = 0x2, //temp
 	G4_G2 = 0x3,
 	G4_G3 = 0x4,
 	STDUX = 0x5,
-	ADDZE = 0x6,
+	//ADDZE = 0x6,
+	G4_G_ADDZE = 0x6,
 	G4_G4 = 0x7,
-	ADD = 0x8,
-	XOR = 0x9,
-	SRW = 0x10,
-	MFLR = 0xa,
+	G4_G_ADD = 0x8,
+	//LHZUX = 0x9,
+	//XOR = 0x9,
+	//DOZI = 0x9, ???
+	G4_G_0x9 = 0x9,
+	//MFLR = 0xa,
+	G4_G_0xa = 0xa, //temp
+	//LVXL = 0xb,
+	G4_G_0xb = 0xb,
 	G4_G5 = 0xc,
-	LVXL = 0xb,
-	MR = 0xd,
+	//MR = 0xd,
+	//OR = 0xd, ???
 	G4_G6 = 0xe,
-	DIVW = 0xf,
-	SUBFO = 0x11,
-	LWSYNC = 0x12, //FIXME
+	//DIVW = 0xf,
+	G4_G_0xf = 0xf, //temp
+	G4_G_ADDCO = 0x10,
+	//SUBFO = 0x11,
+	G4_G_0x11 = 0x11,
+	//LWSYNC = 0x12, //FIXME
+	G4_G_0x12 = 0x12,
 	G4_G7 = 0x13,
-	STFSX = 0x14,
+	//STFSX = 0x14,
+	G4_G_ADDEO = 0x14,
 	G4_G8 = 0x16,
 	G4_G9 = 0x17,
-	SRAW = 0x18,
+	//SRAW = 0x18,
+	G4_G_ADDO = 0x18, //temp
 	SRAWI = 0x19,
-	EIEIO = 0x1a, //FIXME
+	//EIEIO = 0x1a, //FIXME
+	G4_G_0x1a = 0x1a, //temp
 	G4_G10 = 0x1b,
 	EXTSH = 0x1c,
 	EXTSB = 0x1d,
-	EXTSW = 0x1e,
-	DCBZ = 0x1f,
+	G4_G_0x1e = 0x1e, //temp
+	//EXTSW = 0x1e,
+	//DCBZ = 0x1f,
+	G4_G_0x1f = 0x1f, //temp
 	LWZX = 0x2e,
+};
+
+enum G4_G0Opcodes //func
+{
+	//CMPW = 0x0,
+	//CMPD = 0x0, ???
+	//CMPWI = 0x0, ???
+	LVSL = 0xc,
+	LVEBX = 0xe,
+	MULHDU = 0x12,
+	MULHDU_ = 0x13,
+	ADDC = 0x14,
+	MULHWU = 0x16,
+	MULHWU_ = 0x17,
+	//MFCR = 0x26,
+	//MFOCRF = 0x26,
+	G4_G0_0x26 = 0x26,
+	LWARX = 0x28,
+	LDX = 0x2a,
+	CNTLZW = 0x34,
+	AND = 0x38,
+	AND_ = 0x39,
+	MASKG = 0x3a,
+};
+
+enum G4_G0_0x26 //rt??
+{
+	MFCR = 0x0,
+	MFOCRF = 0x18,
 };
 
 enum G4_G1Opcodes //func
 {
-	CMPLD = 0x0,
+	//CMPLD = 0x0,
+	//CMPLW = 0x0, ???
 	LVSR = 0xc,
 	LVEHX = 0xe,
 	SUBF = 0x10,
@@ -103,12 +411,30 @@ enum G4_G1Opcodes //func
 	ANDC = 0x38,
 };
 
+enum G4_G_0x2 //func
+{
+	LVEWX = 0xe,
+	MULHD = 0x12,
+	MULHD_ = 0x13,
+	MULHW = 0x16,
+	MULHW_ = 0x17,
+	DLMZB = 0x1c,
+	DLMZB_ = 0x1d,
+	//MTSRD = 0x24,
+	LDARX = 0x28,
+	DCBF = 0x2c,
+	LBZX = 0x2e,
+};
+
 enum G4_G2Opcodes //func
 {
 	LVX = 0xe,
 	NEG = 0x10,
+	MUL = 0x16,
+	MUL_ = 0x17,
 	MTSRDIN = 0x24,
-	NOT = 0x38,
+	//NOT = 0x38,
+	//NOR = 0x38, ???
 };
 
 enum G4_G3Opcodes //func
@@ -119,7 +445,9 @@ enum G4_G3Opcodes //func
 	SUBFE_ = 0x11,
 	ADDE = 0x14,
 	ADDE_ = 0x15,
-	MTOCRF = 0x20,
+	//MTOCRF = 0x20,
+	//MTCRF = 0x20,
+	//MTMSR = 0x24,
 	STDX = 0x2a,
 	STWCX_ = 0x2d,
 	STWX = 0x2e,
@@ -132,11 +460,67 @@ enum G4_G4Opcodes //func
 {
 	STVX = 0xe,
 	MULLD = 0x12,
+	MULLD_ = 0x13,
+	ADDME = 0x14,
 	ADDME_ = 0x15,
 	MULLW = 0x16,
 	MULLW_ = 0x17,
 	DCBTST = 0x2c,
 	SLLIQ = 0x30,
+};
+
+enum G4_G_ADD //func
+{
+	ICBT = 0xc,
+	DOZ = 0x10,
+	DOZ_ = 0x11,
+	ADD = 0x14, //???
+	ADD_= 0x15,
+	LSCBX = 0x2a,
+	LSCBX_ = 0x2b,
+	DCBT = 0x2c,
+	LHZX = 0x2e,
+	EQV = 0x38,
+	EQV_ = 0x39,
+};
+
+enum G4_G_ADDZE //func
+{
+	ADDZE = 0x14,
+	ADDZE_ = 0x15,
+	//MTSR = 0x24,
+};
+
+enum G4_G_0x9 //func
+{
+	DOZI = 0x1,
+	LHZUX = 0x2e,
+	XOR = 0x38,
+};
+
+enum G4_G_0xa //func
+{
+	MFDCR = 0x6,
+	DIV = 0x16,
+	DIV_ = 0x17,
+	//MFCTR = 0x26,
+	//MFLR = 0x26,
+	G4_G_0xa_0x26 = 0x26,
+	LWAX = 0x2a,
+};
+
+enum G4_G_0xa_0x26 //rt
+{
+	//MFVRSAVE = 0x0,
+	MFSPR = 0x0,
+	MFLR = 0x8,
+	MFCTR = 0x9,
+};
+
+enum G4_G_0xb //func
+{
+	LVXL = 0xe,
+	MFTB = 0x26,
 };
 
 enum G4_G5Opcodes //func
@@ -153,6 +537,7 @@ enum G4_G6Opcodes //func
 	DIVDU = 0x12,
 	DIVDU_ = 0x13,
 	DIVWU = 0x16,
+	DIVWU_ = 0x17,
 	G4_G6_G1 = 0x26,
 	DCBI = 0x2c,
 	NAND = 0x38,
@@ -161,9 +546,49 @@ enum G4_G6Opcodes //func
 
 enum G4_G6_G1Opcodes //rt
 {
-	MTSPR = 0x0, //0x3?
+	//MTSPR = 0x0, //0x3?
+	//MTMQ //sa0xe ; func0x26 ; rt0x0
+	//MTVRSAVE //sa0xe ; func0x26; 
 	MTLR = 0x8,
 	MTCTR = 0x9,
+};
+
+enum G4_G_0xf //func
+{
+	DIVD = 0x12,
+	DIVD_ = 0x13,
+	DIVW = 0x16,
+};
+
+enum G4_G_ADDCO //func
+{
+	MCRXR = 0x0,
+	LVLX = 0xe,
+	ADDCO = 0x14,
+	ADDCO_= 0x15,
+	LSWX = 0x2a,
+	LWBRX = 0x2c,
+	LFSX = 0x2e,
+	MASKIR = 0x3a,
+};
+
+enum G4_G_0x11 //func
+{
+	LVRX = 0xe,
+	SUBFO = 0x10,
+};
+
+enum G4_G_0x12 //func
+{
+	//LSWI ???
+	G4_G_0x12_0x26 = 0x26,
+	LWSYNC = 0x2c,
+	LFDX = 0x2e,
+};
+
+enum G4_G_0x12_0x26 //rt
+{
+	MFSR = 0x0,
 };
 
 enum G4_G7Opcodes //func
@@ -171,11 +596,30 @@ enum G4_G7Opcodes //func
 	NEGO = 0x10,
 	MULO = 0x16,
 	MULO_ = 0x17,
-	MFSRI = 0x26, //FIXME
+	//MFSRI = 0x26, //FIXME
+	G4_G7_0x26 = 0x26,
+};
+
+enum G4_G7_0x26 //rt??
+{
+	MFSRI = 0x0,
+};
+
+enum G4_G_ADDEO //func
+{
+	ADDEO = 0x14,
+	ADDEO_ = 0x15,
+	G4_G_ADDEO_0x26 = 0x26,
+};
+
+enum G4_G_ADDEO_0x26 //rt??
+{
+	MFSRIN = 0x0,
 };
 
 enum G4_G8Opcodes //func
 {
+	ADDZEO_ = 0x15, //temp
 	STSWI = 0x2a,
 	STFDX = 0x2e,
 	SRLQ = 0x30,
@@ -185,221 +629,661 @@ enum G4_G8Opcodes //func
 enum G4_G9Opcodes //func
 {
 	MULLDO = 0x12,
+	MULLDO_ = 0x13,
 	MULLWO = 0x16,
 	MULLWO_ = 0x17,
+};
+
+enum G4_G_ADDO //func
+{
+	LVLXL = 0xe,
+	DOZO = 0x10,
+	ADDO = 0x14,
+	ADDO_ = 0x15, //???
+	LHBRX = 0x2c,
+};
+
+enum G4_G_0x1a //func
+{
+	DIVO = 0x16,
+	DIVO_ = 0x17,
+	EIEIO = 0x2c,
 };
 
 enum G4_G10Opcodes //func
 {
 	ABSO_ = 0x11,
+	DIVSO = 0x16,
 	DIVSO_ = 0x17,
 };
+
+enum G4_G_0x1e //func
+{
+	ICCCI = 0xc,
+	RLDCL_ = 0x11,
+	DIVDUO = 0x12,
+	DIVDUO_ = 0x13,
+	DIVWUO = 0x16,
+	DIVWUO_ = 0x17,
+	ICBI = 0x2c,
+	RLDCL = 0x30,
+	EXTSW = 0x34,
+	EXTSW_ = 0x35, //???
+};
+
+enum G4_G_0x1f //func
+{
+	ICREAD = 0xc,
+	DIVDO = 0x12,
+	DCBZ = 0x2c,
+	//DIVWO ???
+	//DIVWO_ ???
+};
+
+enum G_0x3a //func
+{
+	LDU = 0x9,
+	LWA = 0x26,
+	LD = 0x28,
+};
+
+enum G4_SOpcodes //func
+{
+	FSUBS = 0x28,
+	FSUBS_ = 0x29,
+	FADDS = 0x2a,
+	FSQRTS = 0x2c,
+	FRES = 0x30,
+	FMULS = 0x32,
+	FMULS_ = 0x33,
+	FMADDS = 0x3a,
+	FMADDS_ = 0x3b,
+	FMSUBS = 0x38,
+	FMSUBS_ = 0x39,
+	FNMSUBS = 0x3c,
+	FNMSUBS_ = 0x3d,
+	FNMADDS = 0x3e,
+	FNMADDS_ = 0x3f,
+};
+
+enum G5Opcodes //func
+{
+	G5_G0x0 = 0x0,
+	//MTFSB1 = 0xc, (mtfsb1  4*cr6+lt)
+	//MTFSFI = 0xc,
+	//MFFS = 0xe,
+	//MTFSF = 0xe,
+	G5_G0x10 = 0x10,
+	G5_G0x1c = 0x1c,
+	G5_G0x1e = 0x1e,
+	FDIV = 0x24,
+	FDIV_ = 0x25,
+	FSUB = 0x28,
+	FSUB_ = 0x29,
+	FADD = 0x2a,
+	FADD_ = 0x2b,
+	FSQRT = 0x2c,
+	FSEL = 0x2e,
+	FSEL_ = 0x2f,
+	FMUL = 0x32,
+	FMUL_ = 0x33,
+	FRSQRTE = 0x34,
+	FMSUB = 0x38,
+	FMSUB_ = 0x39,
+	FMADD = 0x3a,
+	FNMSUB = 0x3c,
+	FNMSUB_ = 0x3d,
+	FNMADD = 0x3e,
+	FNMADD_ = 0x3f,
+};
+
+enum G5_G0x0Opcodes //sa
+{
+	FCMPU = 0x0,
+	FCMPO = 0x1,
+	MCRFS = 0x2,
+};
+
+enum G5_G0x10Opcodes //sa
+{
+	FNEG = 0x1,
+	FMR = 0x2,
+	FNABS = 0x4,
+	FABS = 0x8,
+};
+
+enum G5_G0x1cOpcodes //sa
+{
+	FCTIW = 0x0,
+	FCTID = 0x19,
+	//FCFID -> sa==0x1a ???
+	FCFID = 0x1c,
+};
+
+enum G5_G0x1eOpcodes //sa
+{
+	FCTIWZ = 0x0,
+	FCTIDZ = 0x19,
+};
+
+//118
 
 class Opcodes
 {
 public:
 	virtual void Exit()=0;
 	virtual void Step()=0;
-	virtual bool DoSysCall(const int code)=0;
+	//virtual bool DoSysCall(const int code);
 
-	virtual void NOP()=0;
-		//SPECIAL
-		virtual void UNK_SPECIAL(const int code, const int rs, const int rt,
-			const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-		//
-		//SPECIAL 2
-		virtual void SPECIAL2()=0;
-		//
-		//SPECIAL3???
-		//virtual void SPECIAL3()=0;
-		//virtual void XOR(const int rd, const int rs, const int rt)=0;
-		//
-	virtual void MULLI(const int rt, const int rs, const int imm_s16)=0;
-	virtual void SUBFIC(const int rs, const int rt, const int imm_s16)=0;
-	virtual void CMPLWI(const int rs, const int rt, const int imm_u16)=0;
-	virtual void CMPWI(const int rs, const int rt, const int rd)=0;
-	virtual void ADDIC(const int rs, const int rt, const int imm_s16)=0;
-	virtual void ADDIC_(const int rs, const int rt, const int imm_s16)=0;
-		//g1 - 0e
-		virtual void G1()=0;
-		//
-		//virtual void ADDI(const int rt, const int rs, const int imm_u16)=0;
-		//
-	virtual void ADDIS(const int rt, const int rs, const int imm_s16)=0;
-		//g2 - 10
-		virtual void G2()=0;
-		//
-	virtual void SC()=0;
-		//g3 - 12
-		virtual void G3()=0;
-		//
-	virtual void BLR()=0;
-	virtual void RLWINM()=0;
-	virtual void ROTLW(const int rt, const int rs, const int rd)=0;
-	virtual void ORI(const int rt, const int rs, const int imm_u16)=0;
-	virtual void ORIS(const int rt, const int rs, const int imm_u16)=0;
-	virtual void XORI(const int rt, const int rs, const int imm_u16)=0;
-	virtual void XORIS(const int rt, const int rs, const int imm_u16)=0;
-	virtual void CLRLDI(const int rt, const int rs, const int imm_u16)=0;
-		//g4 - 1f
-		virtual void CMPW(const int rs, const int rt, const int rd)=0;
-			//g4_g1
-			virtual void CMPLD(const int rs, const int rt, const int rd)=0;
-			virtual void LVSR(const int rs, const int rt, const int rd)=0;
-			virtual void LVEHX(const int rs, const int rt, const int rd)=0;
-			virtual void SUBF(const int rs, const int rt, const int rd)=0;
-			virtual void SUBF_(const int rs, const int rt, const int rd)=0;
-			virtual void LDUX(const int rs, const int rt, const int rd)=0;
-			virtual void LWZUX(const int rs, const int rt, const int rd)=0;
-			virtual void CNTLZD(const int rs, const int rt)=0;
-			virtual void ANDC(const int rt, const int rs, const int rd)=0;
-			virtual void UNK_G4_G1(const int code, const int opcode, const int rs, const int rt,
-				const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g1
-		virtual void MULHW(const int rs, const int rt, const int rd)=0;
-			//g4_g2
-		    virtual void LVX(const int rs, const int rt, const int rd)=0;
-			virtual void NEG(const int rs, const int rt)=0;
-			virtual void MTSRDIN(const int rs, const int rd)=0;
-			virtual void NOT(const int rt, const int rd)=0;
-			virtual void UNK_G4_G2(const int code, const int opcode, const int rs, const int rt,
-					const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g2
-			//g4_g3
-			virtual void WRTEE(const int rs)=0;
-			virtual void STVEBX(const int rs, const int rt, const int rd)=0;
-			virtual void SUBFE(const int rs, const int rt, const int rd)=0;
-			virtual void SUBFE_(const int rs, const int rt, const int rd)=0;
-			virtual void ADDE(const int rs, const int rt, const int rd)=0;
-			virtual void ADDE_(const int rs, const int rt, const int rd)=0;
-			virtual void MTOCRF(const int rs)=0;
-			virtual void STDX(const int rs, const int rt, const int rd)=0;
-			virtual void STWCX_(const int rs, const int rt, const int rd)=0;
-			virtual void STWX(const int rs, const int rt, const int rd)=0;
-			virtual void SLQ(const int rt, const int rs, const int rd)=0;
-			virtual void SLQ_(const int rt, const int rs, const int rd)=0;
-			virtual void SLE_(const int rt, const int rs, const int rd)=0;
-			virtual void UNK_G4_G3(const int code, const int opcode, const int rs, const int rt,
-					const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g3
-		virtual void STDUX(const int rs, const int rt, const int rd)=0;
-		virtual void ADDZE(const int rs, const int rt)=0;
-			//g4_g4
-		    virtual void STVX(const int rs, const int rt, const int rd)=0;
-			virtual void MULLD(const int rs, const int rt, const int rd)=0;
-			virtual void ADDME_(const int rs, const int rt)=0;
-			virtual void MULLW(const int rs, const int rt, const int rd)=0;
-			virtual void MULLW_(const int rs, const int rt, const int rd)=0;
-			virtual void DCBTST(const int rt, const int rd)=0;
-			virtual void SLLIQ(const int rt, const int rs, const int rd)=0;
-			virtual void UNK_G4_G4(const int code, const int opcode, const int rs, const int rt,
-					const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g4
-		virtual void ADD(const int rs, const int rt, const int rd)=0;
-		virtual void XOR(const int rt, const int rs, const int rd)=0;
-		virtual void SRW(const int rt, const int rs, const int rd)=0;
-		virtual void MFLR(const int rs)=0;
-			//g4_g5
-			virtual void STHX(const int rs, const int rt, const int rd)=0;
-			virtual void ORC(const int rt, const int rs, const int rd)=0;
-			virtual void ORC_(const int rt, const int rs, const int rd)=0;
-			virtual void UNK_G4_G5(const int code, const int opcode, const int rs, const int rt,
-				const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g5
-		virtual void LVXL(const int rs, const int rt, const int rd)=0;
-		virtual void MR(const int rt, const int rs)=0;
-			//g4_g6
-			virtual void MTDCR(const int rs)=0;
-			virtual void DCCCI(const int rt, const int rd)=0;
-			virtual void DIVDU(const int rs, const int rt, const int rd)=0;
-			virtual void DIVDU_(const int rs, const int rt, const int rd)=0;
-			virtual void DIVWU(const int rs, const int rt, const int rd)=0;
-			virtual void DCBI(const int rt, const int rd)=0;
-			virtual void NAND(const int rt, const int rs, const int rd)=0;
-			virtual void NAND_(const int rt, const int rs, const int rd)=0;
-				//g4_g6_g1
-			    virtual void MTSPR(const int rs)=0;
-				virtual void MTLR(const int rs)=0;
-				virtual void MTCTR(const int rs)=0;
-				virtual void UNK_G4_G6_G1(const int code, const int opcode, const int rs, const int rt,
-					const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-				//end g4_g6_g1
-			
-			virtual void UNK_G4_G6(const int code, const int opcode, const int rs, const int rt,
-				const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g6
-		virtual void DIVW(const int rs, const int rt, const int rd)=0;
-		virtual void SUBFO(const int rs, const int rt, const int rd)=0;
-		virtual void LWSYNC ()=0;
-			//g4_g7
-		    virtual void NEGO()=0;
-			virtual void MULO(const int rs, const int rt, const int rd)=0;
-			virtual void MULO_(const int rs, const int rt, const int rd)=0;
-			virtual void MFSRI()=0;
-			virtual void UNK_G4_G7(const int code, const int opcode, const int rs, const int rt,
-				const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g7
-		virtual void STFSX(const int rs, const int rt, const int rd)=0;
-			//g4_g8
-			virtual void STSWI(const int rs, const int rt, const int rd)=0;
-			virtual void STFDX(const int rs, const int rt, const int rd)=0;
-			virtual void SRLQ(const int rt, const int rs, const int rd)=0;
-			virtual void SREQ(const int rt, const int rs, const int rd)=0;
-			virtual void UNK_G4_G8(const int code, const int opcode, const int rs, const int rt,
-					const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g8
-			//g4_g9
-			virtual void MULLDO(const int rs, const int rt, const int rd)=0;
-			virtual void MULLWO(const int rs, const int rt, const int rd)=0;
-			virtual void MULLWO_(const int rs, const int rt, const int rd)=0;
-			virtual void UNK_G4_G9(const int code, const int opcode, const int rs, const int rt,
-				const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g9
-		
-		virtual void SRAW(const int rt, const int rs, const int rd)=0;
-		virtual void SRAWI(const int rt, const int rs, const int rd)=0;
-		virtual void EIEIO()=0;
-			//g4_g10
-			virtual void ABSO_()=0;
-			virtual void DIVSO_(const int rs, const int rt, const int rd)=0;
-			virtual void UNK_G4_G10(const int code, const int opcode, const int rs, const int rt,
-				const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-			//end g4_g10
-		virtual void EXTSH(const int rt, const int rs)=0;
-		virtual void EXTSB(const int rt, const int rs)=0;
-		virtual void EXTSW(const int rt, const int rs)=0;
-		virtual void DCBZ(const int rt, const int rd)=0;
-		virtual void LWZX(const int rs, const int rt, const int rd)=0;
-		
-		virtual void UNK_G4(const int code, const int opcode, const int rs, const int rt,
-			const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
-		//end g4
-	virtual void LWZ(const int rs, const int rt, const int imm_s16)=0;
-	virtual void LWZU(const int rt, const int rs, const int imm_s16)=0;
-	virtual void LBZ(const int rs, const int rt, const int imm_s16)=0;
-	virtual void LBZU(const int rs, const int rt, const int imm_u16)=0;
-	virtual void STW(const int rs, const int rt, const int imm_s16)=0;
-	virtual void STWU(const int rs, const int rt, const int imm_u16)=0;
-	virtual void STB(const int rs, const int rt, const int imm_s16)=0;
-	virtual void STBU(const int rs, const int rt, const int imm_u16)=0;
-	virtual void LHZ(const int rs, const int rt, const int imm_s16)=0;
-	virtual void LHZU(const int rs, const int rt, const int imm_u16)=0;
-	virtual void STH(const int rs, const int rt, const int imm_s16)=0;
-	virtual void STHU(const int rs, const int rt, const int imm_u16)=0;
-	virtual void LFS(const int rs, const int rt, const int imm_s16)=0;
-	virtual void LFSU(const int rs, const int rt, const int imm_u16)=0;
-	virtual void LFD(const int rs, const int rt, const int imm_s16)=0;
-	virtual void STFS(const int rs, const int rt, const int imm_s16)=0;
-	virtual void STFSU(const int rs, const int rt, const int imm_u16)=0;
-	virtual void STFD(const int rs, const int rt, const int imm_s16)=0;
-	virtual void LD(const int rs, const int rt, const int imm_s16)=0;
-	virtual void FDIVS(const int rs, const int rt, const int rd)=0;
-	virtual void STD(const int rs, const int rt, const int imm_s16)=0;
-		//g5 - 3f
-		virtual void G5()=0;
-		//virtual void FCFID(const int rs, const int rd)=0;
-		//
-	
-	virtual void UNK(const int code, const int opcode, const int rs, const int rt,
-		const int rd, const int sa, const int func, const int imm_s16, const int imm_u16, const int imm_u26)=0;
+	static int branchTarget(const int imm_s16) //FIXME
+	{
+        return CPU.PC + imm_s16;
+    }
+
+    static int jumpTarget(const int imm_u26) //FIXME
+	{
+        return (CPU.PC & 0xf0000000) + (imm_u26 << 2);
+    }
+
+	ADD_NULL_OPCODE(NOP);
+		START_OPCODES_GROUP(SPECIAL)
+		END_OPCODES_GROUP(SPECIAL);
+		START_OPCODES_GROUP(SPECIAL2)
+		END_OPCODES_GROUP(SPECIAL2);
+	ADD_OPCODE(MULLI,(OP_REG rt, OP_REG rs, OP_sREG imm_s16));
+	ADD_OPCODE(SUBFIC,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(CMPLDI,(OP_REG rs, OP_REG rt, OP_REG imm_u16));
+	ADD_OPCODE(CMPDI,(OP_REG rs, OP_REG rt, OP_REG rd));
+	ADD_OPCODE(ADDIC,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(ADDIC_,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+		START_OPCODES_GROUP(G_0x04)
+			START_OPCODES_GROUP(G_0x04_0x0)
+			ADD_OPCODE(MULHHWU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MULHHWU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACHHWU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACHHWU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x0);
+			START_OPCODES_GROUP(G_0x04_0x1)
+				ADD_OPCODE(MULHHW,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MULHHW_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACHHW,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(NMACHHW,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x1);
+			START_OPCODES_GROUP(G_0x04_0x2)
+			ADD_OPCODE(MACHHWSU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACHHWSU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x2);
+			START_OPCODES_GROUP(G_0x04_0x3)
+			ADD_OPCODE(MACHHWS,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACHHWS_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(NMACHHWS,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x3);
+			START_OPCODES_GROUP(G_0x04_0x4)
+				ADD_OPCODE(MULCHWU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MULCHWU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACCHWU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACCHWU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x4);
+			START_OPCODES_GROUP(G_0x04_0x5)
+				ADD_OPCODE(MULCHW,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACCHW,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x5);
+			START_OPCODES_GROUP(G_0x04_0x6)
+			ADD_OPCODE(MACCHWSU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACCHWSU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x6);
+			START_OPCODES_GROUP(G_0x04_0x7)
+			ADD_OPCODE(MACCHWS,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(NMACCHWS,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(NMACCHWS_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x7);
+			START_OPCODES_GROUP(G_0x04_0xc)
+				ADD_OPCODE(MULLHWU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MULLHWU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACLHWU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACLHWU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0xc);
+			START_OPCODES_GROUP(G_0x04_0xd)
+				ADD_OPCODE(NMACLHW,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0xd);
+			START_OPCODES_GROUP(G_0x04_0xe)
+			ADD_OPCODE(MACLHWSU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACLHWSU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0xe);
+			START_OPCODES_GROUP(G_0x04_0xf)
+			ADD_OPCODE(MACLHWS,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0xf);
+			START_OPCODES_GROUP(G_0x04_0x10)
+			ADD_OPCODE(MACHHWUO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACHHWUO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x10);
+			START_OPCODES_GROUP(G_0x04_0x12)
+			ADD_OPCODE(MACHHWSUO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACHHWSUO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x12);
+			START_OPCODES_GROUP(G_0x04_0x13)
+			ADD_OPCODE(MACHHWSO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACHHWSO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(NMACHHWSO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x13);
+			START_OPCODES_GROUP(G_0x04_0x14)
+			ADD_OPCODE(MACCHWUO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACCHWUO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x14);
+			START_OPCODES_GROUP(G_0x04_0x15)
+			ADD_OPCODE(MACCHWO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACCHWO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(NMACCHWO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x15);
+			START_OPCODES_GROUP(G_0x04_0x16)
+			ADD_OPCODE(MACCHWSUO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACCHWSUO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x16);
+			START_OPCODES_GROUP(G_0x04_0x17)
+				ADD_OPCODE(NMACCHWSO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x17);
+			START_OPCODES_GROUP(G_0x04_0x18)
+				ADD_OPCODE(MFVSCR,(OP_REG rs));
+			END_OPCODES_GROUP(G_0x04_0x18);
+			START_OPCODES_GROUP(G_0x04_0x1c)
+			ADD_OPCODE(MACLHWUO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACLHWUO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x1c);
+			START_OPCODES_GROUP(G_0x04_0x1d)
+			ADD_OPCODE(NMACLHWO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(NMACLHWO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x1d);
+			START_OPCODES_GROUP(G_0x04_0x1e)
+			ADD_OPCODE(MACLHWSUO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MACLHWSUO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x1e);
+			START_OPCODES_GROUP(G_0x04_0x1f)
+			ADD_OPCODE(NMACLHWSO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(NMACLHWSO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G_0x04_0x1f);
+		END_OPCODES_GROUP(G_0x04);
+		START_OPCODES_GROUP(G1)
+		END_OPCODES_GROUP(G1);
+	//ADD_OPCODE(ADDIS,(OP_REG rt, OP_REG rs, OP_sREG imm_s16));
+		START_OPCODES_GROUP(G_0x0f)
+			START_OPCODES_GROUP(G_0x0f_0x0)
+			ADD_OPCODE(ADDIS,(OP_REG rt, OP_REG rs, OP_sREG imm_s16));
+			ADD_OPCODE(LIS,(OP_REG rs, OP_sREG imm_s16));
+			END_OPCODES_GROUP(G_0x0f_0x0);
+		END_OPCODES_GROUP(G_0x0f);
+		START_OPCODES_GROUP(G2)
+		END_OPCODES_GROUP(G2);
+	ADD_NULL_OPCODE(SC);
+		START_OPCODES_GROUP(G3)
+		END_OPCODES_GROUP(G3);
+		START_OPCODES_GROUP(G3_S)
+		END_OPCODES_GROUP(G3_S);
+		START_OPCODES_GROUP(G3_S0)
+	ADD_NULL_OPCODE(RLWINM_);
+	ADD_OPCODE(CLRLWI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+	ADD_OPCODE(CLRLWI_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+		END_OPCODES_GROUP(G3_S0);
+		START_OPCODES_GROUP(G3_S0_G0)
+	ADD_NULL_OPCODE(RLWINM);
+	ADD_OPCODE(ROTLWI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+	ADD_OPCODE(ROTLWI_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+		END_OPCODES_GROUP(G3_S0_G0);
+	//ADD_NULL_OPCODE(RLWINM);
+	ADD_OPCODE(ROTLW,(OP_REG rt, OP_REG rs, OP_REG rd));
+	ADD_OPCODE(ORI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+	ADD_OPCODE(ORIS,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+	ADD_OPCODE(XORI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+	ADD_OPCODE(XORIS,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+	ADD_OPCODE(ANDI_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+	ADD_OPCODE(ANDIS_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+	//ADD_OPCODE(LRLDIÑ,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+		START_OPCODES_GROUP(G_0x1e)
+			START_OPCODES_GROUP(G_0x1e_G_0x14)
+				ADD_OPCODE(CLRLDI_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+			END_OPCODES_GROUP(G_0x1e_G_0x14);
+		END_OPCODES_GROUP(G_0x1e);
+		START_OPCODES_GROUP(G4)
+			START_OPCODES_GROUP(G4_G0)
+				//ADD_OPCODE(CMPW,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(LVSL,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(LVEBX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(MULHDU,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(MULHDU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(ADDC,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(MULHWU,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(MULHWU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+				//ADD_OPCODE(MFCR,(OP_REG rs));
+					START_OPCODES_GROUP(G4_G0_0x26)
+						ADD_OPCODE(MFCR,(OP_REG rs));
+						ADD_OPCODE(MFOCRF,(OP_REG rs, OP_sREG imm_s16));
+					END_OPCODES_GROUP(G4_G0_0x26);
+				ADD_OPCODE(LWARX,(OP_REG rs, OP_REG rd, OP_sREG imm_s16));
+				ADD_OPCODE(LDX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(CNTLZW,(OP_REG rt, OP_REG rs));
+				ADD_OPCODE(AND,(OP_REG rt, OP_REG rs, OP_REG rd));
+				ADD_OPCODE(AND_,(OP_REG rt, OP_REG rs, OP_REG rd));
+				ADD_OPCODE(MASKG,(OP_REG rt, OP_REG rs, OP_REG rd));
+			END_OPCODES_GROUP(G4_G0);
+				START_OPCODES_GROUP(G4_G1)
+					//ADD_OPCODE(CMPLD,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(LVSR,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(LVEHX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(SUBF,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(SUBF_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(LDUX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(LWZUX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(CNTLZD,(OP_REG rs, OP_REG rt));
+					ADD_OPCODE(ANDC,(OP_REG rt, OP_REG rs, OP_REG rd));
+				END_OPCODES_GROUP(G4_G1);
+			//ADD_OPCODE(MULHW,(OP_REG rs, OP_REG rt, OP_REG rd));
+				START_OPCODES_GROUP(G4_G_0x2)
+					ADD_OPCODE(LVEWX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(MULHD,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(MULHD_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MULHW,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MULHW_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DLMZB,(OP_REG rt, OP_REG rs, OP_REG rd));
+					ADD_OPCODE(DLMZB_,(OP_REG rt, OP_REG rs, OP_REG rd));
+					ADD_OPCODE(LDARX,(OP_REG rt, OP_REG rs, OP_REG rd));
+					ADD_OPCODE(DCBF,(OP_REG rt, OP_REG rs, OP_REG rd));
+					ADD_OPCODE(LBZX,(OP_REG rt, OP_REG rs, OP_REG rd));
+				END_OPCODES_GROUP(G4_G_0x2);
+				START_OPCODES_GROUP(G4_G2)
+					ADD_OPCODE(LVX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(NEG,(OP_REG rs, OP_REG rt));
+					ADD_OPCODE(MUL,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MUL_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MTSRDIN,(OP_REG rs, OP_REG rd));
+					//ADD_OPCODE(NOT,(OP_REG rt, OP_REG rd));
+				END_OPCODES_GROUP(G4_G2);
+				START_OPCODES_GROUP(G4_G3)
+					ADD_OPCODE(WRTEE,(OP_REG rs));
+					ADD_OPCODE(STVEBX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(SUBFE,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(SUBFE_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ADDE,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ADDE_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					//ADD_OPCODE(MTOCRF,(OP_REG rs));
+					ADD_OPCODE(STDX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(STWCX_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(STWX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(SLQ,(OP_REG rt, OP_REG rs, OP_REG rd));
+					ADD_OPCODE(SLQ_,(OP_REG rt, OP_REG rs, OP_REG rd));
+					ADD_OPCODE(SLE_,(OP_REG rt, OP_REG rs, OP_REG rd));
+				END_OPCODES_GROUP(G4_G3);
+			ADD_OPCODE(STDUX,(OP_REG rs, OP_REG rt, OP_REG rd));
+			//ADD_OPCODE(ADDZE,(OP_REG rs, OP_REG rt));
+				START_OPCODES_GROUP(G4_G4)
+					ADD_OPCODE(STVX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MULLD,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MULLD_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ADDME,(OP_REG rs, OP_REG rt));
+					ADD_OPCODE(ADDME_,(OP_REG rs, OP_REG rt));
+					ADD_OPCODE(MULLW,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MULLW_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DCBTST,(OP_REG rt, OP_REG rd));
+					ADD_OPCODE(SLLIQ,(OP_REG rt, OP_REG rs, OP_REG rd));
+				END_OPCODES_GROUP(G4_G4);
+				START_OPCODES_GROUP(G4_G_ADD)
+					ADD_OPCODE(ICBT,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DOZ,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DOZ_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ADD,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ADD_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(LSCBX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(LSCBX_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DCBT,(OP_REG rt, OP_REG rd));
+					ADD_OPCODE(LHZX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(EQV,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(EQV_,(OP_REG rs, OP_REG rt, OP_REG rd));
+				END_OPCODES_GROUP(G4_G_ADD);
+				START_OPCODES_GROUP(G4_G_ADDZE)
+					ADD_OPCODE(ADDZE,(OP_REG rs, OP_REG rt));
+					ADD_OPCODE(ADDZE_,(OP_REG rs, OP_REG rt));
+				END_OPCODES_GROUP(G4_G_ADDZE);
+			//ADD_OPCODE(XOR,(OP_REG rt, OP_REG rs, OP_REG rd));
+			ADD_OPCODE(SRW,(OP_REG rt, OP_REG rs, OP_REG rd));
+			//ADD_OPCODE(MFLR,(OP_REG rs));
+			START_OPCODES_GROUP(G4_G_0x9)
+					ADD_OPCODE(DOZI,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+					ADD_OPCODE(LHZUX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(XOR,(OP_REG rt, OP_REG rs, OP_REG rd));
+				END_OPCODES_GROUP(G4_G_0x9);
+			START_OPCODES_GROUP(G4_G_0xa)
+					ADD_OPCODE(MFDCR,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIV,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIV_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					START_OPCODES_GROUP(G4_G_0xa_0x26)
+						ADD_OPCODE(MFSPR,(OP_REG rs, OP_sREG imm_s16));
+						ADD_OPCODE(MFLR,(OP_REG rs));
+						ADD_OPCODE(MFCTR,(OP_REG rs));
+					END_OPCODES_GROUP(G4_G_0xa_0x26);
+					//ADD_OPCODE(MFCTR,(OP_REG rs));
+					ADD_OPCODE(LWAX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				END_OPCODES_GROUP(G4_G_0xa);
+				START_OPCODES_GROUP(G4_G_0xb)
+					ADD_OPCODE(LVXL,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MFTB,(OP_REG rs));
+					END_OPCODES_GROUP(G4_G_0xb);
+				START_OPCODES_GROUP(G4_G5)
+					ADD_OPCODE(STHX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ORC,(OP_REG rt, OP_REG rs, OP_REG rd));
+					ADD_OPCODE(ORC_,(OP_REG rt, OP_REG rs, OP_REG rd));
+				END_OPCODES_GROUP(G4_G5);
+			//ADD_OPCODE(LVXL,(OP_REG rs, OP_REG rt, OP_REG rd));
+			//ADD_OPCODE(MR,(OP_REG rt, OP_REG rs));
+				START_OPCODES_GROUP(G4_G6)
+					ADD_OPCODE(MTDCR,(OP_REG rs));
+					ADD_OPCODE(DCCCI,(OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVDU,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVDU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVWU,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVWU_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DCBI,(OP_REG rt, OP_REG rd));
+					ADD_OPCODE(NAND,(OP_REG rt, OP_REG rs, OP_REG rd));
+					ADD_OPCODE(NAND_,(OP_REG rt, OP_REG rs, OP_REG rd));
+					START_OPCODES_GROUP(G4_G6_G1)
+						//ADD_OPCODE(MTSPR,(OP_REG rs));
+						ADD_OPCODE(MTLR,(OP_REG rs));
+						ADD_OPCODE(MTCTR,(OP_REG rs));
+					END_OPCODES_GROUP(G4_G6_G1);
+				END_OPCODES_GROUP(G4_G6);
+			//ADD_OPCODE(DIVW,(OP_REG rs, OP_REG rt, OP_REG rd));
+			START_OPCODES_GROUP(G4_G_0xf)
+				ADD_OPCODE(DIVD,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(DIVD_,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(DIVW,(OP_REG rs, OP_REG rt, OP_REG rd));
+			END_OPCODES_GROUP(G4_G_0xf);
+			START_OPCODES_GROUP(G4_G_ADDCO)
+				ADD_OPCODE(MCRXR,(OP_REG rs));
+				ADD_OPCODE(LVLX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(ADDCO,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(ADDCO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(LSWX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(LWBRX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(LFSX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				ADD_OPCODE(MASKIR,(OP_REG rt, OP_REG rs, OP_REG rd));
+			END_OPCODES_GROUP(G4_G_ADDCO);
+			//ADD_OPCODE(SUBFO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			//ADD_NULL_OPCODE(LWSYNC);
+				START_OPCODES_GROUP(G4_G_0x11)
+					ADD_OPCODE(LVRX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(SUBFO,(OP_REG rs, OP_REG rt, OP_REG rd));
+				END_OPCODES_GROUP(G4_G_0x11);
+				START_OPCODES_GROUP(G4_G_0x12)
+					START_OPCODES_GROUP(G4_G_0x12_0x26)
+					ADD_OPCODE(MFSR,(OP_REG rs, OP_sREG imm_s16));
+					END_OPCODES_GROUP(G4_G_0x12_0x26);
+					ADD_NULL_OPCODE(LWSYNC);
+					ADD_OPCODE(LFDX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				END_OPCODES_GROUP(G4_G_0x12);
+				START_OPCODES_GROUP(G4_G7)
+					ADD_NULL_OPCODE(NEGO);
+					ADD_OPCODE(MULO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MULO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					START_OPCODES_GROUP(G4_G7_0x26)
+						ADD_OPCODE(MFSRI,(OP_REG rs, OP_REG rt, OP_REG rd));
+						END_OPCODES_GROUP(G4_G7_0x26);
+					
+				END_OPCODES_GROUP(G4_G7);
+			//ADD_OPCODE(STFSX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				START_OPCODES_GROUP(G4_G_ADDEO)
+					ADD_OPCODE(ADDEO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ADDEO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					START_OPCODES_GROUP(G4_G_ADDEO_0x26)
+						ADD_OPCODE(MFSRIN,(OP_REG rs, OP_REG rd));
+					END_OPCODES_GROUP(G4_G_ADDEO_0x26);
+				END_OPCODES_GROUP(G4_G_ADDEO);
+				START_OPCODES_GROUP(G4_G8)
+					ADD_OPCODE(ADDZEO_,(OP_REG rs, OP_REG rt, OP_REG rd)); //temp
+					ADD_OPCODE(STSWI,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(STFDX,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(SRLQ,(OP_REG rt, OP_REG rs, OP_REG rd));
+					ADD_OPCODE(SREQ,(OP_REG rt, OP_REG rs, OP_REG rd));
+				END_OPCODES_GROUP(G4_G8);
+				START_OPCODES_GROUP(G4_G_ADDO)
+					ADD_OPCODE(LVLXL,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DOZO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ADDO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ADDO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(LHBRX,(OP_REG rs, OP_REG rt, OP_REG rd));
+				END_OPCODES_GROUP(G4_G_ADDO);
+				START_OPCODES_GROUP(G4_G9)
+					ADD_OPCODE(MULLDO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MULLDO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MULLWO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(MULLWO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+				END_OPCODES_GROUP(G4_G9);
+			//ADD_OPCODE(SRAW,(OP_REG rt, OP_REG rs, OP_REG rd));
+			ADD_OPCODE(SRAWI,(OP_REG rt, OP_REG rs, OP_REG rd));
+			//ADD_NULL_OPCODE(EIEIO);
+				START_OPCODES_GROUP(G4_G_0x1a)
+					ADD_OPCODE(DIVO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_NULL_OPCODE(EIEIO);
+				END_OPCODES_GROUP(G4_G_0x1a);
+				START_OPCODES_GROUP(G4_G10)
+					ADD_NULL_OPCODE(ABSO_);
+					ADD_OPCODE(DIVSO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVSO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+				END_OPCODES_GROUP(G4_G10);
+				START_OPCODES_GROUP(G4_G_0x1e)
+					ADD_OPCODE(ICCCI,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(RLDCL_,(OP_REG rt, OP_REG rs, OP_REG rd, OP_sREG imm_s16));
+					ADD_OPCODE(DIVDUO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVDUO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVWUO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVWUO_,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(ICBI,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(RLDCL,(OP_REG rt, OP_REG rs, OP_REG rd, OP_sREG imm_s16));
+					ADD_OPCODE(EXTSW,(OP_REG rt, OP_REG rs));
+				    ADD_OPCODE(EXTSW_,(OP_REG rt, OP_REG rs));
+				END_OPCODES_GROUP(G4_G_0x1e);
+				START_OPCODES_GROUP(G4_G_0x1f)
+					ADD_OPCODE(ICREAD,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DIVDO,(OP_REG rs, OP_REG rt, OP_REG rd));
+					ADD_OPCODE(DCBZ,(OP_REG rt, OP_REG rd));
+				END_OPCODES_GROUP(G4_G_0x1f);
+			ADD_OPCODE(EXTSH,(OP_REG rt, OP_REG rs));
+			ADD_OPCODE(EXTSB,(OP_REG rt, OP_REG rs));
+			//ADD_OPCODE(EXTSW,(OP_REG rt, OP_REG rs));
+			//ADD_OPCODE(DCBZ,(OP_REG rt, OP_REG rd));
+			ADD_OPCODE(LWZX,(OP_REG rs, OP_REG rt, OP_REG rd));
+		END_OPCODES_GROUP(G4);
+	ADD_OPCODE(LWZ,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LWZU,(OP_REG rt, OP_REG rs, OP_sREG imm_s16));
+	ADD_OPCODE(LBZ,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LBZU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(STW,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(STWU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(STB,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(STBU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LHZ,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LHZU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LHA,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LHAU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(STH,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(STHU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LMW,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LFS,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LFSU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LFD,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(LFDU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(STFS,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(STFSU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	ADD_OPCODE(STFD,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+	//ADD_OPCODE(LD,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+		START_OPCODES_GROUP(G_0x3a)
+			ADD_OPCODE(LDU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+			ADD_OPCODE(LWA,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+			ADD_OPCODE(LD,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+		END_OPCODES_GROUP(G_0x3a);
+		START_OPCODES_GROUP(G4_S)
+			ADD_OPCODE(FSUBS,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FSUBS_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FADDS,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FSQRTS,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FRES,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FMULS,(OP_REG rs, OP_REG rt, OP_REG sa));
+			ADD_OPCODE(FMULS_,(OP_REG rs, OP_REG rt, OP_REG sa));
+			ADD_OPCODE(FMADDS,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FMADDS_,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FMSUBS,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FMSUBS_,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FNMSUBS,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FNMSUBS_,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FNMADDS,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FNMADDS_,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+		END_OPCODES_GROUP(G4_S);
+	ADD_OPCODE(STD,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+		START_OPCODES_GROUP(G5)
+			START_OPCODES_GROUP(G5_G0x0)
+			ADD_OPCODE(FCMPU,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FCMPO,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(MCRFS,(OP_REG rs, OP_REG rt));
+			END_OPCODES_GROUP(G5_G0x0);
+			START_OPCODES_GROUP(G5_G0x10)
+			ADD_OPCODE(FNEG,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FMR,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FNABS,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FABS,(OP_REG rs, OP_REG rd));
+			END_OPCODES_GROUP(G5_G0x10);
+			START_OPCODES_GROUP(G5_G0x1c)
+			ADD_OPCODE(FCTIW,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FCTID,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FCFID,(OP_REG rs, OP_REG rd));
+			END_OPCODES_GROUP(G5_G0x1c);
+			START_OPCODES_GROUP(G5_G0x1e)
+			ADD_OPCODE(FCTIWZ,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FCTIDZ,(OP_REG rs, OP_REG rd));
+			END_OPCODES_GROUP(G5_G0x1e);
+
+			//ADD_OPCODE(MFFS,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FDIV,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FDIV_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FSUB,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FSUB_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FADD,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FADD_,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(FSQRT,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FSEL,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FSEL_,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FMUL,(OP_REG rs, OP_REG rt, OP_REG sa));
+			ADD_OPCODE(FMUL_,(OP_REG rs, OP_REG rt, OP_REG sa));
+			ADD_OPCODE(FRSQRTE,(OP_REG rs, OP_REG rd));
+			ADD_OPCODE(FMSUB,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FMSUB_,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FMADD,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FNMSUB,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FNMSUB_,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FNMADD,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+			ADD_OPCODE(FNMADD_,(OP_REG rs, OP_REG rt, OP_REG sa, OP_REG rd));
+		END_OPCODES_GROUP(G5);
+	ADD_OPCODE(UNK,(OP_REG code, OP_REG opcode, OP_REG rs, OP_REG rt,
+		OP_REG rd, OP_REG sa, OP_REG func, OP_sREG imm_s16, OP_REG imm_u16, OP_REG imm_u26));
 };
+
+#undef START_OPCODES_GROUP
+#undef ADD_OPCODE
+#undef ADD_NULL_OPCODE
+#undef END_OPCODES_GROUP

@@ -10,7 +10,7 @@ public:
 	uint nPC;
 
 	float FPR[32];
-	u32 GPR[32]; //General-Purpose Register
+	s64 GPR[32]; //General-Purpose Register
 	bool CR[8][4]; //Condition Register
 
 	//CR0
@@ -57,16 +57,16 @@ public:
 	// 25 - 31 : TBC
 	// Transfer-byte count
 
-	u32 LR[32];	//SPR 0x008 : Link Register
-	u32 CTR;	//SPR 0x009 : Count Register
+	s32 LR[32];	//SPR 0x008 : Link Register
+	s32 CTR;	//SPR 0x009 : Count Register
 
-	u32 USPRG;	//SPR 0x100 : User-SPR General-Purpose Registers
+	s32 USPRG;	//SPR 0x100 : User-SPR General-Purpose Registers
 
-	u32 SPRG[8]; //SPR 0x100 - 0x107 : SPR General-Purpose Registers
+	s32 SPRG[8]; //SPR 0x100 - 0x107 : SPR General-Purpose Registers
 
 	//TBR : Time-Base Registers
-	u32 TBU;	//TBR 0x10C
-	u32 TBL;	//TBR 0x10D
+	s32 TBU;	//TBR 0x10C
+	s32 TBL;	//TBR 0x10D
 
 	bool BO[5];
 	// 0 : CR Test Control
@@ -92,16 +92,23 @@ public:
 		Reset();
 	}
 
-	virtual void UpdateCR0(const int lvalue, const int rvalue = 0)
+	virtual void UpdateCRn(const uint n, const int lvalue, const int rvalue)
 	{
-		CR[0][CR0_LT] = lvalue < rvalue;
-		CR[0][CR0_LT] = lvalue > rvalue;
-		CR[0][CR0_EQ] = lvalue == rvalue;
-		CR[0][CR0_SO] = XER[XER_SO];
+		CR[n][CR0_LT] = lvalue < rvalue;
+		CR[n][CR0_GT] = lvalue > rvalue;
+		CR[n][CR0_EQ] = lvalue == rvalue;
+		CR[n][CR0_SO] = XER[XER_SO];
+	}
+
+	virtual void UpdateCR0(const int value)
+	{
+		UpdateCRn(0, value, 0);
 	}
 
 	virtual void Reset();
 	virtual void NextPc();
+	virtual void NextBranchPc();
+	virtual void PrevPc();
 	virtual void SetPc(const uint _pc);
 };
 
