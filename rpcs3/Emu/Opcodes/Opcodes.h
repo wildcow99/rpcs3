@@ -777,7 +777,7 @@ public:
 
 	static int branchTarget(const int imm_s16) //FIXME
 	{
-        return CPU.PC + imm_s16;
+        return CPU.PC + (imm_s16 << 2);
     }
 
     static int jumpTarget(const int imm_u26) //FIXME

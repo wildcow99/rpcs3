@@ -35,7 +35,6 @@ private:
 	void InitMemory()
 	{
 		safe_delete(mem);
-		//mem = malloc(range_size * sizeof(u8));
 		mem = new u8[range_size];
 		memset(mem, 0, sizeof(mem));
 	}
@@ -85,15 +84,27 @@ public:
 		return false;
 	}
 
-	template<typename T> bool Write(u32 addr, T value)
+	__forceinline const u8 FastRead8(const u32 addr)
 	{
-		if(!IsMyAddress(addr)) return false;
-
-		(((T*)mem)[addr - GetStartAddr()]) = value;
-		return true;
+		return ((u8*)mem)[addr - GetStartAddr()];
 	}
 
-	template<typename T> bool Read(u32 addr, T* value)
+	__forceinline const u16 FastRead16(const u32 addr)
+	{
+		return ((u16)FastRead8(addr) << 8) | (u16)FastRead8(addr + 1);
+	}
+
+	__forceinline const u32 FastRead32(const u32 addr)
+	{
+		return ((u32)FastRead16(addr) << 16) | (u32)FastRead16(addr + 2);
+	}
+
+	__forceinline const u32 FastRead64(const u32 addr)
+	{
+		return ((u64)FastRead32(addr) << 32) | (u64)FastRead32(addr + 4);
+	}
+
+	virtual bool Read8(const u32 addr, u8* value)
 	{
 		if(!IsMyAddress(addr))
 		{
@@ -101,58 +112,130 @@ public:
 			return false;
 		}
 
-		*value = (((T*)mem)[addr - GetStartAddr()]);
+		*value = FastRead8(addr);
 		return true;
-	}
-
-	virtual bool Read8(const u32 addr, u8* value)
-	{
-		return Read<u8>(addr, value);
 	}
 
 	virtual bool Read16(const u32 addr, u16* value)
 	{
-		return Read<u16>(addr, value);
+		if(!IsMyAddress(addr))
+		{
+			*value = 0;
+			return false;
+		}
+
+		*value = FastRead16(addr);
+		return true;
 	}
 
 	virtual bool Read32(const u32 addr, u32* value)
 	{
-		return Read<u32>(addr, value);
+		if(!IsMyAddress(addr))
+		{
+			*value = 0;
+			return false;
+		}
+
+		*value = FastRead32(addr);
+		return true;
 	}
 
 	virtual bool Read64(const u32 addr, u64* value)
 	{
-		return Read<u64>(addr, value);
+		if(!IsMyAddress(addr))
+		{
+			*value = 0;
+			return false;
+		}
+
+		*value = FastRead64(addr);
+		return true;
 	}
 
 	virtual bool Read128(const u32 addr, u128* value)
 	{
-		return Read<u64>(addr, &value->lo) && Read<u64>(addr + 8, &value->hi);
+		if(!IsMyAddress(addr))
+		{
+			*value = u128::From((u64)0);
+			return false;
+		}
+
+		value->lo = FastRead64(addr);
+		value->hi = FastRead64(addr + 8);
+		return true;
+	}
+
+	__forceinline void FastWrite8(const u32 addr, const u8 value)
+	{
+		((u8*)mem)[addr - GetStartAddr()] = value;
+	}
+
+	__forceinline void FastWrite16(const u32 addr, const u16 value)
+	{
+		const u32 _addr = addr - GetStartAddr();
+		((u8*)mem)[_addr] = (u8)(value >> 8);
+		((u8*)mem)[_addr + 1] = (u8)value;
+	}
+
+	__forceinline void FastWrite32(const u32 addr, const u32 value)
+	{
+		const u32 _addr = addr - GetStartAddr();
+		FastWrite16(_addr, (u16)(value >> 16));
+		FastWrite16(_addr+2, (u16)value);
+	}
+
+	__forceinline void FastWrite64(const u32 addr, const u64 value)
+	{
+		const u32 _addr = addr - GetStartAddr();
+		FastWrite32(_addr, (u16)(value >> 32));
+		FastWrite32(_addr+4, (u16)value);
+	}
+
+	__forceinline void FastWrite128(const u32 addr, const u128 value)
+	{
+		const u32 _addr = addr - GetStartAddr();
+		FastWrite32(_addr, value.hi);
+		FastWrite32(_addr+8, value.lo);
 	}
 
 	virtual bool Write8(const u32 addr, const u8 value)
 	{
-		return Write<u8>(addr, value);
+		if(!IsMyAddress(addr)) return false;
+
+		FastWrite8(addr, value);
+		return true;
 	}
 
 	virtual bool Write16(const u32 addr, const u16 value)
 	{
-		return Write<u16>(addr, value);
+		if(!IsMyAddress(addr)) return false;
+
+		FastWrite16(addr, value);
+		return true;
 	}
 
 	virtual bool Write32(const u32 addr, const u32 value)
 	{
-		return Write<u32>(addr, value);
+		if(!IsMyAddress(addr)) return false;
+
+		FastWrite32(addr, value);
+		return true;
 	}
 
 	virtual bool Write64(const u32 addr, const u64 value)
 	{
-		return Write<u64>(addr, value);
+		if(!IsMyAddress(addr)) return false;
+
+		FastWrite64(addr, value);
+		return true;
 	}
 
 	virtual bool Write128(const u32 addr, const u128 value)
 	{
-		return Write<u64>(addr, value.lo) && Write<u64>(addr + 8, value.hi);
+		if(!IsMyAddress(addr)) return false;
+
+		FastWrite128(addr, value);
+		return true;
 	}
 
 	const u32 GetStartAddr() const { return range_start; }
