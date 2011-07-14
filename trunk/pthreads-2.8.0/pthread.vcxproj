@@ -43,8 +43,8 @@
     <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>.\.\</OutDir>
-    <IntDir>.\.\</IntDir>
+    <OutDir>.\..\bin\</OutDir>
+    <IntDir>.\$(Configuration)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -128,8 +128,8 @@
       <LinkDLL>true</LinkDLL>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <OutputFile>.\pthreadVC2.dll</OutputFile>
-      <ImportLibrary>.\.\pthreadVC2.lib</ImportLibrary>
+      <OutputFile>.\..\bin\pthreadVC2_2.8.0.dll</OutputFile>
+      <ImportLibrary>.\..\libs\$(Configuration)\pthreadVC2_2.8.0.lib</ImportLibrary>
       <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
