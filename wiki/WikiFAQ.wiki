@@ -1,0 +1,37 @@
+﻿++ *Welcome to rpcs3(Sony PlayStation 3 emulator)*
+This page for FAQ about rpcs3.
+
+++ *Q1:What is Sony PS3?*
+*Answer* : Sony PS3 is the third home video game console produced by Sony Computer Entertainment and the successor to the PS2 as part of the Playstation series. The PS3 competes with Microsoft's Xbox 360 and Nintendo's Wii as part of the seventh generation of video game consoles. It was first released on November 11, 2006 in Japan, with international markets following shortly thereafter.
+
+Major features of the console include its unified online gaming service, the Playstation Network,its robust multimedia capabilities, connectivity with the Playstation Portable, and its use of the Blu-ray Disc as its primary storage medium.
+
+You can see more about PS3 by visiting : http://en.wikipedia.org/wiki/Ps3
+
+++ *Q2:What is RPCS3 Emulator?*
+*Answer* : RPCS3 Emulator is a Sony PS3 Emulator for Windows.
+Currently the emulator is under developement with GNU GPL v3 Lisence.
+
+++ *Q3:What RPCS3 will\can do?*
+*Answer* : Currently RPCS3 doesn't run anything
+But in the near future the emulator probably can run PS3 BIOS and Firmware.
+We are planning to make the emulator run firmware 
+To make devloping Homebrews apps or something like that easier without any fear If it can crash PS3.
+
+++ *Q4:Are you guys noobz?!!!!*
+*Answer* : NO, We are not noobz.
+We just want to make an emulator that makes Homebrew developers test their apps without crashing their PS3
+or playing games with this emulator ( in the far future )
+
+++ *Q4:Can I help you?*
+*Answer* : Yes , you can.
+Just email DH.rpcs3@gmail.com (rpcs3 owner)
+Provide him with your G-Email at google code
+And I have knowladge about C++
+And he will add you to the committers list.
+Note : if you are not going to help us ,DO EMAIL HIM.
+
+
+
+
+
