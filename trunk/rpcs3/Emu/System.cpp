@@ -51,7 +51,7 @@ void SysThread::Run()
 	break;
 	};
 
-	if(m_memory_viewer == NULL) m_memory_viewer = new MemoryViewerPanel(NULL);
+	if(!m_memory_viewer) m_memory_viewer = new MemoryViewerPanel(NULL);
 
 	m_memory_viewer->SetPC(CPU.PC);
 	m_memory_viewer->Show();
@@ -93,7 +93,7 @@ void SysThread::Stop()
 
 	if(decoder)
 	{
-		safe_delete(decoder);
+		delete decoder;
 	}
 }
 

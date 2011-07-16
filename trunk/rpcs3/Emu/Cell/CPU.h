@@ -1,7 +1,17 @@
 #pragma once
 
 enum { XER_SO, XER_OV, XER_CA };
-enum { CR0_LT, CR0_GT, CR0_EQ, CR0_SO }; 
+enum { CR0_LT, CR0_GT, CR0_EQ, CR0_SO };
+
+enum
+{
+	CA_LT_VALUE = 0x80000000,
+	CA_GT_VALUE = 0x40000000,
+	CA_EQ_VALUE = 0x20000000,
+	CA_SO_VALUE = 0x10000000,
+};
+
+static const s32 MAX_INT_VALUE = 0x7fffffff;
 
 class CPUCycle
 {
@@ -11,7 +21,7 @@ public:
 
 	float FPR[32];
 	s64 GPR[32]; //General-Purpose Register
-	bool CR[8][4]; //Condition Register
+	s32 CR[8]; //Condition Register
 
 	//CR0
 	// 0 : LT - Negative (is negative)
@@ -85,24 +95,131 @@ public:
 	// : 0 - Apply standard branch prediction
 	// : 1 - Reverse the standard branch prediction
 
-	u64  cycle;
+	u64 cycle;
 
 	CPUCycle()
 	{
 		Reset();
 	}
 
-	virtual void UpdateCRn(const uint n, const int lvalue, const int rvalue)
+	inline bool CheckOverflow(const s64 a, const s64 b)
 	{
-		CR[n][CR0_LT] = lvalue < rvalue;
-		CR[n][CR0_GT] = lvalue > rvalue;
-		CR[n][CR0_EQ] = lvalue == rvalue;
-		CR[n][CR0_SO] = XER[XER_SO];
+		return
+			a > 0 && b > 0 && (MAX_INT_VALUE - b) < a ||
+			a < 0 && b < 0 && (-MAX_INT_VALUE - b) > a;
 	}
 
-	virtual void UpdateCR0(const int value)
+	inline bool CheckUnderflow(const s64 a, const s64 b)
+	{
+		return
+			a > 0 && b < 0 && (MAX_INT_VALUE + b) < a ||
+			a < 0 && b > 0 && (-MAX_INT_VALUE + b) > a;
+	}
+
+	inline bool IsCarryGen(const s64 a, const s64 b)
+	{
+		if(a == 0 || b == 0) return 0;
+		
+		s64 c = 0;
+		for(uint i=0; i<32; i++)
+		{
+			const s64 x = (a >> i) & 0x1;
+			const s64 y = (b >> i) & 0x1;
+			c = (x * y) | (x * c) | (y * c);
+		}
+		
+		return !!c;
+	}
+
+	inline void UpdateCR_LT(const uint n, const bool set)
+	{
+		if(set)
+		{
+			CR[n] |= CA_LT_VALUE;
+		}
+		else
+		{
+			CR[n] &= ~CA_LT_VALUE;
+		}
+	}
+
+	inline void UpdateCR_GT(const uint n, const bool set)
+	{
+		if(set)
+		{
+			CR[n] |= CA_GT_VALUE;
+		}
+		else
+		{
+			CR[n] &= ~CA_GT_VALUE;
+		}
+	}
+
+	inline void UpdateCR_EQ(const uint n, const bool set)
+	{
+		if(set)
+		{
+			CR[n] |= CA_EQ_VALUE;
+		}
+		else
+		{
+			CR[n] &= ~CA_EQ_VALUE;
+		}
+	}
+
+	inline void UpdateCR_SO(const uint n, const bool set)
+	{
+		if(set)
+		{
+			CR[n] |= CA_SO_VALUE;
+		}
+		else
+		{
+			CR[n] &= ~CA_SO_VALUE;
+		}
+	}
+
+	inline void UpdateCRn(const uint n, const int lvalue, const int rvalue)
+	{
+		UpdateCR_LT(n, lvalue < rvalue);
+		UpdateCR_GT(n, lvalue > rvalue);
+		UpdateCR_EQ(n, lvalue == rvalue);
+		UpdateCR_EQ(n, XER[XER_SO]);
+	}
+
+	inline void UpdateCR0(const int value)
 	{
 		UpdateCRn(0, value, 0);
+	}
+
+	inline void UpdateXER_CA(const s64 lvalue, const s64 rvalue)
+	{
+		XER[XER_CA] = IsCarryGen(lvalue, rvalue);
+	}
+
+	inline void UpdateXER_CA(const s64 lvalue, const s64 value, const s64 rvalue)
+	{
+		XER[XER_CA] = 
+			IsCarryGen(lvalue, value) ||
+			(rvalue && IsCarryGen(lvalue + value, rvalue));
+	}
+
+	inline void UpdateXER_OV(const s64 lvalue, const s64 value, const s64 rvalue)
+	{
+		XER[XER_OV] = CheckUnderflow(lvalue, rvalue);
+	}
+
+	inline void UpdateXER_SO_OV(const s64 lvalue, const s64 rvalue)
+	{
+		XER[XER_SO] = XER[XER_OV] = CheckOverflow(lvalue, rvalue) ? true : XER[XER_SO];
+	}
+
+	inline void UpdateXER_SO_OV(const s64 lvalue, const s64 value, const s64 rvalue)
+	{
+		XER[XER_SO] =
+			XER[XER_OV] = CheckOverflow(lvalue, value) || CheckOverflow(lvalue + value, rvalue)
+			? true
+			: XER[XER_SO];
 	}
 
 	virtual void Reset();

@@ -101,10 +101,10 @@ void ElfLoader::LoadPsf()
 
 void ElfLoader::LoadElf32(wxFile& f)
 {
-	CPU.PC = 0;
-
 	Elf32_Ehdr ehdr;
 	ehdr.Load(f);
+
+	CPU.SetPc(ehdr.e_entry);
 
 	ConLog.SkipLn();
 	ehdr.Show();
@@ -117,10 +117,10 @@ void ElfLoader::LoadElf32(wxFile& f)
 
 void ElfLoader::LoadElf64(wxFile& f)
 {
-	CPU.PC = 0;
-
 	Elf64_Ehdr ehdr;
 	ehdr.Load(f);
+
+	CPU.SetPc(ehdr.e_entry);
 
 	ConLog.SkipLn();
 	ehdr.Show();
@@ -146,15 +146,6 @@ void ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
 		phdr.Load(f);
 		phdr.Show();
 
-		/*
-		if(phdr.p_offset == 0)
-		{
-			ConLog.Error("LoadPhdr32 warning: Skipping program header with null offset!");
-			ConLog.SkipLn();
-			continue;
-		}
-		*/
-
 		if(phdr.p_type == 0x00000001) //LOAD
 		{
 			if (phdr.p_vaddr != phdr.p_paddr)
@@ -170,11 +161,6 @@ void ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
 
 			MemoryBlock& mem = Memory.GetMemByAddr(phdr.p_paddr);
 			f.Read(mem.GetMemFromAddr(phdr.p_paddr - mem.GetStartAddr()), phdr.p_filesz);
-			
-			if(CPU.PC == 0 /*|| phdr.p_paddr < CPU.PC*/)
-			{
-				CPU.SetPc(phdr.p_paddr);
-			}
 		}
 
 		ConLog.SkipLn();
@@ -195,15 +181,6 @@ void ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 		f.Seek(offset + ehdr.e_phoff + (ehdr.e_phentsize * i));
 		phdr.Load(f);
 		phdr.Show();
-		
-		/*
-		if(phdr.p_offset == 0)
-		{
-			ConLog.Warning("LoadPhdr64 warning: Skipping program header with null offset!");
-			ConLog.SkipLn();
-			continue;
-		}
-		*/
 
 		if(phdr.p_type == 0x00000001) //LOAD
 		{
@@ -220,11 +197,6 @@ void ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 
 			MemoryBlock& mem = Memory.GetMemByAddr(phdr.p_paddr);
 			f.Read(mem.GetMemFromAddr(phdr.p_paddr - mem.GetStartAddr()), phdr.p_filesz);
-			
-			if(CPU.PC == 0 /*|| phdr.p_paddr < CPU.PC*/)
-			{
-				CPU.SetPc(phdr.p_paddr);
-			}
 		}
 
 		ConLog.SkipLn();
@@ -343,12 +315,12 @@ void ElfLoader::LoadSelf(bool IsDump)
 
 	f.Seek(sehdr.se_elf);
 
-	CPU.PC = 0;
-
 	if(_class == 1)
 	{
 		Elf32_Ehdr ehdr;
 		ehdr.Load(f);
+
+		CPU.SetPc(ehdr.e_entry);
 
 		ConLog.SkipLn();
 		ehdr.Show();
@@ -362,6 +334,8 @@ void ElfLoader::LoadSelf(bool IsDump)
 	{
 		Elf64_Ehdr ehdr;
 		ehdr.Load(f);
+
+		CPU.SetPc(ehdr.e_entry);
 
 		ConLog.SkipLn();
 		ehdr.Show();
