@@ -117,18 +117,22 @@ private:
 		START_OPCODES_GROUP(G_0x04_0x0)
 			virtual void MULHHWU(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
+				if(rs == 0) return;
 				ConLog.Error("MULHHWU r%d,r%d,r%d", rs, rt, rd);
 			}
 			virtual void MULHHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
+				if(rs == 0) return;
 				ConLog.Error("MULHHWU. r%d,r%d,r%d", rs, rt, rd);
 			}
 			virtual void MACHHWU(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
+				if(rs == 0) return;
 				ConLog.Error("MACHHWU r%d,r%d,r%d", rs, rt, rd);
 			}
 			virtual void MACHHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
+				if(rs == 0) return;
 				ConLog.Error("MACHHWU. r%d,r%d,r%d", rs, rt, rd);
 			}
 		END_OPCODES_GROUP(G_0x04_0x0, "G_0x04_0x0");
@@ -155,6 +159,7 @@ private:
 		START_OPCODES_GROUP(G_0x04_0x2)
 			virtual void MACHHWSU(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
+				if(rs == 0) return;
 				ConLog.Error("MACHHWSU r%d,r%d,r%d", rs, rt, rd);
 			}
 			virtual void MACHHWSU_(OP_REG rs, OP_REG rt, OP_REG rd)
@@ -521,11 +526,19 @@ private:
 	}
 	virtual void ANDI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 	{
-		if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+		if (rt == 0) return;
+		const s64 value = CPU.GPR[rs] & imm_u16;
+		CPU.GPR[rt] = value;
+
+		CPU.UpdateCR0(value);
 	}
 	virtual void ANDIS_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 	{
-		if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+		if (rt == 0) return;
+		const s64 value = CPU.GPR[rs] & (imm_u16 << 16);
+		CPU.GPR[rt] = value;
+
+		CPU.UpdateCR0(value);
 	}
 	//virtual void LRLDIÑ(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 	//{
@@ -566,15 +579,28 @@ private:
 			}
 			virtual void ADDC(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("ADDC r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+
+				const s64 _rt = CPU.GPR[rt];
+				const s64 _rd = CPU.GPR[rd];
+
+				CPU.GPR[rs] = _rt + _rd;
+
+				CPU.UpdateXER_CA(_rt, _rd);
 			}
 			virtual void MULHWU(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("MULHWU r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+
+				CPU.GPR[rs] = ((CPU.GPR[rt] * CPU.GPR[rd]) >> 32);
 			}
 			virtual void MULHWU_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("MULHWU. r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+
+				const s64 value = (CPU.GPR[rt] * CPU.GPR[rd]) >> 32;
+				CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
 			}
 			//virtual void MFCR(OP_REG rs)
 			//{
@@ -583,7 +609,7 @@ private:
 			START_OPCODES_GROUP(G4_G0_0x26)
 				virtual void MFCR(OP_REG rs)
 				{
-					ConLog.Error("MFCR r%d", rs);
+					if(rs != 0) CPU.GPR[rs] = CPU.CR[0];
 				}
 				virtual void MFOCRF(OP_REG rs, OP_sREG imm_s16)
 				{
@@ -605,11 +631,14 @@ private:
 			}
 			virtual void AND(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
-				ConLog.Error("AND r%d,r%d,r%d", rt, rs, rd);
+				if(rt != 0) CPU.GPR[rt] = CPU.GPR[rs] & CPU.GPR[rd];
 			}
 			virtual void AND_(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
-				ConLog.Error("AND. r%d,r%d,r%d", rt, rs, rd);
+				if(rt == 0) return;
+				const s64 value = CPU.GPR[rs] & CPU.GPR[rd];
+				CPU.GPR[rt] = value;
+				CPU.UpdateCR0(value);
 			}
 			virtual void MASKG(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
@@ -632,27 +661,46 @@ private:
 			}
 			virtual void SUBF(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("SUBF r%d,r%d,r%d", rs, rt, rd);
+				if(rs != 0) CPU.GPR[rs] = CPU.GPR[rd] - CPU.GPR[rt];
 			}
 			virtual void SUBF_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("SUBF. r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+				
+				const s64 value = CPU.GPR[rd] - CPU.GPR[rt];
+				CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
 			}
 			virtual void LDUX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("LDUX r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+				
+				CPU.GPR[rs] = rt==0 
+					? Memory.Read64(CPU.GPR[rd]) 
+					: Memory.Read64(CPU.GPR[rt] + CPU.GPR[rd]);
 			}
 			virtual void LWZUX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("LWZUX r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0 || rt == 0 || rt == rs) return;
+				const s64 value = CPU.GPR[rt] + CPU.GPR[rd];
+				CPU.GPR[rs] = Memory.Read32(value);
+				CPU.GPR[rt] = value;
 			}
 			virtual void CNTLZD(OP_REG rs, OP_REG rt)
 			{
-				ConLog.Error("CNTLZD r%d,r%d", rs, rt);
+				if(rt == 0) return;
+				u32 i;
+				s32 mask;
+				for(i=0, mask = 0x80000000; i<32; ++i, mask >>= 1)
+				{
+					if(mask & CPU.GPR[rs]) break;
+				}
+
+				CPU.GPR[rt] = i;
 			}
 			virtual void ANDC(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
-				ConLog.Error("ANDC r%d,r%d,r%d", rt, rs, rd);
+				if(rt != 0) CPU.GPR[rt] = CPU.GPR[rs] & (~(CPU.GPR[rd]));
 			}
 		END_OPCODES_GROUP(G4_G1, "G4_G1");
 		//virtual void MULHW(OP_REG rs, OP_REG rt, OP_REG rd)
@@ -674,11 +722,15 @@ private:
 			}
 			virtual void MULHW(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("MULHW r%d,r%d,r%d", rs, rt, rd);
+				if(rs != 0) CPU.GPR[rs] = (CPU.GPR[rt] * CPU.GPR[rt]) >> 32;
 			}
 			virtual void MULHW_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("MULHW. r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+
+				const s64 value = (CPU.GPR[rt] * CPU.GPR[rt]) >> 32;
+				CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
 			}
 			virtual void DLMZB(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
@@ -923,12 +975,12 @@ private:
 			}
 			virtual void DIV(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				 if (rs != 0) CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd];
+				 if (rs != 0 && CPU.GPR[rd] != 0) CPU.GPR[rs] = CPU.GPR[rt] / CPU.GPR[rd];
 			}
 			virtual void DIV_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				 if (rs == 0) return;
-				 CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd];
+				 if (rs == 0 && CPU.GPR[rd] == 0) return;
+				 CPU.GPR[rs] = CPU.GPR[rt] / CPU.GPR[rd];
 				 CPU.UpdateCR0(CPU.GPR[rs]);
 			}
 			//virtual void MFCTR(OP_REG rs)
@@ -1052,7 +1104,10 @@ private:
 			}
 			virtual void DIVW(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("DIVW r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0 || CPU.GPR[rd] == 0 ||
+					(CPU.GPR[rd] == -1 && CPU.GPR[rt] == 0x80000000)) return;
+
+				CPU.GPR[rs] = CPU.GPR[rt] / CPU.GPR[rd];
 			}
 		END_OPCODES_GROUP(G4_G_0xf, "G4_G_0xf");
 
@@ -1090,14 +1145,6 @@ private:
 				ConLog.Error("MASKIR r%d,r%d,r%d", rt, rs, rd);
 			}
 		END_OPCODES_GROUP(G4_G_ADDCO, "G4_G_ADDCO");
-		//virtual void SUBFO(OP_REG rs, OP_REG rt, OP_REG rd)
-		//{
-		//	ConLog.Error("SUBFO r%d,r%d,r%d", rs, rt, rd);
-		//}
-		//virtual void LWSYNC() //FIXME
-		//{
-		//	ConLog.Error("Unimplemented: LWSYNC");
-		//}
 		START_OPCODES_GROUP(G4_G_0x11)
 			virtual void LVRX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
@@ -1105,7 +1152,9 @@ private:
 			}
 			virtual void SUBFO(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("SUBFO r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+				CPU.UpdateXER_SO_OV(CPU.GPR[rd], CPU.GPR[rt]);
+				CPU.GPR[rs] = CPU.GPR[rd] - CPU.GPR[rt];
 			}
 		END_OPCODES_GROUP(G4_G_0x11, "G4_G_0x11");
 		
@@ -1155,11 +1204,19 @@ private:
 		START_OPCODES_GROUP(G4_G_ADDEO)
 			virtual void ADDEO(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("ADDEO f%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+				CPU.UpdateXER_SO_OV(CPU.GPR[rt], CPU.GPR[rd], CPU.XER[XER_CA]);
+				CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd] + CPU.XER[XER_CA];
+				CPU.UpdateXER_CA(CPU.GPR[rt], CPU.GPR[rd], CPU.XER[XER_CA]);
 			}
 			virtual void ADDEO_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("ADDEO. f%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+				const s64 value = CPU.GPR[rt] + CPU.GPR[rd] + CPU.XER[XER_CA];
+				CPU.UpdateXER_SO_OV(CPU.GPR[rt], CPU.GPR[rd], CPU.XER[XER_CA]);
+				CPU.GPR[rs] = value;
+				CPU.UpdateXER_CA(CPU.GPR[rt], CPU.GPR[rd], CPU.XER[XER_CA]);
+				CPU.UpdateCR0(value);
 			}
 
 			START_OPCODES_GROUP(G4_G_ADDEO_0x26)
@@ -1336,11 +1393,11 @@ private:
 
 		virtual void EXTSH(OP_REG rt, OP_REG rs)
 		{
-			ConLog.Error("EXTSH r%d,r%d", rt, rs);
+			if(rt != 0) CPU.GPR[rt] = ext_s16(CPU.GPR[rs] & 0xff);
 		}
 		virtual void EXTSB(OP_REG rt, OP_REG rs)
-		{
-			ConLog.Error("EXTSB r%d,r%d", rt, rs);
+		{	
+			if(rt != 0) CPU.GPR[rt] = ext_s8(CPU.GPR[rs] & 0xff);
 		}
 		//virtual void EXTSW(OP_REG rt, OP_REG rs)
 		//{
@@ -1457,7 +1514,13 @@ private:
 	}
 	virtual void LMW(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		ConLog.Error("LMW");
+		if(rs == 0) return;
+		s64 pc = rt != 0 ? CPU.GPR[rt] + imm_s16 : imm_s16;
+
+		for(uint i=rs; i<32; ++i, pc += 4)
+		{
+			CPU.GPR[i] = Memory.Read32(pc);
+		}
 	}
 	virtual void LFS(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
