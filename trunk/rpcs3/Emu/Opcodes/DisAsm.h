@@ -10,21 +10,34 @@
 #define START_OPCODES_GROUP(x)
 #define END_OPCODES_GROUP(name, name_string) \
 	virtual void UNK_##name##(\
-		const int code, const int opcode, OP_REG rs, OP_REG rt, OP_REG rd, OP_REG sa, const int func, \
-		const int imm_s16, const int imm_u16, const int imm_u26) \
+		const int code, const int opcode, OP_REG rs, OP_REG rt, OP_REG rd, OP_REG sa, const u32 func,\
+		OP_REG crfs, OP_REG crft, OP_REG crm, OP_REG bd, OP_REG lk, OP_REG ms, OP_REG mt, OP_REG mfm,\
+		OP_REG ls, const s32 imm_m, const s32 imm_s16, const u32 imm_u16, const u32 imm_u26) \
 	{\
 		Write(wxString::Format( \
 			"Unknown "##name_string##" opcode! - (%08x - %02x) - " \
 			"rs: r%d, rt: r%d, rd: r%d, " \
 			"sa: 0x%x : %d, func: 0x%x : %d, " \
-			"imm s16: 0x%x : %d, imm u16: 0x%x : %d, " \
-			"imm u26: 0x%x : %d, " \
+			"crfs: 0x%x : %d, crft: 0x%x : %d, " \
+			"crm: 0x%x : %d, bd: 0x%x : %d, " \
+			"lk: 0x%x : %d, ms: 0x%x : %d, " \
+			"mt: 0x%x : %d, mfm: 0x%x : %d, " \
+			"ls: 0x%x : %d, " \
+			"imm m: 0x%x : %d, imm s16: 0x%x : %d, " \
+			"imm u16: 0x%x : %d, imm u26: 0x%x : %d, " \
 			"Branch: 0x%x, Jump: 0x%x", \
 			code, opcode, \
-			rs, rt, rd, sa, func,\
-			imm_s16, imm_s16, imm_u16, imm_u16, \
-			imm_u26, imm_u26, \
-			branchTarget(imm_s16), jumpTarget(imm_u26) \
+			rs, rt, rd, \
+			sa, sa, func, func, \
+			crfs, crfs, crft, crft, \
+			crm, crm, bd, bd, \
+			lk, lk, ms, ms, \
+			mt, mt, mfm, mfm, \
+			ls, ls, \
+			imm_m, imm_m, imm_s16, imm_s16, \
+			imm_u16, imm_u16, imm_u26, imm_u26, \
+			(m_dump_mode ? branchTarget(dump_pc, imm_u26) : branchTarget(imm_u26)), \
+			(m_dump_mode ? jumpTarget  (dump_pc, imm_u26) : jumpTarget  (imm_u26)) \
 		)); \
 	}
 
@@ -421,21 +434,37 @@ private:
 			}
 		END_OPCODES_GROUP(G_0x04_0x1f, "G_0x04_0x1f");
 	END_OPCODES_GROUP(G_0x04, "G_0x04");
+
 	START_OPCODES_GROUP(G1)
+		virtual void LI(OP_REG rs, OP_sREG imm_s16)
+		{
+			Write(wxString::Format( "LI r%d,%d  #%x", rs, imm_s16, imm_s16 ));
+		}
+		virtual void ADDI(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+		{
+			if(rt == 0)
+			{
+				Write(wxString::Format( "ADDI r%d,%d  #%x", rs, imm_s16, imm_s16 ));
+			}
+			else
+			{
+				Write(wxString::Format( "ADDI r%d,r%d,%d  #%x", rs, rt, imm_s16, imm_s16 ));
+			}
+		}
 	END_OPCODES_GROUP(G1, "G1");
-	virtual void ADDI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
-	{
-		Write(wxString::Format( "ADDI r%d,r%d,%d  #%x", rt, rs, imm_u16, imm_u16 ));
-	}
-	//virtual void ADDIS(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
-	//{
-	//	Write(wxString::Format( "ADDIS r%d,r%d,%d  #%x", rt, rs, imm_s16, imm_s16 ));
-	//}
+
 	START_OPCODES_GROUP(G_0x0f)
 		START_OPCODES_GROUP(G_0x0f_0x0)
 		virtual void ADDIS(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 		{
-			Write(wxString::Format( "ADDIS r%d,r%d,%d  #%x", rt, rs, imm_s16, imm_s16 ));
+			if(rt == 0)
+			{
+				Write(wxString::Format( "ADDIS r%d,%d  #%x", rs, imm_s16, imm_s16 ));
+			}
+			else
+			{
+				Write(wxString::Format( "ADDIS r%d,r%d,%d  #%x", rs, rt, imm_s16, imm_s16 ));
+			}
 		}
 		virtual void LIS(OP_REG rs, OP_sREG imm_s16)
 		{
@@ -446,13 +475,25 @@ private:
 	START_OPCODES_GROUP(G2)
 	END_OPCODES_GROUP(G2, "G2");
 
-	virtual void SC()
+	virtual void SC(const u32 sys)
 	{
-		Write("SysCall");
+		Write(wxString::Format("SysCall %d", sys));
 	}
 
-	START_OPCODES_GROUP(G3)
-	END_OPCODES_GROUP(G3, "G3");
+	START_OPCODES_GROUP(BRANCH)
+		virtual void B(const u32 imm_u26)
+		{
+			Write(wxString::Format
+				("B 0x%x", m_dump_mode ? branchTarget(dump_pc, imm_u26) : branchTarget(imm_u26))
+			);
+		}
+		virtual void BL(const u32 imm_u26)
+		{
+			Write(wxString::Format
+				("BL 0x%x", m_dump_mode ? branchTarget(dump_pc, imm_u26) : branchTarget(imm_u26))
+			);
+		}
+	END_OPCODES_GROUP(BRANCH, "BRANCH");
 
 	START_OPCODES_GROUP(G3_S)
 		/*
@@ -1566,7 +1607,14 @@ private:
 	END_OPCODES_GROUP(G4_S, "G4_S");
 	virtual void STD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		Write(wxString::Format( "STD r%d,%d(r%d)  # %x", rs, imm_s16, rt, imm_s16 ));
+		if(imm_s16 < 0)
+		{
+			Write(wxString::Format( "STDU r%d,%d(r%d)  # %x", rs, imm_s16 - 1, rt, imm_s16 - 1 ));
+		}
+		else
+		{
+			Write(wxString::Format( "STD r%d,%d(r%d)  # %x", rs, imm_s16, rt, imm_s16 ));
+		}
 	}
 	//virtual void FCFID(OP_REG rs, OP_REG rd)
 	//{

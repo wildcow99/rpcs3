@@ -81,11 +81,16 @@ public:
 				mode = wxFile::write;
 			}
 		}
+		else
+		{
+			ConLog.Error("%s error: '%s' has unknown mode! 0x%06x", module_name, patch, mode);
+			return -1;
+		}
 
 		if(mode == wxFile::read && !wxFile::Access(patch, wxFile::read))
 		{
-			ConLog.Error("FSFiles error: %s not found! mode: %06x", patch, mode);
-			return 0;
+			ConLog.Error("%s error: %s not found! mode: 0x%06x", module_name, patch, mode);
+			return -1;
 		}
 		
 		fs_file[num].Open(patch, mode);

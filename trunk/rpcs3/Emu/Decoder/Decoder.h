@@ -11,7 +11,8 @@
 #define END_OPCODES_GROUP(group) \
 		default:\
 			m_op.UNK_##group##(code, opcode, RS(), RT(), RD(), SA(), FUNC(),\
-			imm_s16(), imm_u16(), imm_u26());\
+			CRFS(), CRFT(), CRM(), BD(), LK(), MS(), MT(), MFM(), LS(),\
+			imm_m(), imm_s16(), imm_u16(), imm_u26());\
 		break;\
 		}\
 	break
@@ -29,11 +30,24 @@ class Decoder
 	OP_REG RD()			const { return (m_code >> 11) & 0x1F; }
 	OP_REG SA()			const { return (m_code >>  6) & 0x1F; }
 	OP_REG FUNC()		const { return (m_code & 0x3F); }
-	OP_REG SYS()		const { return (m_code >> 6) & 0x000fffff; }
+	OP_REG SYS()		const { return (m_code & /*0x0000000f*/0x00ffffff); }
+
+	OP_REG SPR()		const { return (m_code & 0x001FF800) >> 11; }
+	OP_REG SPRVAL()		const { return (SPR() & 0x1F) + ((SPR() >> 5) & 0x1F); }
+	OP_REG CRFS()		const { return (m_code & 0x03800000) >> 23; }
+	OP_REG CRFT()		const { return (m_code & 0x001C0000) >> 18; }
+	OP_REG CRM()		const { return (m_code >> 12) & 0xff; }
+	OP_REG BD()			const { return (m_code >> 2) & 0x3fff; }
+	OP_REG LK()			const { return (m_code & 0x1); }
+	OP_REG LS()			const { return (m_code >> 16) & 0x1; }
+	OP_REG MS()			const { return (m_code & 0x7C0) >> 6; }
+	OP_REG MT()			const { return (m_code & 0x3E) >> 1; }
+	OP_REG MFM()		const { return (m_code >> 17 ) & 0xff; }
+	const s32 imm_m()	const { return (m_code >> 12) & 0xf; }
 
 	const s32 imm_s16()	const { return (s32)(s16)(m_code & 0xffff); }
 	const u32 imm_u16()	const { return m_code & 0xffff; }
-	const u32 imm_u26()	const { return m_code & 0x03ffffff; }
+	const u32 imm_u26()	const { return m_code & 0x3fffffc; }
 	
 public:
 	Decoder(Opcodes& op) : m_op(op) {}
@@ -46,24 +60,23 @@ public:
 	void DoCode(const int code)
 	{
 		m_op.Step();
-		if(code == 0)
+
+		const u32 opcode = (code >> 26) & 0x3f;
+
+		if(code == 0 || opcode == 0) //Skip special
 		{
 			m_op.NOP();
 			return;
 		}
 
 		m_code = code;
-		const u32 opcode = (m_code >> 26) & 0x3f;
-
-		//if(opcode == 0xFFFF) if(m_op.DoSysCall(CPU.PC)) return;
 
 		s32 temp;
 
 		switch(opcode)
 		{
-		START_OPCODES_GROUP(SPECIAL, FUNC)
-			//ADD_OPCODE(SYSCALL, (SYS()));
-		END_OPCODES_GROUP(SPECIAL);
+		//START_OPCODES_GROUP(SPECIAL, FUNC)
+		//END_OPCODES_GROUP(SPECIAL);
 
 		START_OPCODES_GROUP(SPECIAL2, SA)
 		END_OPCODES_GROUP(SPECIAL2);
@@ -180,9 +193,11 @@ public:
 			START_OPCODES_GROUP(G_0x04_0x17, FUNC)
 				ADD_OPCODE(NMACCHWSO,	(RS(), RT(), RD()));
 			END_OPCODES_GROUP	(G_0x04_0x17);
+
 			START_OPCODES_GROUP(G_0x04_0x18, FUNC)
-				ADD_OPCODE(MFVSCR,	(RS()));
+				ADD_OPCODE(MFVSCR,		(RS()));
 			END_OPCODES_GROUP	(G_0x04_0x18);
+
 			START_OPCODES_GROUP(G_0x04_0x1c, FUNC)
 				ADD_OPCODE(MACLHWUO,	(RS(), RT(), RD()));
 				ADD_OPCODE(MACLHWUO_,	(RS(), RT(), RD()));
@@ -204,9 +219,10 @@ public:
 			END_OPCODES_GROUP	(G_0x04_0x1f);
 		END_OPCODES_GROUP	(G_0x04);
 
-		START_OPCODES_GROUP(G1, SA)
-		END_OPCODES_GROUP	(G1);
-		//ADD_OPCODE(ADDIS,	(RT(), RS(), imm_s16()));
+		START_OPCODES_GROUP(G1, LS)
+			ADD_OPCODE(LI,		(RS(), imm_s16()));
+			ADD_OPCODE(ADDI,	(RS(), RT(), imm_s16()));
+		END_OPCODES_GROUP(G1);
 
 		START_OPCODES_GROUP(G_0x0f, SA)
 			START_OPCODES_GROUP(G_0x0f_0x0, FUNC)
@@ -218,12 +234,12 @@ public:
 		START_OPCODES_GROUP(G2, SA)
 		END_OPCODES_GROUP(G2);
 
-		ADD_NULL_OPCODE		(SC);
+		ADD_OPCODE(SC,			(SYS()));
 
-		START_OPCODES_GROUP(G3, SA)
-		END_OPCODES_GROUP(G3);
-
-		//ADD_NULL_OPCODE	(BLR);
+		START_OPCODES_GROUP(BRANCH, LK)
+			ADD_OPCODE(B,		(imm_u26()));
+			ADD_OPCODE(BL,		(imm_u26()));
+		END_OPCODES_GROUP(BRANCH);
 
 		START_OPCODES_GROUP(G3_S, SA)
 		END_OPCODES_GROUP(G3_S);
