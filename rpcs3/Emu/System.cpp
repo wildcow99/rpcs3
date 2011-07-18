@@ -77,7 +77,7 @@ void SysThread::Resume()
 	StepThread::DoStep();
 }
 
-void SysThread::Stop()
+void SysThread::Stop(bool CloseFrames)
 {
 	if(IsStoped()) return;
 
@@ -86,14 +86,14 @@ void SysThread::Stop()
 
 	ConLog.Write("Shutdown is started...");
 
-	if(m_memory_viewer && !m_memory_viewer->exit) m_memory_viewer->Hide();
 	Memory.Close();
 	CPU.Reset();
 	CurGameInfo.Reset();
 
-	if(decoder)
+	if(CloseFrames)
 	{
-		delete decoder;
+		if(m_memory_viewer && !m_memory_viewer->exit) m_memory_viewer->Hide();
+		if(decoder) delete decoder;
 	}
 }
 

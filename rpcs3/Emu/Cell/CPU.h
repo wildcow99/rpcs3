@@ -16,8 +16,10 @@ static const s32 MAX_INT_VALUE = 0x7fffffff;
 class CPUCycle
 {
 public:
-	uint PC;
-	uint nPC;
+	bool isBranch;
+
+	u32 PC;
+	u32 nPC;
 
 	float FPR[32];
 	s64 GPR[32]; //General-Purpose Register
@@ -67,7 +69,7 @@ public:
 	// 25 - 31 : TBC
 	// Transfer-byte count
 
-	s32 LR[32];	//SPR 0x008 : Link Register
+	s32 LR;		//SPR 0x008 : Link Register
 	s32 CTR;	//SPR 0x009 : Count Register
 
 	s32 USPRG;	//SPR 0x100 : User-SPR General-Purpose Registers
@@ -226,7 +228,8 @@ public:
 	virtual void NextPc();
 	virtual void NextBranchPc();
 	virtual void PrevPc();
-	virtual void SetPc(const uint _pc);
+	virtual void SetBranch(const u32 pc);
+	virtual void SetPc(const u32 pc);
 };
 
 extern CPUCycle CPU;

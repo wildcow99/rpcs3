@@ -11,22 +11,34 @@
 #define START_OPCODES_GROUP(x)
 #define END_OPCODES_GROUP(name, name_string)\
 	virtual void UNK_##name##(\
-		const int code, const int opcode, OP_REG rs, OP_REG rt, OP_REG rd, OP_REG sa, const int func, \
-		const int imm_s16, const int imm_u16, const int imm_u26) \
+		const int code, const int opcode, OP_REG rs, OP_REG rt, OP_REG rd, OP_REG sa, const u32 func,\
+		OP_REG crfs, OP_REG crft, OP_REG crm, OP_REG bd, OP_REG lk, OP_REG ms, OP_REG mt, OP_REG mfm,\
+		OP_REG ls, const s32 imm_m, const s32 imm_s16, const u32 imm_u16, const u32 imm_u26) \
 	{\
 		ConLog.Error\
 		(\
 			"Unknown "##name_string##" opcode! - (%08x - %02x) - " \
 			"rs: r%d, rt: r%d, rd: r%d, " \
 			"sa: 0x%x : %d, func: 0x%x : %d, " \
-			"imm s16: 0x%x : %d, imm u16: 0x%x : %d, " \
-			"imm u26: 0x%x : %d, " \
-			"Branch: 0x%x, Jump: 0x%x",\
+			"crfs: 0x%x : %d, crft: 0x%x : %d, " \
+			"crm: 0x%x : %d, bd: 0x%x : %d, " \
+			"lk: 0x%x : %d, ms: 0x%x : %d, " \
+			"mt: 0x%x : %d, mfm: 0x%x : %d, " \
+			"ls: 0x%x : %d, " \
+			"imm m: 0x%x : %d, imm s16: 0x%x : %d, " \
+			"imm u16: 0x%x : %d, imm u26: 0x%x : %d, " \
+			"Branch: 0x%x, Jump: 0x%x", \
 			code, opcode, \
-			rs, rt, rd, sa, func,\
-			imm_s16, imm_s16, imm_u16, imm_u16, \
-			imm_u26, imm_u26, \
-			branchTarget(imm_s16), jumpTarget(imm_u26) \
+			rs, rt, rd, \
+			sa, sa, func, func, \
+			crfs, crfs, crft, crft, \
+			crm, crm, bd, bd, \
+			lk, lk, ms, ms, \
+			mt, mt, mfm, mfm, \
+			ls, ls, \
+			imm_m, imm_m, imm_s16, imm_s16, \
+			imm_u16, imm_u16, imm_u26, imm_u26, \
+			branchTarget(imm_u26), jumpTarget(imm_u26) \
 		); \
 	}
 
@@ -100,16 +112,19 @@ private:
 	virtual void ADDIC(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
-		CPU.GPR[rs] = CPU.GPR[rt] + imm_s16;
-		CPU.XER[XER_CA] = 1;
+		const s32 lvalue = CPU.GPR[rt];
+		const s32 rvalue = ext_s16(imm_s16);
+		CPU.GPR[rs] = lvalue + rvalue;
+		CPU.UpdateXER_CA(lvalue, rvalue);
 	}
 	virtual void ADDIC_(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
-
-		const int value = CPU.GPR[rt] + imm_s16;
+		const s32 lvalue = CPU.GPR[rt];
+		const s32 rvalue = ext_s16(imm_s16);
+		const s32 value = lvalue + rvalue;
 		CPU.GPR[rs] = value;
-		CPU.XER[XER_CA] = 1;
+		CPU.UpdateXER_CA(lvalue, rvalue);
 		CPU.UpdateCR0(value);
 	}
 
@@ -417,35 +432,38 @@ private:
 	END_OPCODES_GROUP(G_0x04, "G_0x04");
 
 	START_OPCODES_GROUP(G1)
-	END_OPCODES_GROUP(G1, "G1");
-	//virtual void ADDI(OP_REG rt, OP_REG rs, OP_REG imm_u16)=0;
-	//
-	/*virtual void ADDIS(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
-	{
-		if(rt == 0) return;
+		virtual void LI(OP_REG rs, OP_sREG imm_s16)
+		{
+			if(rs != 0) CPU.GPR[rs] = imm_s16;
+		}
+		virtual void ADDI(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+		{
+			if(rs == 0) return;
 
-		if(rs == 0)
-		{
-			CPU.GPR[rt] = imm_s16 << 16;
+			if(rt == 0)
+			{
+				CPU.GPR[rs] = imm_s16;
+			}
+			else
+			{
+				CPU.GPR[rs] = CPU.GPR[rt] + imm_s16;
+			}
 		}
-		else
-		{
-			CPU.GPR[rt] = CPU.GPR[rs] + (imm_s16 << 16);
-		}
-	}*/
+	END_OPCODES_GROUP(G1, "G1");
+
 	START_OPCODES_GROUP(G_0x0f)
 		START_OPCODES_GROUP(G_0x0f_0x0)
 			virtual void ADDIS(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 			{
-				if(rt == 0) return;
+				if(rs == 0) return;
 
-				if(rs == 0)
+				if(rt == 0)
 				{
-					CPU.GPR[rt] = imm_s16 << 16;
+					CPU.GPR[rs] = imm_s16 << 16;
 				}
 				else
 				{
-					CPU.GPR[rt] = CPU.GPR[rs] + (imm_s16 << 16);
+					CPU.GPR[rs] = CPU.GPR[rt] + (imm_s16 << 16);
 				}
 			}
 			virtual void LIS(OP_REG rs, OP_sREG imm_s16)
@@ -458,15 +476,24 @@ private:
 	START_OPCODES_GROUP(G2)
 	END_OPCODES_GROUP(G2, "G2");
 	
-	virtual void SC()
+	virtual void SC(const u32 sys)
 	{
-		const int syscall = (Memory.Read32(CPU.PC) >> 6) & 0x00ffffff;
-		ConLog.Write("SYSCALL_0: %d #%08x!", syscall, syscall);
-		SysCall(syscall);
+		ConLog.Write("SYSCALL %08x: %d!", sys, CPU.GPR[11]);
+		if(sys == 2) SysCall(CPU.GPR[11]);
 	}
 
-	START_OPCODES_GROUP(G3)
-	END_OPCODES_GROUP(G3, "G3");
+	START_OPCODES_GROUP(BRANCH)
+		virtual void B(const u32 imm_u26)
+		{
+			CPU.SetBranch(branchTarget(imm_u26));
+		}
+		virtual void BL(const u32 imm_u26)
+		{
+			CPU.LR = CPU.PC + 4;
+			CPU.SetBranch(branchTarget(imm_u26));
+		}
+	END_OPCODES_GROUP(BRANCH, "BRANCH");
+
 	START_OPCODES_GROUP(G3_S)
 		//virtual void BLR()
 	END_OPCODES_GROUP(G3_S, "G3_S");
@@ -478,11 +505,11 @@ private:
 		}
 		virtual void CLRLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 		{
-			if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+			ConLog.Error("CLRLWI");
 		}
 		virtual void CLRLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 		{
-			if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+			ConLog.Error("CLRLWI.");
 		}
 	END_OPCODES_GROUP(G3_S0, "G3_S0");
 
@@ -493,17 +520,14 @@ private:
 		}
 		virtual void ROTLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 		{
-			if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+			ConLog.Error("ROTLWI");
 		}
 		virtual void ROTLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 		{
-			if (rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
+			ConLog.Error("ROTLWI.");
 		}
 	END_OPCODES_GROUP(G3_S0_G0, "G3_S0_G0");
-	//virtual void RLWINM()
-	//{
-	//	ConLog.Error("RLWINM");
-	//}
+
 	virtual void ROTLW(OP_REG rt, OP_REG rs, OP_REG rd)
 	{
 		ConLog.Error("ROTLW");
@@ -681,10 +705,10 @@ private:
 			}
 			virtual void LWZUX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				if(rs == 0 || rt == 0 || rt == rs) return;
-				const s64 value = CPU.GPR[rt] + CPU.GPR[rd];
-				CPU.GPR[rs] = Memory.Read32(value);
-				CPU.GPR[rt] = value;
+				if(rs == 0 || rt == rs) return;
+				const s64 addr = CPU.GPR[rt] + CPU.GPR[rd];
+				CPU.GPR[rs] = Memory.Read32(addr);
+				if(rt != 0) CPU.GPR[rt] = addr;
 			}
 			virtual void CNTLZD(OP_REG rs, OP_REG rt)
 			{
@@ -1416,73 +1440,64 @@ private:
 	//
 	virtual void LWZ(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		if(rs == 0) return;
-		CPU.GPR[rs] = Memory.Read32(CPU.GPR[rt] + imm_s16);
+		if(rs != 0) CPU.GPR[rs] = Memory.Read32(CPU.GPR[rt] + imm_s16);
 	}
 	virtual void LWZU(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 	{
 		if(rs == 0 || rs == rt) return;
 
-		OP_REG addr = CPU.GPR[rs] + imm_s16;
+		OP_REG addr = CPU.GPR[rt] + imm_s16;
 
-		CPU.GPR[rt] = Memory.Read32(addr);
-		CPU.GPR[rs] = addr;
+		CPU.GPR[rs] = Memory.Read32(addr);
+		if(rt != 0) CPU.GPR[rt] = addr;
 	}
 	virtual void LBZ(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		if(rs == 0) return;
-		CPU.GPR[rs] = Memory.Read8(CPU.GPR[rt] + imm_s16);
+		if(rs != 0) CPU.GPR[rs] = Memory.Read8(CPU.GPR[rt] + imm_s16);
 	}
 	virtual void LBZU(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 	{
 		if(rs == 0 || rs == rt) return;
 
-		OP_REG addr = CPU.GPR[rs] + imm_s16;
-
-		CPU.GPR[rt] = Memory.Read8(addr);
-		CPU.GPR[rs] = addr;
+		const s64 addr = CPU.GPR[rt] + imm_s16;
+		CPU.GPR[rs] = Memory.Read8(addr);
+		if(rt != 0) CPU.GPR[rt] = addr;
 	}
 	virtual void STW(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		if(rs == 0) return;
-		Memory.Write32(CPU.GPR[rs] + imm_s16, CPU.GPR[rt]);
+		if(rs != 0) Memory.Write32(CPU.GPR[rt] + imm_s16, CPU.GPR[rs]);
 	}
 	virtual void STWU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
 
-		OP_REG addr = CPU.GPR[rs] + imm_s16;
-
-		Memory.Write32(addr, CPU.GPR[rt]);
-		CPU.GPR[rt] = addr;
+		const s64 addr = CPU.GPR[rt] + imm_s16;
+		Memory.Write32(addr, CPU.GPR[rs]);
+		if(rt != 0) CPU.GPR[rt] = addr;
 	}
 	virtual void STB(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		if(rs == 0) return;
-		Memory.Write8(CPU.GPR[rs] + imm_s16, CPU.GPR[rt]);
+		if(rs != 0) Memory.Write8(CPU.GPR[rt] + imm_s16, CPU.GPR[rs]);
 	}
 	virtual void STBU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
 
-		OP_REG addr = CPU.GPR[rs] + imm_s16;
-
-		Memory.Write8(addr, CPU.GPR[rt]);
-		CPU.GPR[rt] = addr;
+		const s64 addr = CPU.GPR[rt] + imm_s16;
+		Memory.Write8(addr, CPU.GPR[rs]);
+		if(rt != 0) CPU.GPR[rt] = addr;
 	}
 	virtual void LHZ(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		if(rs == 0) return;
-		CPU.GPR[rs] = Memory.Read16(CPU.GPR[rt] + imm_s16);
+		if(rs != 0) CPU.GPR[rs] = Memory.Read16(CPU.GPR[rt] + imm_s16);
 	}
 	virtual void LHZU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0 || rs == rt) return;
 
-		OP_REG addr = CPU.GPR[rs] + imm_s16;
-
-		CPU.GPR[rt] = Memory.Read16(addr);
-		CPU.GPR[rs] = addr;
+		const s64 addr = CPU.GPR[rt] + imm_s16;
+		CPU.GPR[rs] = Memory.Read16(addr);
+		if(rt != 0) CPU.GPR[rt] = addr;
 	}
 	virtual void LHA(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
@@ -1496,21 +1511,19 @@ private:
 		const uint addr = CPU.GPR[rt] + imm_s16;
 
 		CPU.GPR[rs] = Memory.Read16(addr);
-		CPU.GPR[rt] = addr;
+		if(rt != 0) CPU.GPR[rt] = addr;
 	}
 	virtual void STH(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		if(rs == 0) return;
-		Memory.Write16(CPU.GPR[rs] + imm_s16, CPU.GPR[rt]);
+		if(rs != 0) Memory.Write16(CPU.GPR[rt] + imm_s16, CPU.GPR[rs]);
 	}
 	virtual void STHU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
 		if(rs == 0) return;
 
-		OP_REG addr = CPU.GPR[rs] + imm_s16;
-
-		Memory.Write16(addr, CPU.GPR[rt]);
-		CPU.GPR[rt] = addr;
+		const s64 addr = CPU.GPR[rt] + imm_s16;
+		Memory.Write16(addr, CPU.GPR[rs]);
+		if(rt != 0) CPU.GPR[rt] = addr;
 	}
 	virtual void LMW(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
@@ -1524,61 +1537,77 @@ private:
 	}
 	virtual void LFS(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		ConLog.Error("LFS");
+		if(rs == 0) return;
+
+		const s64 offs = rt == 0 ? imm_s16 : CPU.GPR[rt] + imm_s16;
+		CPU.FPR[rs] = Memory.Read32(offs);
 	}
 	virtual void LFSU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		ConLog.Error("LFSU");
+		if(rs == 0 || rs == rt) return;
+
+		const s64 offs = rt == 0 ? imm_s16 : CPU.GPR[rt] + imm_s16;
+		CPU.FPR[rs] = Memory.Read32(offs);
+		if(rt != 0) CPU.GPR[rt] = offs;
 	}
 	virtual void LFD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		ConLog.Error("LFD");
+		if(rs == 0) return;
+
+		const s64 offs = rt == 0 ? imm_s16 : CPU.GPR[rt] + imm_s16;
+		CPU.FPR[rs] = Memory.Read64(offs);
 	}
 	virtual void LFDU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		ConLog.Error("LFDU");
+		if(rs == 0 || rs == rt) return;
+
+		const s64 offs = rt == 0 ? imm_s16 : CPU.GPR[rt] + imm_s16;
+		CPU.FPR[rs] = Memory.Read64(offs);
+		if(rt != 0) CPU.GPR[rt] = offs;
 	}
 	virtual void STFS(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		ConLog.Error("STFS");
+		if(rs == 0) return;
+
+		const s64 offs = rt == 0 ? imm_s16 : CPU.GPR[rt] + imm_s16;
+		Memory.Write32(offs, (u32)CPU.FPR[rs]);
 	}
 	virtual void STFSU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		ConLog.Error("STFSU");
+		if(rs == 0 || rs == rt) return;
+
+		const s64 offs = rt == 0 ? imm_s16 : CPU.GPR[rt] + imm_s16;
+		Memory.Write32(offs, (u32)CPU.FPR[rs]);
+		if(rt != 0) CPU.GPR[rt] = offs;
 	}
 	virtual void STFD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		ConLog.Error("STFD");
+		if(rs == 0) return;
+
+		const s64 offs = rt == 0 ? imm_s16 : CPU.GPR[rt] + imm_s16;
+		Memory.Write64(offs, (u32)CPU.FPR[rs]);
 	}
-	//virtual void LD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
-	//{
-	//	if(rs == 0) return;
-	//	CPU.GPR[rs] = Memory.Read64(CPU.GPR[rt] + imm_s16);
-	//}
+
 	START_OPCODES_GROUP(G_0x3a)
 		virtual void LDU(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 		{
 			if(rs == 0 || rs == rt) return;
 
-			const uint addr = CPU.GPR[rs] + imm_s16;
-
+			const s64 addr = CPU.GPR[rs] + imm_s16;
 			CPU.GPR[rs] = Memory.Read64(addr);
-			CPU.GPR[rt] = addr;
+			if(rt != 0) CPU.GPR[rt] = addr;
 		}
 		virtual void LWA(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 		{
-			if(rs == 0) return;
-			CPU.GPR[rs] = Memory.Read32(CPU.GPR[rt] + imm_s16);
+			if(rs != 0) CPU.GPR[rs] = Memory.Read32(CPU.GPR[rt] + imm_s16);
 		}
 		virtual void LD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 		{
-			if(rs == 0) return;
-			CPU.GPR[rs] = Memory.Read64(CPU.GPR[rt] + imm_s16);
+			if(rs != 0) CPU.GPR[rs] = Memory.Read64(CPU.GPR[rt] + imm_s16);
 		}
 	END_OPCODES_GROUP(G_0x3a, "G_0x3a");
 
 	START_OPCODES_GROUP(G4_S)
-		//virtual void FDIVS(OP_REG rs, OP_REG rt, OP_REG rd)
 		virtual void FSUBS(OP_REG rs, OP_REG rt, OP_REG rd)
 		{
 			ConLog.Error("FSUBS r%d,r%d,r%d", rs, rt, rd);
@@ -1641,10 +1670,10 @@ private:
 		}
 	END_OPCODES_GROUP(G4_S, "G4_S");
 
-	virtual void STD(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
+	virtual void STD(OP_REG rs, OP_REG rt, OP_sREG imm_s16) //CHECK ME!
 	{
-		if(rs == 0) return;
-		Memory.Write32(CPU.GPR[rs] + imm_s16, CPU.GPR[rt]);
+		//if imm_s16 < 0 then STDU else STD
+		Memory.Write32(CPU.GPR[rt] + (imm_s16 < 0 ? imm_s16 - 1 : imm_s16), CPU.GPR[rs]);
 	}
 
 	START_OPCODES_GROUP(G5)

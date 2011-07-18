@@ -95,7 +95,8 @@ class MTProgressDialog : public wxDialog
 	wxArrayInt m_lastupdate;
 
 public:
-	MTProgressDialog(wxWindow* parent, wxSize size, wxString title, wxString msg, wxArrayInt maximum, const uint cores)
+	MTProgressDialog(wxWindow* parent, const wxSize& size, const wxString& title,
+			const wxString& msg, const wxArrayInt& maximum, const uint cores)
 		: wxDialog(parent, wxID_ANY, title, wxDefaultPosition)
 		, m_maximum(maximum)
 		, m_cores(cores)
@@ -306,12 +307,12 @@ struct WaitDumperThread : public ThreadBase
 
 void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event)) 
 {
-	wxFileDialog ctrl( NULL, L"Select output file...",
+	wxFileDialog ctrl( this, L"Select output file...",
 		wxEmptyString, "DumpOpcodes.txt", "*.txt", wxFD_SAVE);
 
 	if(ctrl.ShowModal() == wxID_CANCEL) return;
 
-	if(!System.IsStoped()) System.Stop();
+	if(!System.IsStoped()) System.Stop(false);
 
 	Memory.Init();
 
@@ -333,29 +334,9 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		(si.dwNumberOfProcessors < 1 || si.dwNumberOfProcessors > 8 ? 2 : si.dwNumberOfProcessors); 
 
 	wxArrayInt max;
-	if(cores_count > 1)
+	for(uint i=0; i<cores_count; ++i)
 	{
-		for(uint i=0; i<cores_count - 1; ++i)
-		{
-			max.Add(dump_size/cores_count);
-		}
-
-		const double d = (double)dump_size/(double)cores_count;
-		const double i = dump_size/cores_count;
-
-		if(d != i)
-		{
-			ConLog.Warning("Dump warning: %.3d != %.3d", d, i);
-			max.Add((dump_size/cores_count) + (d - i) + 1);
-		}
-		else
-		{
-			max.Add(dump_size/cores_count);
-		}
-	}
-	else
-	{
-		max.Add(dump_size);
+		max.Add(dump_size/cores_count);
 	}
 
 	MTProgressDialog& prog_dial = *new MTProgressDialog(this, wxDefaultSize, "Dumping...", "Loading", max, cores_count);
