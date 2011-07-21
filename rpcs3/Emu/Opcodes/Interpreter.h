@@ -95,7 +95,7 @@ private:
 	*/
 	virtual void MULLI(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 	{
-		if (rt != 0) CPU.GPR[rt] = ((s64)CPU.GPR[rs] * (s64)imm_s16) & 0xffffffffLL;
+		if (rs != 0) CPU.GPR[rs] = ((s64)CPU.GPR[rt] * (s64)imm_s16) & 0xffffffffLL;
 	}
 	virtual void SUBFIC(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
