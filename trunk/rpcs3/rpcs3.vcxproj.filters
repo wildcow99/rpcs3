@@ -60,6 +60,9 @@
     <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\CompilerELF.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

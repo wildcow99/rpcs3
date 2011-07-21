@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "MainFrame.h"
+#include "CompilerELF.h"
 
 #include "Emu/System.h"
 #include "Ini.h"
@@ -41,6 +42,8 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_,
 	Connect( id_boot_self, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootSelf) );
 
 	Connect( id_config_emu, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
+
+	(new CompilerELF(this))->Show();
 }
 
 void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))

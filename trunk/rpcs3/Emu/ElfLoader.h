@@ -9,6 +9,7 @@ u64 Read64(wxFile& f);
 
 class ElfLoader //TODO
 {
+public:
 	template<typename T>
 	static wxString from32toString(const T from)
 	{
@@ -235,23 +236,23 @@ class ElfLoader //TODO
 
 		virtual void Show()
 		{
-			ConLog.Write("Magic: %08x", se_magic);
-			ConLog.Write("Class: %s", "SELF");
-			ConLog.Write("hver: 0x%08x", se_hver);
-			ConLog.Write("flags: 0x%04x", se_flags);
-			ConLog.Write("type: 0x%04x", se_type);
-			ConLog.Write("meta: 0x%08x", se_meta);
-			ConLog.Write("hsize: 0x%x", se_hsize);
-			ConLog.Write("esize: 0x%x", se_esize);
-			ConLog.Write("unknown: 0x%x", se_unknown);
-			ConLog.Write("appinfo: 0x%x", se_appinfo);
-			ConLog.Write("elf: 0x%x", se_elf);
-			ConLog.Write("phdr: 0x%x", se_phdr);
-			ConLog.Write("shdr: 0x%x", se_shdr);
-			ConLog.Write("phdroff: 0x%x", se_phdroff);
-			ConLog.Write("scever: 0x%x", se_scever);
-			ConLog.Write("digest: 0x%x", se_digest);
-			ConLog.Write("digestsize: 0x%x", se_digestsize);
+			ConLog.Write("Magic: %08x",			se_magic);
+			ConLog.Write("Class: %s",			"SELF");
+			ConLog.Write("hver: 0x%08x",		se_hver);
+			ConLog.Write("flags: 0x%04x",		se_flags);
+			ConLog.Write("type: 0x%04x",		se_type);
+			ConLog.Write("meta: 0x%08x",		se_meta);
+			ConLog.Write("hsize: 0x%x",			se_hsize);
+			ConLog.Write("esize: 0x%x",			se_esize);
+			ConLog.Write("unknown: 0x%x",		se_unknown);
+			ConLog.Write("appinfo: 0x%x",		se_appinfo);
+			ConLog.Write("elf: 0x%x",			se_elf);
+			ConLog.Write("phdr: 0x%x",			se_phdr);
+			ConLog.Write("shdr: 0x%x",			se_shdr);
+			ConLog.Write("phdroff: 0x%x",		se_phdroff);
+			ConLog.Write("scever: 0x%x",		se_scever);
+			ConLog.Write("digest: 0x%x",		se_digest);
+			ConLog.Write("digestsize: 0x%x",	se_digestsize);
 		}
 
 		virtual bool IsCorrect() const
@@ -284,24 +285,25 @@ class ElfLoader //TODO
 
 		virtual void Show()
 		{
-			ConLog.Write("Magic: %08x",	e_magic);
-			ConLog.Write("Class: %s", "ELF32");
-			ConLog.Write("Data: %s", DataToString(e_data));
-			ConLog.Write("Current Version: %d",	e_curver);
-			ConLog.Write("OS/ABI: %s", OS_ABIToString(e_os_abi));
-			ConLog.Write("Type: %s", TypeToString(e_type));
-			ConLog.Write("Machine: %s",	MachineToString(e_machine));
-			ConLog.Write("Version: %d",	e_version);
-			ConLog.Write("Entry point address: 0x%x", e_entry);
-			ConLog.Write("Program headers offset: %d", e_phoff);
-			ConLog.Write("Section headers offset: %d", e_shoff);
-			ConLog.Write("Flags: 0x%x", e_flags);
-			ConLog.Write("Size of this header: %d", e_ehsize);
-			ConLog.Write("Size of program headers: %d", e_phentsize);
-			ConLog.Write("Number of program headers: %d", e_phnum);
-			ConLog.Write("Size of section headers: %d",	 e_shentsize);
-			ConLog.Write("Number of section headers: %d", e_shnum);
-			ConLog.Write("Section header string table index: %d", e_shstrndx);
+			ConLog.Write("Magic: %08x",								e_magic);
+			ConLog.Write("Class: %s",								"ELF32");
+			ConLog.Write("Data: %s",								DataToString(e_data));
+			ConLog.Write("Current Version: %d",						e_curver);
+			ConLog.Write("OS/ABI: %s",								OS_ABIToString(e_os_abi));
+			ConLog.Write("ABI version: %d",							e_abi_ver);
+			ConLog.Write("Type: %s",								TypeToString(e_type));
+			ConLog.Write("Machine: %s",								MachineToString(e_machine));
+			ConLog.Write("Version: %d",								e_version);
+			ConLog.Write("Entry point address: 0x%x",				e_entry);
+			ConLog.Write("Program headers offset: 0x%08x",			e_phoff);
+			ConLog.Write("Section headers offset: 0x%08x",			e_shoff);
+			ConLog.Write("Flags: 0x%x",								e_flags);
+			ConLog.Write("Size of this header: %d",					e_ehsize);
+			ConLog.Write("Size of program headers: %d",				e_phentsize);
+			ConLog.Write("Number of program headers: %d",			e_phnum);
+			ConLog.Write("Size of section headers: %d",				e_shentsize);
+			ConLog.Write("Number of section headers: %d",			e_shnum);
+			ConLog.Write("Section header string table index: %d",	e_shstrndx);
 		}
 
 		virtual void Load(wxFile& f)
@@ -375,24 +377,25 @@ class ElfLoader //TODO
 
 		virtual void Show()
 		{
-			ConLog.Write("Magic: %08x",							  e_magic);
-			ConLog.Write("Class: %s",							  "ELF64");
-			ConLog.Write("Data: %s",							  DataToString(e_data));
-			ConLog.Write("Current Version: %d",					  e_curver);
-			ConLog.Write("OS/ABI: %s",							  OS_ABIToString(e_os_abi));
-			ConLog.Write("Type: %s",							  TypeToString(e_type));
-			ConLog.Write("Machine: %s",							  MachineToString(e_machine));
-			ConLog.Write("Version: %d",							  e_version);
-			ConLog.Write("Entry point address: 0x%08x",			  e_entry);
-			ConLog.Write("Program headers offset: %d",			  e_phoff);
-			ConLog.Write("Section headers offset: %d",			  e_shoff);
-			ConLog.Write("Flags: 0x%x",							  e_flags);
-			ConLog.Write("Size of this header: %d",				  e_ehsize);
-			ConLog.Write("Size of program headers: %d",			  e_phentsize);
-			ConLog.Write("Number of program headers: %d",		  e_phnum);
-			ConLog.Write("Size of section headers: %d",			  e_shentsize);
-			ConLog.Write("Number of section headers: %d",		  e_shnum);
-			ConLog.Write("Section header string table index: %d", e_shstrndx);
+			ConLog.Write("Magic: %08x",								e_magic);
+			ConLog.Write("Class: %s",								"ELF64");
+			ConLog.Write("Data: %s",								DataToString(e_data));
+			ConLog.Write("Current Version: %d",						e_curver);
+			ConLog.Write("OS/ABI: %s",								OS_ABIToString(e_os_abi));
+			ConLog.Write("ABI version: %d",							e_abi_ver);
+			ConLog.Write("Type: %s",								TypeToString(e_type));
+			ConLog.Write("Machine: %s",								MachineToString(e_machine));
+			ConLog.Write("Version: %d",								e_version);
+			ConLog.Write("Entry point address: 0x%08x",				e_entry);
+			ConLog.Write("Program headers offset: 0x%08x",			e_phoff);
+			ConLog.Write("Section headers offset: 0x%08x",			e_shoff);
+			ConLog.Write("Flags: 0x%x",								e_flags);
+			ConLog.Write("Size of this header: %d",					e_ehsize);
+			ConLog.Write("Size of program headers: %d",				e_phentsize);
+			ConLog.Write("Number of program headers: %d",			e_phnum);
+			ConLog.Write("Size of section headers: %d",				e_shentsize);
+			ConLog.Write("Number of section headers: %d",			e_shnum);
+			ConLog.Write("Section header string table index: %d",	e_shstrndx);
 		}
 	};
 
@@ -477,11 +480,12 @@ class ElfLoader //TODO
 			ConLog.Write("Physical address: 0x%08x", p_paddr);
 			ConLog.Write("File size: 0x%08x", p_filesz);
 			ConLog.Write("Memory size: 0x%08x", p_memsz);
-			ConLog.Write("Flags: 0x%x", p_flags);
+			ConLog.Write("Flags: %s", Phdr_FlagsToString(p_flags));
 			ConLog.Write("Algin: 0x%x", p_align);
 		}
 	};
 
+private:
 	wxString m_elf_fpatch;
 
 public:
