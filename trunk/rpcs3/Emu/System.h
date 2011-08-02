@@ -44,7 +44,7 @@ public:
 	virtual void Run();
 	virtual void Pause();
 	virtual void Resume();
-	virtual void Stop(bool CloseFrames = true);
+	virtual void Stop();
 
 	virtual bool IsRunned() const { return m_cur_state == RUN; }
 	virtual bool IsPaused() const { return m_cur_state == PAUSE; }

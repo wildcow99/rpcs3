@@ -64,6 +64,8 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
+	System.Stop();
+
 	const wxString elf0  = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN";
 	const wxString elf1  = ctrl.GetPath() + "\\USRDIR\\BOOT.BIN";
 	const wxString elf2  = ctrl.GetPath() + "\\BOOT.BIN";
@@ -133,7 +135,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 
 	ConLog.Write("Elf: booting...");
 
-	if(stoped) System.Stop();
+	System.Stop();
 
 	System.SetElf(ctrl.GetPath());
 	System.Run();
@@ -162,7 +164,7 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 
 	ConLog.Write("SELF: booting...");
 
-	if(stoped) System.Stop();
+	System.Stop();
 
 	System.SetSelf(ctrl.GetPath());
 	System.Run();

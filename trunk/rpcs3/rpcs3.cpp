@@ -22,23 +22,19 @@ bool Rpcs3App::OnInit()
 	return true;
 }
 
-void Rpcs3App::CleanUp()
-{
-	System.Stop();
-	wxApp::CleanUp();
-}
-
 void Rpcs3App::Exit()
 {
+	Ini.Save();
+	System.Stop();
+	System.~SysThread();
+
 	if(ConLogFrame && ConLogFrame->runned) ConLogFrame->~LogFrame();
 
 	if(m_main && m_main->IsShown())
 	{
 		Ini.Gui.m_MainWindow.SetValue(WindowInfo(m_main->GetSize(), m_main->GetPosition()));
-		m_main->Hide();
+		m_main->~MainFrame();
 	}
-	CleanUp();
-	Ini.Save();
 
 	wxApp::Exit();
 }

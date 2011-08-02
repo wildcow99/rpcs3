@@ -59,34 +59,176 @@ void ElfLoader::LoadPsf()
 
 	wxFile psf(fpatch);
 
-	u32 magic;
-	psf.Seek(0);
-	const u32 length = psf.Length();
-	psf.Read(&magic, sizeof(u32));
+	PsfHeader pshdr;
+	psf.Read(&pshdr, sizeof(PsfHeader));
 
-	if(magic != 0x46535000)
+	if(pshdr.ps_magic != 0x46535000)
 	{
-		ConLog.Error("%s is not PSF!", fpatch.c_str());
+		ConLog.Error("%s is not PSF!", fpatch);
 		psf.Close();
 		return;
 	}
 
-	psf.Seek((length-sizeof(PsfHeader)) + 4);
+	psf.Seek(pshdr.ps_listoff);
+	wxArrayString list;
+	list.Add(wxEmptyString);
 
-	PsfHeader header;
-	psf.Read(&header, sizeof(PsfHeader));
+	while(!psf.Eof())
+	{
+		char c;
+		psf.Read(&c, 1);
+		if(c == 0)
+		{
+			psf.Read(&c, 1);
+			if(c == 0) break;
+
+			list.Add(wxEmptyString);
+		}
+		list[list.GetCount() - 1].Append(c);
+	}
+
+	psf.Seek(pshdr.ps_soffset);
+
+	wxString sb = wxEmptyString;
+	wxString serial = wxEmptyString;
+
+	struct PsfHelper
+	{
+		static wxString ReadString(wxFile& f, const u32 size)
+		{
+			wxString ret = wxEmptyString;
+
+			for(uint i=0; i<size && !f.Eof(); ++i)
+			{
+				ret += ReadChar(f);
+			}
+
+			return ret;
+		}
+
+		static wxString ReadString(wxFile& f)
+		{
+			wxString ret = wxEmptyString;
+
+			while(!f.Eof())
+			{
+				const char c = ReadChar(f);
+				if(c == 0) break;
+				ret += c;
+			}
+
+			return ret;
+		}
+
+		static char ReadChar(wxFile& f)
+		{
+			char c;
+			f.Read(&c, 1);
+			return c;
+		}
+
+		static char ReadCharNN(wxFile& f)
+		{
+			char c;
+			while(!f.Eof())
+			{
+				f.Read(&c, 1);
+				if(c != 0) break;
+			}
+			
+			return c;
+		}
+
+		static void GoToNN(wxFile& f)
+		{
+			while(!f.Eof())
+			{
+				char c;
+				f.Read(&c, 1);
+				if(c != 0)
+				{
+					f.Seek(f.Tell() - 1);
+					break;
+				}
+			}
+		}
+
+		static wxString ToData(const wxString& str)
+		{
+			return wxString::Format(": %x", str);
+		}
+	};
+
+	for(uint i=0;i<list.GetCount(); i++)
+	{
+		u32 buf;
+
+		if(!list[i].Cmp("TITLE_ID"))
+		{
+			serial = PsfHelper::ReadString(psf);
+			list[i].Append(wxString::Format(": %s", serial));
+			PsfHelper::GoToNN(psf);
+		}
+		else if(!list[i](0, 5).Cmp("TITLE"))
+		{
+			CurGameInfo.name = FixForName(PsfHelper::ReadString(psf));
+			list[i].Append(wxString::Format(": %s", CurGameInfo.name));
+			PsfHelper::GoToNN(psf);
+		}
+		else if(!list[i].Cmp("APP_VER"))
+		{
+			list[i].Append(wxString::Format(": %s", PsfHelper::ReadString(psf, sizeof(u64))));
+		}
+		else if(!list[i].Cmp("ATTRIBUTE"))
+		{
+			psf.Read(&buf, sizeof(buf));
+			list[i].Append(wxString::Format(": 0x%x", buf));
+		}
+		else if(!list[i].Cmp("CATEGORY"))
+		{
+			list[i].Append(wxString::Format(": %s", PsfHelper::ReadString(psf, sizeof(u32))));
+		}
+		else if(!list[i].Cmp("BOOTABLE"))
+		{			
+			psf.Read(&buf, sizeof(buf));
+			list[i].Append(wxString::Format(": %s", buf ? "true" : "false"));
+		}
+		else if(!list[i].Cmp("LICENSE"))
+		{
+			list[i].Append(wxString::Format(": %s", PsfHelper::ReadString(psf)));
+			psf.Seek(psf.Tell() + (sizeof(u64) * 7 * 2) - 1);
+		}
+		else if(!list[i](0, 14).Cmp("PARENTAL_LEVEL"))
+		{
+			psf.Read(&buf, sizeof(buf));
+			list[i].Append(wxString::Format(": %d", buf));
+		}
+		else if(!list[i].Cmp("PS3_SYSTEM_VER"))
+		{
+			list[i].Append(wxString::Format(": %s", PsfHelper::ReadString(psf, sizeof(u64))));
+		}
+		else if(!list[i].Cmp("SOUND_FORMAT"))
+		{
+			list[i].Append(wxString::Format(": 0x%x", Read32(psf)));
+		}
+		else if(!list[i].Cmp("RESOLUTION"))
+		{
+			list[i].Append(wxString::Format(": 0x%x", Read32(psf)));
+		}
+		else
+		{
+			list[i].Append(wxString::Format(": %s", PsfHelper::ReadString(psf)));
+			PsfHelper::GoToNN(psf);
+		}
+	}
+
 	psf.Close();
 
-	CurGameInfo.name = from32toString_Name(header.name, 31);
-	const wxString serial = from64toString(header.reg, 2);
-
-	ConLog.Write("Name: %s", CurGameInfo.name.c_str());
-	ConLog.Write("Serial: %s", serial.c_str());
-	ConLog.Write("Version: %s", from32toString(header.ver, 3).c_str());
-
-	const wxString comm_id = from32toString(header.comm_id, 4).c_str();
-	if(!comm_id.IsEmpty()) ConLog.Write("ID: %s", comm_id.c_str());
-
+	ConLog.SkipLn();
+	for(uint i=0; i<list.GetCount(); ++i)
+	{
+		ConLog.Write("%s", list[i]);
+	}
 	ConLog.SkipLn();
 
 	if(serial.Length() == 9)
@@ -110,8 +252,6 @@ void ElfLoader::LoadElf32(wxFile& f)
 	ehdr.Show();
 	ConLog.SkipLn();
 
-	f.Seek(ehdr.e_phoff);
-
 	LoadPhdr32(f, ehdr);
 }
 
@@ -126,9 +266,8 @@ void ElfLoader::LoadElf64(wxFile& f)
 	ehdr.Show();
 	ConLog.SkipLn();
 
-	f.Seek(ehdr.e_phoff);
-
 	LoadPhdr64(f, ehdr);
+	LoadShdr64(f, ehdr);
 }
 
 void ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
@@ -200,6 +339,89 @@ void ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 		}
 
 		ConLog.SkipLn();
+	}
+}
+
+void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
+{
+	if(ehdr.e_shoff == 0 && ehdr.e_shnum > 0)
+	{
+		ConLog.Error("LoadShdr64 error: Section header offset is null!");
+		return;
+	}
+
+	for(uint i=0; i<m_sh_ptr.GetCount(); ++i)
+	{
+		delete m_sh_ptr[i];
+	}
+
+	m_sh_ptr.Clear();
+
+	Elf64_Shdr* strtab = NULL;
+	Elf64_Shdr* symtab = NULL;
+
+	for(uint i=0; i<ehdr.e_shnum; ++i)
+	{
+		Elf64_Shdr* shdr = new Elf64_Shdr();
+		f.Seek(offset + ehdr.e_shoff + (ehdr.e_shentsize * i));
+		shdr->Load(f);
+
+		m_sh_ptr.Add(shdr);
+
+		switch(shdr->sh_type)
+		{
+		case SHT_SYMTAB: if(!symtab) symtab = shdr; break;
+		case SHT_STRTAB: if(!strtab) strtab = shdr; break;
+		}
+	}
+
+	s64 pc_addr = CPU.PC;
+
+	for(uint i=0; i<m_sh_ptr.GetCount(); ++i)
+	{
+		Elf64_Shdr& shdr = *(Elf64_Shdr*)m_sh_ptr[i];
+		if(strtab)
+		{
+			f.Seek(strtab->sh_offset + shdr.sh_name);
+			wxString name = wxEmptyString;
+			while(!f.Eof())
+			{
+				char c;
+				f.Read(&c, 1);
+				if(c == 0) break;
+				name += c;
+			}
+
+			ConLog.Write("Name: %s", name);
+		}
+		shdr.Show();
+		ConLog.SkipLn();
+
+		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;
+
+		const s64 addr = offset + shdr.sh_addr;
+		const s64 size = shdr.sh_size;
+		MemoryBlock* mem = NULL;
+
+		switch(shdr.sh_type)
+		{
+		case SHT_NOBITS:
+			if(size == 0) continue;
+			mem = &Memory.GetMemByAddr(addr);
+
+			memset(&((u8*)mem->GetMem())[addr - mem->GetStartAddr()], 0, size);
+
+		case SHT_PROGBITS:
+			if(pc_addr > addr) pc_addr = addr;
+		break;
+		}
+	}
+
+	CPU.SetPc(pc_addr);
+
+	if(symtab)
+	{
+		//TODO
 	}
 }
 

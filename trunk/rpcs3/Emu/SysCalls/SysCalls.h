@@ -1,76 +1,133 @@
 #pragma once
 #include <Emu/Cell/CPU.h>
 
-class FreeNumList
+class SysCallBase
 {
 protected:
-	wxArrayInt free_nums_list;
-	u32 cur_num;
-	u32 max_size;
 	wxString module_name;
 
-	FreeNumList()
-		: cur_num(0)
-		, max_size(100)
-		, module_name(wxEmptyString)
+	SysCallBase(const wxString& name) : module_name(name)
 	{
 	}
 
-	inline const s32 GetFree() const
+	//TODO
+};
+
+static wxString FixPatch(const wxString& patch)
+{
+	if(!patch(0, 10).CmpNoCase("/dev_hdd0/")) return CurGameInfo.root + patch(10, patch.Length());
+
+	ConLog.Warning("Unknown patch: %s", patch);
+	return patch;
+}
+
+template<typename T> struct SysCallsData
+{
+	T* data;
+	u64 id;
+};
+
+template<typename T> class SysCallsArraysList
+{
+	u64 m_count;
+	SysCallsData<T>* m_array;
+
+public:
+	SysCallsArraysList()
+		: m_count(0)
+		, m_array(NULL)
 	{
-		if(free_nums_list.GetCount() == 0) return -1;
-		return free_nums_list[0];
 	}
 
-	inline void AddFree(const u32 num)
+	__forceinline bool RemoveById(const u64 id)
 	{
-		free_nums_list.Add(num);
+		const int num = GetNumById(id);
+		if(num < 0 || num >= m_count) return false;
+
+		m_count--;
+		SysCallsData<T>* new_array = (SysCallsData<T>*)malloc(sizeof(SysCallsData<T>) * m_count);
+		memmove(new_array, m_array, num * sizeof(T));
+		if(m_count > num) memmove(&new_array[num], &m_array[num + 1], (m_count - num) * sizeof(T));
+		safe_delete(m_array);
+		m_array = new_array;
+
+		return true;
 	}
 
-	inline void DeleteFreeByValue(const u32 value)
+	__forceinline int GetNumById(const u64 id)
 	{
-		for(uint i=0; i<free_nums_list.GetCount(); ++i)
+		for(uint i=0; i<m_count; ++i)
 		{
-			if(free_nums_list[i] == value)
-			{
-				DeleteFreeByNum(i);
-				break;
-			}
+			if(m_array[i].id == id) return i;
 		}
+
+		return -1;
 	}
 
-	inline void DeleteFreeByNum(const u32 num)
+	__forceinline T* GetDataById(const u64 id, bool* is_error = NULL)
 	{
-		free_nums_list.Remove(num);
-	}
+		if(is_error) *is_error = false;
 
-	inline const u32 GetNumAndDelete()
-	{
-		s32 ret = GetFree();
-
-		if(ret == -1)
+		for(uint i=0; i<m_count; ++i)
 		{
-			ret = cur_num++;
+			if(m_array[i].id == id) return m_array[i].data;
+		}
 
-			if(ret >= (s32)max_size)
+		if(is_error) *is_error = true;
+		return NULL;
+	}
+
+	__forceinline u64 GetFreeId()
+	{
+		for(u64 id=1; id>0; id++)
+		{
+			bool found = false;
+			for(u64 arr=0; arr<m_count; ++arr)
 			{
-				ConLog.Error("%s error: Not enought free containers!", module_name);
-				return 0;
+				if(m_array[arr].id == id)
+				{
+					found = true;
+					break;
+				}
 			}
+
+			if(!found) return id;
+		}
+
+		return 0;
+	}
+
+	__forceinline u64 Add()
+	{
+		return Add(new T());
+	}
+
+	__forceinline u64 Add(T* data)
+	{
+		if(!m_array)
+		{
+			m_array = (SysCallsData<T>*)malloc(sizeof(SysCallsData<T>));
 		}
 		else
 		{
-			//DeleteFreeByValue(ret);
-			DeleteFreeByNum(0);
+			m_array = (SysCallsData<T>*)realloc(m_array, sizeof(SysCallsData<T>) * (m_count + 1));
 		}
+		const u64 id = GetFreeId();
+		m_array[m_count].data = data;
+		m_array[m_count].id = id;
+		m_count++;
 
-		return (u32)ret;
+		return id;
 	}
 
-	inline void Reset()
+	__forceinline u64 Add(T& data)
 	{
-		cur_num = 0;
-		free_nums_list.Clear();
+		return Add(&data);
+	}
+
+	__forceinline void Clear()
+	{
+		safe_delete(m_array);
 	}
 };
 

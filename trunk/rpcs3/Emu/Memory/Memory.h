@@ -313,6 +313,70 @@ class NullMemoryBlock : public MemoryBlock
 	}
 };
 
+struct MemoryFlag
+{
+	u32 addr;
+	char* value;
+	u64 size;
+};
+
+class MemoryFlags
+{
+	MemoryFlag* m_memflags;
+	u32 m_count;
+
+public:
+	MemoryFlags() 
+		: m_memflags(NULL)
+		, m_count(0)
+	{
+	}
+
+	void Add(char* value, const u64 size, const u32 addr)
+	{
+		if(!m_memflags)
+		{
+			m_count = 1;
+			m_memflags = (MemoryFlag*)malloc(sizeof(MemoryFlag));
+		}
+		else
+		{
+			m_count++;
+			m_memflags = (MemoryFlag*)realloc(m_memflags, sizeof(MemoryFlag) * m_count);
+		}
+
+		MemoryFlag& mf = m_memflags[m_count-1];
+		mf.addr = addr;
+		mf.size = size;
+		mf.value = value;
+	}
+
+	void Clear()
+	{
+		m_count = 0;
+		safe_delete(m_memflags);
+	}
+
+	char* Search(const u32 addr)
+	{
+		for(uint i=0; i<m_count; ++i)
+		{
+			if(m_memflags[i].addr == addr) return m_memflags[i].value;
+		}
+
+		return NULL;
+	}
+
+	char* SearchV(const s64& value)
+	{
+		char* saddr = Search(value);
+		if(saddr == 0) return (char*)&value;
+		return saddr;
+	}
+
+	u64 GetCount() const { return m_count; }
+};
+
 class MemoryBase
 {
 	NullMemoryBlock NullMem;
@@ -321,6 +385,8 @@ public:
 	MemoryBlock MainRam;
 	MemoryBlock Video_FrameBuffer;
 	MemoryBlock Video_GPUdata;
+
+	MemoryFlags MemFlags;
 
 	u8 mem_count;
 
@@ -386,6 +452,7 @@ public:
 		MainRam.Delete();
 		Video_FrameBuffer.Delete();
 		Video_GPUdata.Delete();
+		MemFlags.Clear();
 	}
 
 	void Reset()
@@ -396,7 +463,7 @@ public:
 		Close();
 		Init();
 	}
-	//u8* GetMem(u32& addr);
+
 	void Write8(u32 addr, const u8 data);
 	void Write16(u32 addr, const u16 data);
 	void Write32(u32 addr, const u32 data);

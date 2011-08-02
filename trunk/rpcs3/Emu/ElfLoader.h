@@ -7,88 +7,48 @@ u16 Read16(wxFile& f);
 u32 Read32(wxFile& f);
 u64 Read64(wxFile& f);
 
+enum SectionHeaderType
+{
+	SHT_NULL = 0, 
+	SHT_PROGBITS,
+	SHT_SYMTAB,
+	SHT_STRTAB,
+	SHT_RELA,
+	SHT_HASH,
+	SHT_DYNAMIC,
+	SHT_NOTE,
+	SHT_NOBITS,
+	SHT_REL,
+	SHT_SHLIB,
+	SHT_DYNSYM,
+};
+
+enum SectionHeaderFlag
+{
+	SHF_WRITE		= 0x1,
+	SHF_ALLOC		= 0x2,
+	SHF_EXECINSTR	= 0x4,
+	SHF_MASKPROC	= 0xf0000000,
+};
+
 class ElfLoader //TODO
 {
 public:
-	template<typename T>
-	static wxString from32toString(const T from)
-	{
-		const wxString f0 = wxString::Format("%c", (char)( from >> 24));
-		const wxString f1 = wxString::Format("%c", (char)((from >> 16) & 0x00ffffff));
-		const wxString f2 = wxString::Format("%c", (char)((from >>  8) & 0x0000ffff));
-		const wxString f3 = wxString::Format("%c", (char)( from		   & 0x000000ff));
+	wxArrayPtrVoid m_sh_ptr;
 
-		return f3 + f2 + f1 + f0;
-	}
-
-	template<typename T>
-	static wxString from32toString(const T* from, const uint count)
+	static wxString FixForName(wxString& name)
 	{
 		wxString ret = wxEmptyString;
 
-		for(uint i=0; i<count; ++i)
+		for(uint i=0; i<name.Length(); ++i)
 		{
-			ret += from32toString(from[i]);
-		}
-
-		return ret;
-	}
-
-	static wxString from32toString_Name(const u32* from, const uint count)
-	{
-		wxString ret = wxEmptyString;
-
-		for(uint i=0; i<count; ++i)
-		{
-			char c[4];
-
-			c[0] = (char)( from[i] >> 24);
-			c[1] = (char)((from[i] >> 16) & 0x00ffffff);
-			c[2] = (char)((from[i] >>  8) & 0x0000ffff);
-			c[3] = (char)( from[i]        & 0x000000ff);
-
-			for(uint a=0; a<4; ++a)
+			switch(name[i])
 			{
-				switch(c[a])
-				{
-					case 0xFFFFFFE2: case 0xFFFFFFA2: case 0xFFFFFF84:
-						c[a] = 0;	
-					break;
-				};
-			}
+				case 0xFFFFFFE2: case 0xFFFFFFA2: case 0xFFFFFF84:
+				continue;
 
-			for(int a=3; a>=0; --a)
-			{
-				ret += wxString::Format("%c", c[a]);
-			}
-		}
-
-		return ret;
-	}
-
-	template<typename T>
-	static wxString from64toString(const T from)
-	{
-		const wxString f0 = wxString::Format("%c", (char)(from >> 56));
-		const wxString f1 = wxString::Format("%c", (char)((from >> 48) & 0x00ffffffffffffff));
-		const wxString f2 = wxString::Format("%c", (char)((from >> 40) & 0x0000ffffffffffff));
-		const wxString f3 = wxString::Format("%c", (char)((from >> 32) & 0x000000ffffffffff));
-		const wxString f4 = wxString::Format("%c", (char)((from >> 24) & 0x00000000ffffffff));
-		const wxString f5 = wxString::Format("%c", (char)((from >> 16) & 0x0000000000ffffff));
-		const wxString f6 = wxString::Format("%c", (char)((from >>  8) & 0x000000000000ffff));
-		const wxString f7 = wxString::Format("%c", (char)( from		   & 0x00000000000000ff));
-
-		return f7 + f6 + f5 + f4 + f3 + f2 + f1 + f0;
-	}
-
-	template<typename T>
-	static wxString from64toString(const T* from, const uint count)
-	{
-		wxString ret = wxEmptyString;
-
-		for(uint i=0; i<count; ++i)
-		{
-			ret += from64toString(from[i]);
+				default: ret += name[i]; break;
+			};
 		}
 
 		return ret;
@@ -143,6 +103,7 @@ public:
 		switch(flags)
 		{
 		case 0x4:  return "R";
+		case 0x5:  return "R E";
 		case 0x7:  return "RWE";
 		default: break;
 		};
@@ -165,34 +126,12 @@ public:
 		return wxString::Format("Unknown (%x)", type);
 	}
 
-	/*
 	struct PsfHeader
 	{
-		u32	magic; //46535000 (PSF)
-		u64	unknown_0[28];
-		u32	list[34];
-		u32	app_ver[3];
-		u32	attribute;
-		u32	license[129];
-		u32	comm_id[4];
-		u32	unknown_1;
-		u64	plevel;
-		u32	unknown_2[3];
-		u32	name[31];
-		u64	reg[2];
-		u32	ver[3];
-	};
-	*/
-
-	struct PsfHeader
-	{
-		u32	comm_id[4];
-		u32	unknown_1;
-		u64	plevel;
-		u32	unknown_2[3];
-		u32	name[31];
-		u64	reg[2];
-		u32	ver[3];
+		u32 ps_magic;
+		u32 ps_unk_0;
+		u32 ps_listoff;
+		u32 ps_soffset;
 	};
 
 	struct SelfHeader
@@ -404,13 +343,41 @@ public:
 		u32 sh_name; 
 		u32 sh_type;
 		u64 sh_flags;
-		u64 sh_addr;
-		u64 sh_offset;
+ 		u64 sh_addr;
+ 		u64 sh_offset;
 		u64 sh_size;
-		u32 sh_link;
-		u32 sh_info;
+ 		u32 sh_link;
+ 		u32 sh_info;
 		u64 sh_addralign;
 		u64 sh_entsize;
+
+		virtual void Load(wxFile& f)
+		{
+			sh_name			= Read32(f);
+			sh_type			= Read32(f);
+			sh_flags		= Read64(f);
+			sh_addr			= Read64(f);
+			sh_offset		= Read64(f);
+			sh_size			= Read64(f);
+			sh_link			= Read32(f);
+			sh_info			= Read32(f);
+			sh_addralign	= Read64(f);
+			sh_entsize		= Read64(f);
+		}
+
+		virtual void Show()
+		{
+			ConLog.Write("Name offset: %x", sh_name);
+			ConLog.Write("Type: %d", sh_type);
+			ConLog.Write("Addr: %x", sh_addr);
+			ConLog.Write("Offset: %x", sh_offset);
+			ConLog.Write("Size: %x", sh_size);
+			ConLog.Write("EntSize: %d", sh_entsize);
+			ConLog.Write("Flags: %x", sh_flags);
+			ConLog.Write("Link: %x", sh_link);
+			ConLog.Write("Info: %d", sh_info);
+			ConLog.Write("Address align: %x", sh_addralign);
+		}
 	};
 
 	struct Elf32_Phdr
@@ -506,6 +473,8 @@ private:
 
 	virtual void LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset = 0);
 	virtual void LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset = 0);
+
+	virtual void LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset = 0);
 
 	virtual void LoadPsf();
 };

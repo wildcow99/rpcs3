@@ -22,30 +22,42 @@ struct MemContiner
 	}
 };
 
-class MemContiners : private FreeNumList
+class MemContiners : private SysCallBase
 {
-	MemContiner* continers;
+	SysCallsArraysList<MemContiner> continers;
 
 public:
-	MemContiners()
-		: FreeNumList()
-		, continers(new MemContiner[100])
+	MemContiners() : SysCallBase("MemContainers")
 	{
-		module_name = "MemContainers";
 	}
 
-	u32 AddContiner(u32 size)
+	u64 AddContiner(const u64 size)
 	{
-		const u32 num = GetNumAndDelete();
-		continers[num].Create(size);
+		const u64 id = continers.Add();
+		bool error;
+		MemContiner& data = *continers.GetDataById(id, &error);
+		if(error)
+		{
+			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
+			return 0;
+		}
 
-		return num;
+		data.Create(size);
+
+		return id;
 	}
 
-	void DeleteContiner(u32 num)
+	void DeleteContiner(const u64 id)
 	{
-		continers[num].Delete();
-		AddFree(num);
+		bool error;
+		MemContiner& data = *continers.GetDataById(id, &error);
+		if(error)
+		{
+			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
+			return;
+		}
+		data.Delete();
+		continers.RemoveById(id);
 	}
 };
 
