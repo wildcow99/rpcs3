@@ -12,7 +12,7 @@
 	virtual void UNK_##name##(\
 		const int code, const int opcode, OP_REG rs, OP_REG rt, OP_REG rd, OP_REG sa, const u32 func,\
 		OP_REG crfs, OP_REG crft, OP_REG crm, OP_REG bd, OP_REG lk, OP_REG ms, OP_REG mt, OP_REG mfm,\
-		OP_REG ls, const s32 imm_m, const s32 imm_s16, const u32 imm_u16, const u32 imm_u26) \
+		OP_REG ls, OP_REG lt, const s32 imm_m, const s32 imm_s16, const u32 imm_u16, const u32 imm_u26) \
 	{\
 		Write(wxString::Format( \
 			"Unknown "##name_string##" opcode! - (%08x - %02x) - " \
@@ -22,7 +22,7 @@
 			"crm: 0x%x : %d, bd: 0x%x : %d, " \
 			"lk: 0x%x : %d, ms: 0x%x : %d, " \
 			"mt: 0x%x : %d, mfm: 0x%x : %d, " \
-			"ls: 0x%x : %d, " \
+			"ls: 0x%x : %d, lt: 0x%x : %d, " \
 			"imm m: 0x%x : %d, imm s16: 0x%x : %d, " \
 			"imm u16: 0x%x : %d, imm u26: 0x%x : %d, " \
 			"Branch: 0x%x, Jump: 0x%x", \
@@ -33,7 +33,7 @@
 			crm, crm, bd, bd, \
 			lk, lk, ms, ms, \
 			mt, mt, mfm, mfm, \
-			ls, ls, \
+			ls, ls, lt, lt, \
 			imm_m, imm_m, imm_s16, imm_s16, \
 			imm_u16, imm_u16, imm_u26, imm_u26, \
 			(m_dump_mode ? branchTarget(dump_pc, imm_u26) : branchTarget(imm_u26)), \
@@ -229,6 +229,10 @@ private:
 			virtual void MACCHW(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
 				Write(wxString::Format( "MACCHW r%d,r%d,r%d", rs, rt, rd ));
+			}
+			virtual void NMACCHW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				Write(wxString::Format( "NMACCHW r%d,r%d,r%d", rs, rt, rd ));
 			}
 		END_OPCODES_GROUP(G_0x04_0x5, "G_0x04_0x5");
 
@@ -435,6 +439,9 @@ private:
 		END_OPCODES_GROUP(G_0x04_0x1f, "G_0x04_0x1f");
 	END_OPCODES_GROUP(G_0x04, "G_0x04");
 
+	START_OPCODES_GROUP(G_0x0b)
+	END_OPCODES_GROUP(G_0x0b, "G_0x0b");
+
 	START_OPCODES_GROUP(G1)
 		virtual void LI(OP_REG rs, OP_sREG imm_s16)
 		{
@@ -454,7 +461,7 @@ private:
 	END_OPCODES_GROUP(G1, "G1");
 
 	START_OPCODES_GROUP(G_0x0f)
-		START_OPCODES_GROUP(G_0x0f_0x0)
+		
 		virtual void ADDIS(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 		{
 			if(rt == 0)
@@ -470,7 +477,7 @@ private:
 		{
 			Write(wxString::Format( "LIS r%d,%d", rs, imm_s16 ));
 		}
-		END_OPCODES_GROUP(G_0x0f_0x0, "G_0x0f_0x0");
+		
 	END_OPCODES_GROUP(G_0x0f, "G_0x0f");
 	START_OPCODES_GROUP(G2)
 	END_OPCODES_GROUP(G2, "G2");
@@ -502,6 +509,37 @@ private:
 			Write("BLR");
 		}
 		*/
+		START_OPCODES_GROUP(G3_S_0x0)
+				virtual void MCRF(OP_REG crfs, OP_REG crft)
+			{
+				Write(wxString::Format( "MCRF r%d, r%d", crfs, crft ));
+			}
+			START_OPCODES_GROUP(G3_S_0x0_0x20)
+			virtual void BLELR(OP_REG crft)
+			{
+				Write(wxString::Format( "BLELR r%d", crft ));
+			}
+			virtual void BEQLR()
+			{
+				Write("BEQLR (Unimplemented)");
+			}
+			virtual void BLR()
+			{
+				Write("BLR (Unimplemented)");
+			}
+			END_OPCODES_GROUP(G3_S_0x0_0x20, "G3_S_0x0_0x20");
+		END_OPCODES_GROUP(G3_S_0x0, "G3_S_0x0");
+		START_OPCODES_GROUP(G3_S_0x10)
+				virtual void BCTR()
+	{
+		Write("BCTR (Unimplemented)");
+	}
+	virtual void BCTRL()
+	{
+		Write("BCTRL (Unimplemented)");
+	}
+		END_OPCODES_GROUP(G3_S_0x10, "G3_S_0x10");
+
 	END_OPCODES_GROUP(G3_S, "G3_S");
 
 	START_OPCODES_GROUP(G3_S0)
@@ -509,6 +547,26 @@ private:
 	{
 		Write("RLWINM. (Unimplemented)");
 	}
+	virtual void RLWINM()
+	{
+		Write("RLWINM (Unimplemented)");
+	}
+	
+	
+	END_OPCODES_GROUP(G3_S0, "G3_S0");
+	
+
+	START_OPCODES_GROUP(G3_S0_0x3e)
+	virtual void ROTLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+		{
+			if(rt == 0 && rs == 0)
+			{
+				NOP();
+				return;
+			}
+
+			Write(wxString::Format( "ROTLWI r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
+		}
 	virtual void CLRLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 	{
 		if(rt == 0 && rs == 0)
@@ -519,6 +577,18 @@ private:
 
 		Write(wxString::Format( "CLRLWI r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
 	}
+	END_OPCODES_GROUP(G3_S0_0x3e, "G3_S0_0x3e");
+	START_OPCODES_GROUP(G3_S0_0x3f)
+	virtual void ROTLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+		{
+			if(rt == 0 && rs == 0)
+			{
+				NOP();
+				return;
+			}
+
+			Write(wxString::Format( "ROTLWI. r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
+		}
 	virtual void CLRLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 	{
 		if(rt == 0 && rs == 0)
@@ -529,38 +599,8 @@ private:
 
 		Write(wxString::Format( "CLRLWI. r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
 	}
-	END_OPCODES_GROUP(G3_S0, "G3_S0");
-
-	START_OPCODES_GROUP(G3_S0_G0)
-		virtual void RLWINM()
-		{
-			Write("RLWINM (Unimplemented)");
-		}
-		virtual void ROTLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
-		{
-			if(rt == 0 && rs == 0)
-			{
-				NOP();
-				return;
-			}
-
-			Write(wxString::Format( "ROTLWI r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
-		}
-		virtual void ROTLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
-		{
-			if(rt == 0 && rs == 0)
-			{
-				NOP();
-				return;
-			}
-
-			Write(wxString::Format( "ROTLWI. r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
-		}
-	END_OPCODES_GROUP(G3_S0_G0, "G3_S0_G0");
-	//virtual void RLWINM()
-	//{
-	//	Write("RLWINM (Unimplemented)");
-	//}
+	END_OPCODES_GROUP(G3_S0_0x3f, "G3_S0_0x3f");
+	
 	virtual void ROTLW(OP_REG rt, OP_REG rs, OP_REG rd)
 	{
 		Write(wxString::Format( "ROTLW r%d,r%d,r%d", rt, rs, rd ));
@@ -630,7 +670,16 @@ private:
 	//	Write(wxString::Format( "LRLDIÑ r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
 	//}
 	START_OPCODES_GROUP(G_0x1e)
-		START_OPCODES_GROUP(G_0x1e_G_0x14)
+			virtual void CLRLDI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+			{
+				if(rt == 0 && rs == 0)
+				{
+					NOP();
+					return;
+				}
+
+				Write(wxString::Format( "CLRLDI r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
+			}
 			virtual void CLRLDI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 			{
 				if(rt == 0 && rs == 0)
@@ -641,7 +690,7 @@ private:
 
 				Write(wxString::Format( "CLRLDI. r%d,r%d,%d  # %x", rt, rs, imm_u16, imm_u16 ));
 			}
-		END_OPCODES_GROUP(G_0x1e_G_0x14, "G_0x1e_G_0x14");
+		
 	END_OPCODES_GROUP(G_0x1e, "G_0x1e");
 	START_OPCODES_GROUP(G4)
 		START_OPCODES_GROUP(G4_G0)
@@ -698,6 +747,10 @@ private:
 			virtual void LDX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
 				Write(wxString::Format("LDX r%d,r%d,r%d", rs, rt, rd));
+			}
+			virtual void LWZX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				Write(wxString::Format("LWZX r%d,r%d,r%d", rs, rt, rd));
 			}
 			virtual void CNTLZW(OP_REG rt, OP_REG rs)
 			{
@@ -1426,10 +1479,10 @@ private:
 		//{
 		//	Write(wxString::Format("DCBZ r%d,r%d", rt, rd));
 		//}
-		virtual void LWZX(OP_REG rs, OP_REG rt, OP_REG rd)
-		{
-			Write(wxString::Format("LWZX r%d,r%d,r%d", rs, rt, rd));
-		}
+		//virtual void LWZX(OP_REG rs, OP_REG rt, OP_REG rd)
+		//{
+		//	Write(wxString::Format("LWZX r%d,r%d,r%d", rs, rt, rd));
+		//}
 	END_OPCODES_GROUP(G4, "G4");
 	virtual void LWZ(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 	{

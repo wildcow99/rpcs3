@@ -33,6 +33,9 @@ class CompilerELF : public wxFrame
 {
 	wxTextCtrl* asm_list;
 	wxTextCtrl* hex_list;
+	wxTextCtrl* err_list;
+
+	wxTimer* scroll_timer;
 
 	wxTextAttr* a_instr;
 
@@ -54,12 +57,13 @@ public:
 		SetBackgroundStyle(wxBG_STYLE_COLOUR);
 		SetBackgroundColour(wxColour(200, 200, 200));
 		asm_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-			wxTE_LEFT | wxTE_MULTILINE );
+			wxTE_LEFT | wxTE_MULTILINE | wxTE_DONTWRAP);
 		hex_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+			wxTE_LEFT | wxTE_MULTILINE | wxTE_READONLY | wxTE_DONTWRAP);
+		err_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
 			wxTE_LEFT | wxTE_MULTILINE | wxTE_READONLY);
 
-
-		wxSize size = wxSize(640, 680);
+		const wxSize& size = wxSize(640, 680);
 
 		asm_list->SetSize(size.GetWidth() * 0.75, size.GetHeight());
 		hex_list->SetSize(size.GetWidth() * 0.25, size.GetHeight());
@@ -69,29 +73,45 @@ public:
 		list_sizer->Add(hex_list);
 
 		main_sizer->Add(list_sizer);
+		main_sizer->AddSpacer(2);
+		main_sizer->Add(err_list);
 
 		SetSizerAndFit(main_sizer);
+
+		scroll_timer = new wxTimer(this);
 
 		Connect( wxEVT_SIZE, wxSizeEventHandler(CompilerELF::OnResize) );
 		Connect(asm_list->GetId(), wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(CompilerELF::OnUpdate));
 		Connect(id_analyze_code, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::AnalyzeCode));
 		Connect(id_compile_code, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::CompileCode));
 
+		Connect(scroll_timer->GetId(), wxEVT_TIMER, wxTimerEventHandler(CompilerELF::OnUpdateScroll));
+
 		SetSize(wxSize(640, 680));
+
+		scroll_timer->Start(5);
 
 		a_instr = new wxTextAttr(wxColour(0, 160, 0));
 
 		asm_list->SetFont(GetFont(16));
+		hex_list->SetFont(GetFont(16));
+
+		hex_list->Disable();
 
 		asm_list->SetValue(
 			//"T2R r3,\"opcode\"\n"
-			"li r3,\"tx\"\n"
-			"li r4,0x000001\n"
-			"li r5,0x0\n"
-			"li r6,0x0\n"
-			"li r8,0x0\n"
-			"li r11,801\n"
+			"li r3, \"tx\"\n"
+			"li r4, 0x000001\n"
+			"li r5, 0\n"
+			"li r6, 0\n"
+			"li r8, 0\n"
+			"li r11, 801\n"
 			"sc 2");
+	}
+
+	~CompilerELF()
+	{
+		scroll_timer->Stop();
 	}
 
 	wxFont GetFont(int size)
@@ -118,9 +138,36 @@ public:
 
 		return false;
 	}
-
-	void OnUpdate(wxCommandEvent& event)
+	
+	void UpdateScroll()
 	{
+		const int asm_count = asm_list->GetScrollPos(wxVERTICAL);
+		int hex_count = hex_list->GetScrollPos(wxVERTICAL);
+
+		if(asm_count == hex_count) return;
+
+		if(hex_count > asm_count)
+		{
+			for(; hex_count>asm_count; --hex_count)
+				::SendMessage((HWND)hex_list->GetHWND(), WM_VSCROLL, SB_LINEUP, 0);
+		}
+		else
+		{
+			const int lines_count = hex_list->GetNumberOfLines();
+			for(; hex_count<asm_count && hex_count<lines_count; ++hex_count)
+				::SendMessage((HWND)hex_list->GetHWND(), WM_VSCROLL, SB_LINEDOWN, 0);
+		}
+	}
+
+	void OnUpdateScroll(wxTimerEvent& WXUNUSED(event))
+	{
+		UpdateScroll();
+	}
+
+	void OnUpdate(wxCommandEvent& WXUNUSED(event))
+	{
+		DoAnalyzeCode(false);
+		UpdateScroll();
 		//TODO...
 	}
 
@@ -128,9 +175,20 @@ public:
 	{
 		const wxSize size(GetClientSize());
 
-		asm_list->SetSize(size.GetWidth() * 0.75, size.GetHeight());
-		hex_list->SetSize(size.GetWidth() * 0.25 - 3, size.GetHeight());
+		static const int hex_w = 130;
+		asm_list->SetSize(size.GetWidth() - hex_w, size.GetHeight() * 0.75);
+		hex_list->SetSize(hex_w, size.GetHeight() * 0.75);
+		err_list->SetSize(size.GetWidth(), size.GetHeight() * 0.25);
+
 		hex_list->SetPosition(wxPoint(asm_list->GetSize().x + 3, 0));
+		err_list->SetPosition(wxPoint(0, asm_list->GetSize().y + 2));
+
+		UpdateScroll();
+	}
+
+	void WriteError(const wxString& error, const uint line)
+	{
+		err_list->WriteText(wxString::Format("line %d: %s\n", line, error));
 	}
 
 	int StringToReg(wxString str)
@@ -160,21 +218,41 @@ public:
 	enum MASKS
 	{
 		MASK_ERROR,
-		RS_RT_IMM,
-		RS_IMM,
-		IMM,
+		RS_RT_IMM16,
+		RS_IMM16,
+		IMM16,
+		IMM26,
+	};
+
+	enum OPCODES
+	{
+		O_MULLI,
+		O_ADDI,
+		O_LI,
+		O_SC,
+		O_B,
+		O_BL,
 	};
 
 	MASKS OpcodeToMask(int opcode)
 	{
 		switch(opcode)
 		{
-		case MULLI:
-		case ADDI:	return RS_RT_IMM;
+		case O_MULLI:
+		case O_ADDI:
+			return RS_RT_IMM16;
 
-		case LI:	return RS_IMM;
+		case O_LI:
+			return RS_IMM16;
 
-		case SC:	return IMM;
+		case O_SC:
+			return IMM16;
+
+		case O_BL:
+		case O_B:
+			return IMM26;
+
+		default: break;
 		}
 
 		return MASK_ERROR;
@@ -182,10 +260,17 @@ public:
 
 	int StringToOpcode(const wxString& str)
 	{
-		if(!str.Cmp("mulli"))return MULLI;
-		if(!str.Cmp("addi")) return ADDI;
-		if(!str.Cmp("li"))   return LI;
-		if(!str.Cmp("sc"))   return SC;
+		if(!str.Cmp("mulli"))	return O_MULLI;
+		if(!str.Cmp("sc"))		return O_SC;
+		//g1
+			if(!str.Cmp("addi"))return O_ADDI;
+			if(!str.Cmp("li"))	return O_LI;
+		//
+		//BRANCH
+			if(!str.Cmp("b"))	return O_B;
+			if(!str.Cmp("bl"))	return O_BL;
+		//
+
 		//if(!str.Cmp("T2R"))  return -2; //TODO
 
 		return -1;
@@ -198,7 +283,7 @@ public:
 		str.ToLongLong(imm);
 		if(*imm == 0)
 		{
-			if(str.Length() == 1) return str.Cmp("0") == 0;
+			if(str.Length() == 1) return !str.Cmp("0");
 
 			if(str.Length() <= 2 || !!str(0, 2).Cmp("0x")) return false;
 			
@@ -224,60 +309,74 @@ public:
 	s32 ToOpcode(u32 i)	const { return i << 26; }
 	s32 ToRS(u32 i)		const { return i << 21; }
 	s32 ToRT(u32 i)		const { return i << 16; }
-	s32 ToIMM(u32 i)	const { return i & 0xffff; }
+	s32 ToIMM16(u32 i)	const { return i & 0xffff; }
+	s32 ToIMM26(u32 i)	const { return i & 0xffffff; }
+	s32 ToLK(u32 i)		const { return i; }
 	s32 ToLS(u32 i)		const { return i << 16; }
 
 	int Compile(wxArrayLong& arr, MASKS mask)
 	{
 		switch(mask)
 		{
-		case RS_RT_IMM:
+		case RS_RT_IMM16:
 			switch(arr[0]) //opcode
 			{
-			case ADDI: return ToOpcode(G1) | ToLS(ADDI) | ToRS(arr[1]) | ToRT(arr[2]) | ToIMM(arr[3]);
-			case MULLI: return ToOpcode(MULLI) | ToRS(arr[1]) | ToRT(arr[2]) | ToIMM(arr[3]);
-			default: return -1;
+			case O_ADDI: return ToOpcode(G1) | ToLS(ADDI) | ToRS(arr[1]) | ToRT(arr[2]) | ToIMM16(arr[3]);
+			case O_MULLI: return ToOpcode(MULLI) | ToRS(arr[1]) | ToRT(arr[2]) | ToIMM16(arr[3]);
+			default: return 0;
 			}
 		break;
-		case RS_IMM:
+		case RS_IMM16:
 			switch(arr[0]) //opcode
 			{
-			case LI: return ToOpcode(G1) | ToLS(LI) | ToRS(arr[1]) | ToIMM(arr[2]);
-			default: return -1;
+			case O_LI: return ToOpcode(G1) | ToLS(LI) | ToRS(arr[1]) | ToIMM16(arr[2]);
+			default: break;
 			}
 		break;
 
-		case IMM:
+		case IMM16:
 			switch(arr[0]) //opcode
 			{
-			case SC: return ToOpcode(SC) | ToIMM(arr[1]);
-			default: return -1;
+			case O_SC: return ToOpcode(SC) | ToIMM16(arr[1]);
+			default: break;
+			}
+		break;
+
+		case IMM26:
+			switch(arr[0]) //opcode
+			{
+			case O_B: return ToOpcode(BRANCH) | ToLK(B) | ToIMM26(arr[1]);
+			case O_BL: return ToOpcode(BRANCH) | ToLK(BL) | ToIMM26(arr[1]);
+			default: break;
 			}
 		break;
 		}
 
-		return -1;
+		return 0; //NOP
+	}
+
+	bool IsSkipChar(const wxString& str)
+	{
+		return !str.Cmp(" ") || !str.Cmp("	");
 	}
 
 	bool SearchReg(u64& p, const wxString& str, const u64 line, wxArrayLong& arr)
 	{
-		p++;
 		wxString buf = wxEmptyString;
 
-		for(; p<str.Length(); ++p)
+		for(p++; p<str.Length(); p++)
 		{
-			const wxString cur_str = str(p, 1);
+			const wxString& cur_str = str(p, 1);
 
-			if( !cur_str.Cmp("\n") || p == str.Length() ||
-				!cur_str.Cmp(",") || !cur_str.Cmp(" "))
+			if(IsSkipChar(cur_str) && buf.IsEmpty() && p != str.Length() - 1) continue;
+
+			if(p == str.Length() - 1 || !cur_str.Cmp(",") || !cur_str.Cmp(" ") || !cur_str.Cmp("#"))
 			{
+				if(p == str.Length()-1 && !IsSkipChar(cur_str)) buf += cur_str;
+
 				const int reg = StringToReg(buf);
 
-				if(reg == -1)
-				{
-					ConLog.Error("line %d: Unknown register '%s'", line, buf);
-					return false;
-				}
+				if(reg == -1) break;
 
 				arr.Add(reg);
 				return true;
@@ -286,97 +385,109 @@ public:
 			buf += cur_str;
 		}
 
+		WriteError(wxString::Format("Unknown register '%s'", buf), line);
 		return false;
 	}
 
 	bool SearchImm(u64& p, const wxString& str, const u64 line, wxArrayLong& arr)
 	{
-		p++;
 		wxString buf = wxEmptyString;
 
-		for(;; ++p)
+		for(p++; p<str.Length(); p++)
 		{
-			const wxString cur_str = str(p, 1);
+			const wxString& cur_str = str(p, 1);
 
-			if( !cur_str.Cmp("\n") || p == str.Length() ||
-				!cur_str.Cmp(",") || !cur_str.Cmp(" "))
+			s64 imm;
+			if(!buf(0, 1).Cmp("\""))
 			{
-				s64 imm;
-				if(!buf(0, 1).Cmp("\"") || !buf(buf.Length()-1, 1).Cmp("\""))
+				if(!cur_str.Cmp("\""))
 				{
-					imm = *(s64*)buf(1, buf.Length()-1).c_str();
+					for(p++; p<str.Length(); p++)
+					{
+						if(!str(p, 1).Cmp("#")) break;
+						if(!IsSkipChar(cur_str))
+						{
+							WriteError(wxString::Format("Unknown symbol '%s'", buf), line);
+							return false;
+						}
+					}
+
+					imm = *(s64*)buf(1, buf.Length()).c_str();
+					arr.Add(imm);
+					return true;
 				}
-				else if(!StringToImm(buf, &imm))
+			}
+			else
+			{
+				if(IsSkipChar(cur_str) && p != str.Length() - 1) continue;
+				if(p == str.Length() - 1 || !cur_str.Cmp(",") || !cur_str.Cmp("#"))
 				{
-					ConLog.Error("line %d: Unknown immediate '%s'", line, buf);
-					return false;
+					if(p == str.Length()-1 && !IsSkipChar(cur_str)) buf += cur_str;
+
+					if(StringToImm(buf, &imm))
+					{
+						arr.Add(imm);
+						return true;
+					}
+					break;
 				}
-				
-				arr.Add(imm);
-				return true;
 			}
 
 			buf += cur_str;
 		}
 
+		WriteError(wxString::Format("Unknown immediate '%s'", buf), line);
 		return false;
 	}
 
 	bool SearchText(u64& p, const wxString& str, const u64 line, wxString& dst)
 	{
-		p++;
 		wxString buf = wxEmptyString;
 
-		for(;; ++p)
+		for(p++; p<str.Length(); ++p)
 		{
-			const wxString cur_str = str(p, 1);
+			const wxString& cur_str = str(p, 1);
 
-			if( !cur_str.Cmp("\n") || p == str.Length() ||
-				!cur_str.Cmp(",") || !cur_str.Cmp(" "))
+			if(!buf(0, 1).Cmp("\""))
 			{
-				if(!buf(0, 1).Cmp("\"") || !buf(buf.Length()-1, 1).Cmp("\""))
+				if(!cur_str.Cmp("\""))
 				{
-					dst = buf(1, buf.Length()-1);
+					for(p++; p<str.Length(); p++)
+					{
+						if(!str(p, 1).Cmp("#")) break;
+						if(!IsSkipChar(cur_str))
+						{
+							WriteError(wxString::Format("Unknown symbol '%s'", buf), line);
+							return false;
+						}
+					}
+
+					dst = buf(1, buf.Length()).c_str();
 					return true;
 				}
-
-				ConLog.Error("line %d: Text is not found! (%s)", line, buf);
-				return false;
+			}
+			else
+			{
+				if(IsSkipChar(cur_str) && p != str.Length() - 1) continue;
 			}
 
 			buf += cur_str;
 		}
 
-		return false;
-	}
-
-	bool GoToNextLine(u64& p, u32& line, const wxString& str)
-	{
-		for(;p<str.Length(); ++p)
-		{
-			if(str(p, 1).Cmp("\n"))
-			{
-				line++;
-				p--;
-				return true;
-			}
-		}
-
+		WriteError(wxString::Format("Text is not found! (%s)", buf), line);
 		return false;
 	}
 
 	void DoAnalyzeCode(bool compile)
 	{
-		const wxString str = asm_list->GetLabel();
-		wxString buf = wxEmptyString;
-		uint line = 1;
-		bool skip = false;
-
 		wxFile f;
+
+		ElfLoader::Elf64_Ehdr ehdr;
+		ElfLoader::Elf64_Phdr phdr;
+
 		if(compile)
 		{
 			f.Open("compiled.elf", wxFile::write);
-			ElfLoader::Elf64_Ehdr ehdr;
 
 			//TODO
 			ehdr.e_magic = 0x7F454C46;
@@ -421,14 +532,12 @@ public:
 
 			for(uint i=ehdr.e_ehsize; i<ehdr.e_phoff; ++i) Write8(f, 0);
 
-			ElfLoader::Elf64_Phdr phdr;
-
 			phdr.p_type = 0x1;
 			phdr.p_flags = 0x4;
 			phdr.p_offset = ehdr.e_phoff + 0x38 + 0x2;
 			phdr.p_vaddr = 0x20050;
 			phdr.p_paddr = 0x20050;
-			phdr.p_filesz = asm_list->GetNumberOfLines() * 4*15000;
+			phdr.p_filesz = asm_list->GetNumberOfLines() * 4 * 15000;
 			phdr.p_memsz = phdr.p_filesz;
 			phdr.p_align = 0x0;
 
@@ -444,105 +553,126 @@ public:
 			for(uint i=ehdr.e_phoff + 0x38; i<phdr.p_offset; ++i) Write8(f, 0);
 		}
 
-		for(u64 p=0; p<str.Length(); ++p)
+		const uint lines_count = (uint)asm_list->GetNumberOfLines();
+		u64 errors_count = 0;
+
+		hex_list->Clear();
+		err_list->Clear();
+
+		for(uint line=0, virt_line = 0; line<lines_count; ++line)
 		{
-			const wxString cur_str = str(p, 1);
+			if(line > 0) hex_list->WriteText("\n");
+			if(compile && errors_count > 0) break;
+			wxString buf = wxEmptyString;
+			wxString str = asm_list->GetLineText(line);
 
-			if(!cur_str.Cmp(" "))
+			for(u64 p=0; p<str.Length(); ++p)
 			{
-				const int opcode = StringToOpcode(buf);
-				if(opcode == -1)
+				const wxString cur_str = str(p, 1);
+
+				if(!cur_str.Cmp("#") && p < str.Length() - 1) continue;
+
+				if(IsSkipChar(cur_str) || p == str.Length() - 1)
 				{
-					ConLog.Error("line %d: Unknown opcode '%s'", line, buf);
-					if(compile || !GoToNextLine(p, line, str)) return;
-					buf = wxEmptyString;
-					continue;
+					if(!IsSkipChar(cur_str) && p == str.Length() - 1)
+					{
+						buf += cur_str;
+					}
+
+					const int opcode = StringToOpcode(buf);
+					if(opcode == -1)
+					{
+						WriteError(wxString::Format("Unknown opcode '%s'", buf), line);
+						errors_count++;
+						continue;
+					}
+
+					wxArrayLong arr;
+					arr.Clear();
+
+					if(opcode == -2) //TODO: T2R
+					{
+						if(!SearchReg(p, str, line, arr))
+						{
+							errors_count++;
+							break;
+						}
+
+						wxString text;
+						if(!SearchText(p, str, line, text))
+						{
+							errors_count++;
+							break;
+						}
+
+						if(compile)
+						{
+							Write32(f, ToOpcode(G1) | ToLS(LI) | ToRS(arr[0]) | ToIMM16(0));
+
+							ConLog.Write("Text size: %d", WXSIZEOF(text));
+
+							const u64 text_u64 = *(u64*)text.char_str().data();
+
+							const s16 count = text_u64 / 0x7fff;
+							const u64 l_v = text_u64 - (count * 0x7fff);
+
+							Write32(f, ToOpcode(G1) | ToLS(LI) | ToRS(arr[0]) | ToRT(arr[0]) | ToIMM16(0x7fff));
+							Write32(f, ToOpcode(MULLI) | ToRS(arr[0]) | ToRT(arr[0]) | ToIMM16(count));
+							Write32(f, ToOpcode(G1) | ToLS(ADDI) | ToRS(arr[0]) | ToRT(arr[0]) | ToIMM16(l_v));
+						}
+
+						break;
+					}
+
+					const MASKS mask = OpcodeToMask(opcode);
+					if(mask == MASK_ERROR)
+					{
+						WriteError(wxString::Format("Unknown opcode '%s' mask", buf), line);
+						errors_count++;
+						break;
+					}
+
+					arr.Add(opcode);
+
+					switch(mask)
+					{
+					case RS_RT_IMM16:
+						if(!SearchReg(p, str, line, arr))
+						{
+							errors_count++;
+							break;
+						}
+					case RS_IMM16:
+						if(!SearchReg(p, str, line, arr))
+						{
+							errors_count++;
+							break;
+						}
+					case IMM26:
+					case IMM16:
+						if(!SearchImm(p, str, line, arr))
+						{
+							errors_count++;
+							break;
+						}
+					break;
+					};
+
+					if(errors_count > 0) break;
+
+					const s32 compiled = Compile(arr, mask);
+					hex_list->WriteText(wxString::Format("%08x", compiled));
+
+					if(compile) Write32(f, compiled);
+
+					virt_line++;
+					break;
 				}
 
-				wxArrayLong arr;
-				arr.Clear();
-
-				if(opcode == -2) //TODO: T2R
-				{
-					if(!SearchReg(p, str, line, arr))
-					{
-						if(compile || !GoToNextLine(p, line, str)) return;
-						buf = wxEmptyString;
-						continue;
-					}
-
-					wxString text;
-					if(!SearchText(p, str, line, text))
-					{
-						if(compile || !GoToNextLine(p, line, str)) return;
-						buf = wxEmptyString;
-						continue;
-					}
-
-					if(compile)
-					{
-						Write32(f, ToOpcode(G1) | ToLS(LI) | ToRS(arr[0]) | ToIMM(0));
-
-						ConLog.Write("Text size: %d", WXSIZEOF(text));
-
-						const u64 text_u64 = *(u64*)text.char_str().data();
-
-						const s16 count = text_u64 / 0x7fff;
-						const u64 l_v = text_u64 - (count * 0x7fff);
-
-						Write32(f, ToOpcode(G1) | ToLS(LI) | ToRS(arr[0]) | ToRT(arr[0]) | ToIMM(0x7fff));
-						Write32(f, ToOpcode(MULLI) | ToRS(arr[0]) | ToRT(arr[0]) | ToIMM(count));
-						Write32(f, ToOpcode(G1) | ToLS(ADDI) | ToRS(arr[0]) | ToRT(arr[0]) | ToIMM(l_v));
-					}
-
-					buf = wxEmptyString;
-					continue;
-				}
-
-				const MASKS mask = OpcodeToMask(opcode);
-				if(mask == MASK_ERROR)
-				{
-					ConLog.Error("line %d: Unknown opcode '%s' mask", line, buf);
-					if(compile || !GoToNextLine(p, line, str)) return;
-					buf = wxEmptyString;
-					continue;
-				}
-
-				arr.Add(opcode);
-
-				switch(mask)
-				{
-				case RS_RT_IMM:
-					if(!SearchReg(p, str, line, arr))
-					{
-						if(compile || !GoToNextLine(p, line, str)) return;
-						buf = wxEmptyString;
-						continue;
-					}
-				case RS_IMM:
-					if(!SearchReg(p, str, line, arr))
-					{
-						if(compile || !GoToNextLine(p, line, str)) return;
-						buf = wxEmptyString;
-						continue;
-					}
-				case IMM:
-					if(!SearchImm(p, str, line, arr))
-					{
-						if(compile || !GoToNextLine(p, line, str)) return;
-						buf = wxEmptyString;
-						continue;
-					}
-				break;
-				};
-
-				if(compile) Write32(f, Compile(arr, mask));
-				line++;
-				buf = wxEmptyString;
-				continue;
+				buf += cur_str;
 			}
-
-			buf += cur_str;
 		}
+
+		if(compile && errors_count == 0) wxMessageBox("Compile done.", "Compile message");
 	}
 };

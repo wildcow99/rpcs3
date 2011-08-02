@@ -25,8 +25,14 @@ void SysThread::SetElf(wxString elf_patch)
 
 void SysThread::Run()
 {
-	if(IsRunned()) return;
-	if(IsPaused()) Resume();
+	if(IsRunned()) Stop();
+	if(IsPaused())
+	{
+		Resume();
+		return;
+	}
+
+	ConLog.Write("run...");
 
 	Memory.Init();
 
@@ -65,6 +71,7 @@ void SysThread::Run()
 void SysThread::Pause()
 {
 	if(!IsRunned()) return;
+	ConLog.Write("pause...");
 
 	m_cur_state = PAUSE;
 }
@@ -72,29 +79,26 @@ void SysThread::Pause()
 void SysThread::Resume()
 {
 	if(!IsPaused()) return;
+	ConLog.Write("resume...");
 
 	m_cur_state = RUN;
 	StepThread::DoStep();
 }
 
-void SysThread::Stop(bool CloseFrames)
+void SysThread::Stop()
 {
 	if(IsStoped()) return;
+	ConLog.Write("shutdown...");
 
 	m_cur_state = STOP;
 	StepThread::Exit();
-
-	ConLog.Write("Shutdown is started...");
 
 	Memory.Close();
 	CPU.Reset();
 	CurGameInfo.Reset();
 
-	if(CloseFrames)
-	{
-		if(m_memory_viewer && !m_memory_viewer->exit) m_memory_viewer->Hide();
-		if(decoder) delete decoder;
-	}
+	if(m_memory_viewer && !m_memory_viewer->exit) m_memory_viewer->Hide();
+	if(decoder) delete decoder;
 }
 
 void SysThread::Step()

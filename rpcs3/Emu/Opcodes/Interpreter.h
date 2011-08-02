@@ -13,7 +13,7 @@
 	virtual void UNK_##name##(\
 		const int code, const int opcode, OP_REG rs, OP_REG rt, OP_REG rd, OP_REG sa, const u32 func,\
 		OP_REG crfs, OP_REG crft, OP_REG crm, OP_REG bd, OP_REG lk, OP_REG ms, OP_REG mt, OP_REG mfm,\
-		OP_REG ls, const s32 imm_m, const s32 imm_s16, const u32 imm_u16, const u32 imm_u26) \
+		OP_REG ls, OP_REG lt, const s32 imm_m, const s32 imm_s16, const u32 imm_u16, const u32 imm_u26) \
 	{\
 		ConLog.Error\
 		(\
@@ -24,7 +24,7 @@
 			"crm: 0x%x : %d, bd: 0x%x : %d, " \
 			"lk: 0x%x : %d, ms: 0x%x : %d, " \
 			"mt: 0x%x : %d, mfm: 0x%x : %d, " \
-			"ls: 0x%x : %d, " \
+			"ls: 0x%x : %d, lt: 0x%x : %d," \
 			"imm m: 0x%x : %d, imm s16: 0x%x : %d, " \
 			"imm u16: 0x%x : %d, imm u26: 0x%x : %d, " \
 			"Branch: 0x%x, Jump: 0x%x", \
@@ -35,7 +35,7 @@
 			crm, crm, bd, bd, \
 			lk, lk, ms, ms, \
 			mt, mt, mfm, mfm, \
-			ls, ls, \
+			ls, ls, lt, lt, \
 			imm_m, imm_m, imm_s16, imm_s16, \
 			imm_u16, imm_u16, imm_u26, imm_u26, \
 			branchTarget(imm_u26), jumpTarget(imm_u26) \
@@ -99,10 +99,12 @@ private:
 	}
 	virtual void SUBFIC(OP_REG rs, OP_REG rt, OP_sREG imm_s16)
 	{
-		ConLog.Error("SUBFIC");
+		const s64 _rt = CPU.GPR[rt];
+		if(rs != 0) CPU.GPR[rs] = imm_s16 - _rt;
+		CPU.UpdateXER_CA(CPU.IsCarryGen(-_rt, imm_s16));
 	}
 	virtual void CMPLDI(OP_REG rs, OP_REG rt, OP_REG imm_u16)
-	{
+	{	
 		ConLog.Error("CMPLDI");
 	}
 	virtual void CMPDI(OP_REG rs, OP_REG rt, OP_REG rd)
@@ -225,6 +227,10 @@ private:
 			virtual void MACCHW(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
 				ConLog.Error("MACCHW r%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void NMACCHW(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("NMACCHW r%d,r%d,r%d", rs, rt, rd);
 			}
 		END_OPCODES_GROUP(G_0x04_0x5, "G_0x04_0x5");
 
@@ -431,6 +437,9 @@ private:
 		END_OPCODES_GROUP(G_0x04_0x1f, "G_0x04_0x1f");
 	END_OPCODES_GROUP(G_0x04, "G_0x04");
 
+	START_OPCODES_GROUP(G_0x0b)
+	END_OPCODES_GROUP(G_0x0b, "G_0x0b");
+
 	START_OPCODES_GROUP(G1)
 		virtual void LI(OP_REG rs, OP_sREG imm_s16)
 		{
@@ -452,7 +461,7 @@ private:
 	END_OPCODES_GROUP(G1, "G1");
 
 	START_OPCODES_GROUP(G_0x0f)
-		START_OPCODES_GROUP(G_0x0f_0x0)
+		
 			virtual void ADDIS(OP_REG rt, OP_REG rs, OP_sREG imm_s16)
 			{
 				if(rs == 0) return;
@@ -470,7 +479,7 @@ private:
 			{
 				ConLog.Error("LIS");
 			}
-		END_OPCODES_GROUP(G_0x0f_0x0, "G_0x0f_0x0");
+		
 	END_OPCODES_GROUP(G_0x0f, "G_0x0f");
 
 	START_OPCODES_GROUP(G2)
@@ -496,6 +505,38 @@ private:
 
 	START_OPCODES_GROUP(G3_S)
 		//virtual void BLR()
+		START_OPCODES_GROUP(G3_S_0x0)
+			virtual void MCRF(OP_REG crfs, OP_REG crft)
+			{
+				ConLog.Error("MCRF");
+			}
+			START_OPCODES_GROUP(G3_S_0x0_0x20)
+			virtual void BLELR(OP_REG crft)
+			{
+				ConLog.Error("BLELR");
+			}
+			virtual void BEQLR()
+			{
+				ConLog.Error("BEQLR");
+			}
+			virtual void BLR()
+			{
+				ConLog.Error("BLR");
+			}
+			END_OPCODES_GROUP(G3_S_0x0_0x20, "G3_S_0x0_0x20");
+		
+		END_OPCODES_GROUP(G3_S_0x0, "G3_S_0x0");
+		START_OPCODES_GROUP(G3_S_0x10)
+			virtual void BCTR()
+		{
+			ConLog.Error("BCTR");
+		}
+		virtual void BCTRL()
+		{
+			ConLog.Error("BCTRL");
+		}
+		END_OPCODES_GROUP(G3_S_0x10, "G3_S_0x10");
+		
 	END_OPCODES_GROUP(G3_S, "G3_S");
 
 	START_OPCODES_GROUP(G3_S0)
@@ -503,30 +544,33 @@ private:
 		{
 			ConLog.Error("RLWINM.");
 		}
+		virtual void RLWINM()
+		{
+			ConLog.Error("RLWINM");
+		}
+		
+	END_OPCODES_GROUP(G3_S0, "G3_S0");
+
+	START_OPCODES_GROUP(G3_S0_0x3e)
+		virtual void ROTLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+		{
+			ConLog.Error("ROTLWI");
+		}
 		virtual void CLRLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 		{
 			ConLog.Error("CLRLWI");
+		}
+	END_OPCODES_GROUP(G3_S0_0x3e, "G3_S0_0x3e");
+	START_OPCODES_GROUP(G3_S0_0x3f)
+		virtual void ROTLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+		{
+			ConLog.Error("ROTLWI.");
 		}
 		virtual void CLRLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 		{
 			ConLog.Error("CLRLWI.");
 		}
-	END_OPCODES_GROUP(G3_S0, "G3_S0");
-
-	START_OPCODES_GROUP(G3_S0_G0)
-		virtual void RLWINM()
-		{
-			ConLog.Error("RLWINM");
-		}
-		virtual void ROTLWI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
-		{
-			ConLog.Error("ROTLWI");
-		}
-		virtual void ROTLWI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
-		{
-			ConLog.Error("ROTLWI.");
-		}
-	END_OPCODES_GROUP(G3_S0_G0, "G3_S0_G0");
+	END_OPCODES_GROUP(G3_S0_0x3f, "G3_S0_0x3f");
 
 	virtual void ROTLW(OP_REG rt, OP_REG rs, OP_REG rd)
 	{
@@ -569,15 +613,15 @@ private:
 	//	ConLog.Error("LRLDIÑ");
 	//}
 	START_OPCODES_GROUP(G_0x1e)
-		START_OPCODES_GROUP(G_0x1e_G_0x14)
+			virtual void CLRLDI(OP_REG rt, OP_REG rs, OP_REG imm_u16)
+			{
+				ConLog.Error("CLRLDI r%d,r%d,%d #%x", rs, rt, imm_u16, imm_u16);
+			}
 			virtual void CLRLDI_(OP_REG rt, OP_REG rs, OP_REG imm_u16)
 			{
-				if (rt == 0) return;
-				CPU.GPR[rt] = CPU.GPR[rs] ^ (imm_u16 << 16);
-				CPU.UpdateCR0(CPU.GPR[rt]);
+				ConLog.Error("CLRLDI_ r%d,r%d,%d #%x", rs, rt, imm_u16, imm_u16);
 			}
-		END_OPCODES_GROUP(G_0x1e_G_0x14, "G_0x1e_G_0x14");
-	END_OPCODES_GROUP(G_0x1e, "G_0x1e");
+		END_OPCODES_GROUP(G_0x1e, "G_0x1e");
 
 	START_OPCODES_GROUP(G4)
 		START_OPCODES_GROUP(G4_G0)
@@ -647,11 +691,27 @@ private:
 			}
 			virtual void LDX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("LDX r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+
+				CPU.GPR[rs] = rt == 0
+					? Memory.Read64(CPU.GPR[rd])
+					: Memory.Read64(CPU.GPR[rt] + CPU.GPR[rd]);
+			}
+			virtual void LWZX(OP_REG rs, OP_REG rt, OP_REG rd)
+			{
+				ConLog.Error("LWZX r%d,r%d,r%d", rs, rt, rd);
 			}
 			virtual void CNTLZW(OP_REG rt, OP_REG rs)
 			{
-				ConLog.Error("CNTLZW r%d,r%d", rt, rs);
+				if(rt == 0) return;
+				for(u32 i=0, mask = 0x80000000; i<32; ++i, mask >>= 1)
+				{
+					if(mask & CPU.GPR[rs])
+					{
+						CPU.GPR[rt] = i;
+						break;
+					}
+				}
 			}
 			virtual void AND(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
@@ -713,14 +773,14 @@ private:
 			virtual void CNTLZD(OP_REG rs, OP_REG rt)
 			{
 				if(rt == 0) return;
-				u32 i;
-				s32 mask;
-				for(i=0, mask = 0x80000000; i<32; ++i, mask >>= 1)
+				for(u32 i=0, mask = 0x80000000; i<32; ++i, mask >>= 1)
 				{
-					if(mask & CPU.GPR[rs]) break;
+					if(mask & CPU.GPR[rs])
+					{
+						CPU.GPR[rt] = i;
+						break;
+					}
 				}
-
-				CPU.GPR[rt] = i;
 			}
 			virtual void ANDC(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
@@ -774,7 +834,11 @@ private:
 			}
 			virtual void LBZX(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
-				ConLog.Error("LBZX r%d,r%d,r%d", rt, rs, rd);
+				if(rs == 0) return;
+				
+				CPU.GPR[rs] = rt==0 
+					? Memory.Read8(CPU.GPR[rd]) 
+					: Memory.Read8(CPU.GPR[rt] + CPU.GPR[rd]);
 			}
 		END_OPCODES_GROUP(G4_G_0x2, "G4_G_0x2");
 
@@ -785,15 +849,18 @@ private:
 			}
 			virtual void NEG(OP_REG rs, OP_REG rt)
 			{
-				ConLog.Error("NEG r%d,r%d", rs, rt);
+				if(rs != 0) CPU.GPR[rs] = ~CPU.GPR[rt];
 			}
 			virtual void MUL(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("MUL r%d,r%d,r%d", rs, rt, rd);
+				if(rs != 0) CPU.GPR[rs] = CPU.GPR[rt] * CPU.GPR[rd];
 			}
 			virtual void MUL_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("MUL. r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+
+				CPU.GPR[rs] = CPU.GPR[rt] * CPU.GPR[rd];
+				CPU.UpdateCR0(CPU.GPR[rs]);
 			}
 			virtual void MTSRDIN(OP_REG rs, OP_REG rd)
 			{
@@ -816,19 +883,43 @@ private:
 			}
 			virtual void SUBFE(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("SUBFE r%d,r%d,r%d", rs, rt, rd);
+				const s64 _rt = ~CPU.GPR[rt];
+				const s64 _rd = CPU.GPR[rd];
+				const s64 _ca = CPU.IsXER_CA() ? 1 : 0;
+
+				if(rs != 0) CPU.GPR[rs] = _rt + _rd + _ca;
+				CPU.UpdateXER_CA(_rt, _rd, _ca);
 			}
 			virtual void SUBFE_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("SUBFE. r%d,r%d,r%d", rs, rt, rd);
+				const s64 _rt = ~CPU.GPR[rt];
+				const s64 _rd = CPU.GPR[rd];
+				const s64 _ca = CPU.IsXER_CA() ? 1 : 0;
+
+				const s64 value = _rt + _rd + _ca;
+				if(rs != 0) CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
+				CPU.UpdateXER_CA(_rt, _rd, _ca);
 			}
 			virtual void ADDE(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("ADDE r%d,r%d,r%d", rs, rt, rd);
+				const s64 _rt = CPU.GPR[rt];
+				const s64 _rd = CPU.GPR[rd];
+				const s64 _ca = CPU.IsXER_CA() ? 1 : 0;
+
+				if(rs != 0) CPU.GPR[rs] = _rt + _rd + _ca;
+				CPU.UpdateXER_CA(_rt, _rd, _ca);
 			}
 			virtual void ADDE_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("ADDE. r%d,r%d,r%d", rs, rt, rd);
+				const s64 _rt = CPU.GPR[rt];
+				const s64 _rd = CPU.GPR[rd];
+				const s64 _ca = CPU.IsXER_CA() ? 1 : 0;
+
+				const s64 value = _rt + _rd + _ca;
+				if(rs != 0) CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
+				CPU.UpdateXER_CA(_rt, _rd, _ca);
 			}
 			//virtual void MTOCRF(OP_REG rs) //FIXME
 			//{
@@ -836,7 +927,15 @@ private:
 			//}
 			virtual void STDX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("STDX r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+				if(rt == 0)
+				{
+					Memory.Write64(CPU.GPR[rs], CPU.GPR[rd]);
+				}
+				else
+				{
+					Memory.Write64(CPU.GPR[rs], CPU.GPR[rt] + CPU.GPR[rd]);
+				}
 			}
 			virtual void STWCX_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
@@ -844,7 +943,15 @@ private:
 			}
 			virtual void STWX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("STWX r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+				if(rt == 0)
+				{
+					Memory.Write32(CPU.GPR[rs], CPU.GPR[rd]);
+				}
+				else
+				{
+					Memory.Write32(CPU.GPR[rs], CPU.GPR[rt] + CPU.GPR[rd]);
+				}
 			}
 			virtual void SLQ(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
@@ -882,19 +989,29 @@ private:
 			}
 			virtual void ADDME(OP_REG rs, OP_REG rt)
 			{
-				ConLog.Error("ADDME r%d,r%d", rs, rt);
+				const s8 _ca = CPU.IsXER_CA() - 1;
+				const s64 _rt = CPU.GPR[rt];
+				if(rs != 0) CPU.GPR[rs] = _rt + _ca;
+				CPU.UpdateXER_CA(_rt, _ca);
 			}
 			virtual void ADDME_(OP_REG rs, OP_REG rt)
 			{
-				ConLog.Error("ADDME. r%d,r%d", rs, rt);
+				const s8 _ca = CPU.IsXER_CA() - 1;
+				const s64 _rt = CPU.GPR[rt];
+				const s64 value = _rt + _ca;
+				if(rs != 0) CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
+				CPU.UpdateXER_CA(_rt, _ca);
 			}
 			virtual void MULLW(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("MULLW r%d,r%d,r%d", rs, rt, rd);
+				if(rs != 0) CPU.GPR[rs] = (CPU.GPR[rt] * CPU.GPR[rd]) & 0xffffffffll;
 			}
 			virtual void MULLW_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("MULLW. r%d,r%d,r%d", rs, rt, rd);
+				const s64 value = (CPU.GPR[rt] * CPU.GPR[rd]) & 0xffffffffll;
+				if(rs != 0) CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
 			}
 			virtual void DCBTST(OP_REG rt, OP_REG rd)
 			{
@@ -943,7 +1060,11 @@ private:
 			}
 			virtual void LHZX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("LHZX r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+
+				CPU.GPR[rs] = rt==0 
+					? Memory.Read16(CPU.GPR[rd]) 
+					: Memory.Read16(CPU.GPR[rt] + CPU.GPR[rd]);
 			}
 			virtual void EQV(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
@@ -958,11 +1079,19 @@ private:
 		START_OPCODES_GROUP(G4_G_ADDZE)
 			virtual void ADDZE(OP_REG rs, OP_REG rt)
 			{
-				ConLog.Error("ADDZE r%d,r%d", rs, rt);
+				const s64 _rt = CPU.GPR[rt];
+				const s8 _ca = CPU.IsXER_CA();
+				if(rs != 0) CPU.GPR[rs] = _rt + _ca;
+				CPU.UpdateXER_CA(_rt, _ca);
 			}
 			virtual void ADDZE_(OP_REG rs, OP_REG rt)
 			{
-				ConLog.Error("ADDZE. r%d,r%d", rs, rt);
+				const s64 _rt = CPU.GPR[rt];
+				const s8 _ca = CPU.IsXER_CA();
+				const s64 value = _rt + _ca;
+				if(rs != 0) CPU.GPR[rs] = value;
+				CPU.UpdateXER_CA(_rt, _ca);
+				CPU.UpdateCR0(value);
 			}
 		END_OPCODES_GROUP(G4_G_ADDZE, "G4_G_ADDZE");
 		//virtual void XOR(OP_REG rt, OP_REG rs, OP_REG rd)
@@ -971,7 +1100,7 @@ private:
 		//}
 		virtual void SRW(OP_REG rt, OP_REG rs, OP_REG rd)
 		{
-			ConLog.Error("SRW r%d,r%d,r%d", rt, rs, rd);
+			if(rt != 0) CPU.GPR[rt] = CPU.GPR[rs] >> (CPU.GPR[rd] & 0x1f);
 		}
 		//virtual void MFLR(OP_REG rs)
 		//{
@@ -984,11 +1113,14 @@ private:
 			}
 			virtual void LHZUX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("LHZUX r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0 || rt == rs) return;
+				const s64 value = CPU.GPR[rt] + CPU.GPR[rd];
+				CPU.GPR[rs] = Memory.Read16(value);
+				CPU.GPR[rt] = value;
 			}
 			virtual void XOR(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
-				ConLog.Error("XOR r%d,r%d,r%d", rt, rs, rd);
+				if(rt != 0) CPU.GPR[rt] = CPU.GPR[rs] ^ CPU.GPR[rd];
 			}
 		END_OPCODES_GROUP(G4_G_0x9, "G4_G_0x9");
 
@@ -1034,27 +1166,37 @@ private:
 
 		START_OPCODES_GROUP(G4_G_0xb)
 			virtual void LVXL(OP_REG rs, OP_REG rt, OP_REG rd)
-		{
-			ConLog.Error("LVXL v%d,r%d,r%d", rs, rt, rd);
-		}
-		virtual void MFTB(OP_REG rs)
-		{
-			ConLog.Error("MFTB r%d", rs);
-		}
+			{
+				ConLog.Error("LVXL v%d,r%d,r%d", rs, rt, rd);
+			}
+			virtual void MFTB(OP_REG rs)
+			{
+				ConLog.Error("MFTB r%d", rs);
+			}
 		END_OPCODES_GROUP(G4_G_0xb, "G4_G_0xb");
 
 		START_OPCODES_GROUP(G4_G5)
 			virtual void STHX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("STHX r%d,r%d,r%d", rs, rt, rd);
+				if(rs == 0) return;
+				if(rt == 0)
+				{
+					Memory.Write16(CPU.GPR[rs], CPU.GPR[rd]);
+				}
+				else
+				{
+					Memory.Write16(CPU.GPR[rs], CPU.GPR[rt] + CPU.GPR[rd]);
+				}
 			}
 			virtual void ORC(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
-				ConLog.Error("ORC r%d,r%d,r%d", rt, rs, rd);
+				if(rt != 0) CPU.GPR[rt] = CPU.GPR[rs] | (~CPU.GPR[rd]);
 			}
 			virtual void ORC_(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
-				ConLog.Error("ORC. r%d,r%d,r%d", rt, rs, rd);
+				const s64 value = CPU.GPR[rs] | (~CPU.GPR[rd]);
+				if(rt != 0) CPU.GPR[rt] = value;
+				CPU.UpdateCR0(value);
 			}
 		END_OPCODES_GROUP(G4_G5, "G4_G5");
 		//virtual void MR(OP_REG rt, OP_REG rs)
@@ -1080,11 +1222,15 @@ private:
 			}
 			virtual void DIVWU(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("DIVWU r%d,r%d,r%d", rs, rt, rd);
+				if(rs != 0 && (s32)CPU.GPR[rd] != 0)
+					CPU.GPR[rs] = (s32)CPU.GPR[rt] / (s32)CPU.GPR[rd];
 			}
 			virtual void DIVWU_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("DIVWU. r%d,r%d,r%d", rs, rt, rd);
+				if((s32)CPU.GPR[rd] == 0) return;
+				const s32 value = (s32)CPU.GPR[rt] / (s32)CPU.GPR[rd];
+				if(rs != 0) CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
 			}
 			virtual void DCBI(OP_REG rt, OP_REG rd)
 			{
@@ -1092,11 +1238,13 @@ private:
 			}
 			virtual void NAND(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
-				ConLog.Error("NAND r%d,r%d,r%d", rt, rs, rd);
+				if(rt != 0) CPU.GPR[rt] = ~(CPU.GPR[rs] & CPU.GPR[rt]);
 			}
 			virtual void NAND_(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
-				ConLog.Error("NAND. r%d,r%d,r%d", rt, rs, rd);
+				const s64 value = ~(CPU.GPR[rs] & CPU.GPR[rt]);
+				if(rt != 0) CPU.GPR[rt] = value;
+				CPU.UpdateCR0(value);
 			}
 			START_OPCODES_GROUP(G4_G6_G1)
 				//virtual void MTSPR(OP_REG rs)
@@ -1146,11 +1294,17 @@ private:
 			}
 			virtual void ADDCO(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("ADDCO r%d,r%d,r%d", rs, rt, rd);
+				CPU.UpdateXER_SO_OV(CPU.GPR[rt], CPU.GPR[rd]);
+				CPU.UpdateXER_CA(CPU.CheckOverflow(CPU.GPR[rt], CPU.GPR[rd]));
+				if(rs != 0) CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd];
 			}
 			virtual void ADDCO_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("ADDCO. r%d,r%d,r%d", rs, rt, rd);
+				CPU.UpdateXER_SO_OV(CPU.GPR[rt], CPU.GPR[rd]);
+				CPU.UpdateXER_CA(CPU.CheckOverflow(CPU.GPR[rt], CPU.GPR[rd]));
+				const s64 value = CPU.GPR[rt] + CPU.GPR[rd];
+				if(rs != 0) CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
 			}
 			virtual void LSWX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
@@ -1162,7 +1316,9 @@ private:
 			}
 			virtual void LFSX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("LFSX r%d,r%d,r%d", rs, rt, rd);
+				if(rs != 0) CPU.FPR[rs] = rt == 0 ? 
+					Memory.Read32(CPU.GPR[rd]) :
+					Memory.Read32(CPU.GPR[rt] + CPU.GPR[rd]);
 			}
 			virtual void MASKIR(OP_REG rt, OP_REG rs, OP_REG rd)
 			{
@@ -1196,7 +1352,9 @@ private:
 			}
 			virtual void LFDX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("LFDX f%d,r%d,r%d", rs, rt, rd);
+				if(rs != 0) CPU.FPR[rs] = rt == 0 ? 
+					Memory.Read64(CPU.GPR[rd]) :
+					Memory.Read64(CPU.GPR[rt] + CPU.GPR[rd]);
 			}
 		END_OPCODES_GROUP(G4_G_0x12, "G4_G_0x12");
 
@@ -1229,17 +1387,17 @@ private:
 			virtual void ADDEO(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
 				if(rs == 0) return;
-				CPU.UpdateXER_SO_OV(CPU.GPR[rt], CPU.GPR[rd], CPU.XER[XER_CA]);
-				CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd] + CPU.XER[XER_CA];
-				CPU.UpdateXER_CA(CPU.GPR[rt], CPU.GPR[rd], CPU.XER[XER_CA]);
+				CPU.UpdateXER_SO_OV(CPU.GPR[rt], CPU.GPR[rd], CPU.IsXER_CA());
+				CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd] + CPU.IsXER_CA();
+				CPU.UpdateXER_CA(CPU.GPR[rt], CPU.GPR[rd], CPU.IsXER_CA());
 			}
 			virtual void ADDEO_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
 				if(rs == 0) return;
-				const s64 value = CPU.GPR[rt] + CPU.GPR[rd] + CPU.XER[XER_CA];
-				CPU.UpdateXER_SO_OV(CPU.GPR[rt], CPU.GPR[rd], CPU.XER[XER_CA]);
+				const s64 value = CPU.GPR[rt] + CPU.GPR[rd] + CPU.IsXER_CA();
+				CPU.UpdateXER_SO_OV(CPU.GPR[rt], CPU.GPR[rd],CPU.IsXER_CA());
 				CPU.GPR[rs] = value;
-				CPU.UpdateXER_CA(CPU.GPR[rt], CPU.GPR[rd], CPU.XER[XER_CA]);
+				CPU.UpdateXER_CA(CPU.GPR[rt], CPU.GPR[rd],CPU.IsXER_CA());
 				CPU.UpdateCR0(value);
 			}
 
@@ -1285,15 +1443,21 @@ private:
 			}
 			virtual void ADDO(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("ADDO f%d,r%d,r%d", rs, rt, rd);
+				CPU.UpdateXER_SO_OV(CPU.CheckOverflow(CPU.GPR[rt], CPU.GPR[rd]));
+				if(rs != 0) CPU.GPR[rs] = CPU.GPR[rt] + CPU.GPR[rd];
 			}
 			virtual void ADDO_(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("ADDO. f%d,r%d,r%d", rs, rt, rd);
+				CPU.UpdateXER_SO_OV(CPU.CheckOverflow(CPU.GPR[rt], CPU.GPR[rd]));
+				const s64 value = CPU.GPR[rt] + CPU.GPR[rd];
+				if(rs != 0) CPU.GPR[rs] = value;
+				CPU.UpdateCR0(value);
 			}
 			virtual void LHBRX(OP_REG rs, OP_REG rt, OP_REG rd)
 			{
-				ConLog.Error("LHBRX f%d,r%d,r%d", rs, rt, rd);
+				if(rs != 0) CPU.GPR[rs] = rt == 0 ?
+					Memory.Read16(CPU.GPR[rd]) :
+					Memory.Read16(CPU.GPR[rt] + CPU.GPR[rd]);
 			}
 		END_OPCODES_GROUP(G4_G_ADDO, "G4_G_ADDO");
 
@@ -1431,10 +1595,10 @@ private:
 		//{
 		//	ConLog.Error("DCBZ r%d,r%d", rt, rd);
 		//}
-		virtual void LWZX(OP_REG rs, OP_REG rt, OP_REG rd)
-		{
-			ConLog.Error("LWZX r%d,r%d,r%d", rs, rt, rd);
-		}
+		//virtual void LWZX(OP_REG rs, OP_REG rt, OP_REG rd)
+		//{
+		//	ConLog.Error("LWZX r%d,r%d,r%d", rs, rt, rd);
+		//}
 	END_OPCODES_GROUP(G4, "G4");
 	//virtual void MFLR(OP_REG rs)=0;
 	//

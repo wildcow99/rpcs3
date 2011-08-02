@@ -10,7 +10,6 @@ class Rpcs3App : public wxApp
 
 public:
     virtual bool OnInit();
-	virtual void CleanUp();
 	virtual void Exit();
 };
 

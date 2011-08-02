@@ -38,6 +38,7 @@ DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 	SetSize(50, 650);
 
 	Connect( wxEVT_SIZE, wxSizeEventHandler(DisAsmFrame::OnResize) );
+
 	wxTheApp->Connect(m_disasm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(DisAsmFrame::MouseWheel));
 
 	Connect(b_prev.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Prev));
@@ -141,7 +142,7 @@ public:
 		Show();
 	}
 
-	__forceinline void Update(const uint thread_id, const uint value, const wxString msg)
+	__forceinline void Update(const uint thread_id, const u32 value, const wxString& msg)
 	{
 		if(thread_id > m_cores) return;
 
@@ -151,8 +152,22 @@ public:
 
 		m_msg[thread_id]->SetLabel(msg);
 
-		if(value >= (uint)m_maximum[thread_id]) return;
+		if(value >= (u32)m_maximum[thread_id]) return;
 		m_gauge[thread_id]->SetValue(((double)value / (double)m_maximum[thread_id]) * maxdial);
+	}
+
+	const u32 GetMaxValue(const uint thread_id) const
+	{
+		if(thread_id > m_cores) return 0;
+		return m_maximum[thread_id];
+	}
+
+	virtual void Close(bool force = false)
+	{
+		m_lastupdate.Empty();
+		m_maximum.Empty();
+
+		wxDialog::Close(force);
 	}
 };
 
@@ -161,23 +176,19 @@ class DumperThread : public StepThread
 	volatile uint id;
 	DisAsmOpcodes* disasm;
 	Decoder* decoder;
-	volatile u64 pc;
 	volatile bool* done;
 	volatile u8 cores;
-	volatile u64 length;
 	MTProgressDialog* prog_dial;
-	wxArrayString* arr;
+	wxArrayString** arr;
 
 public:
 	DumperThread() : StepThread()
 	{
 	}
 
-	void Set(uint _id, uint _length, u8 _cores, bool* _done, MTProgressDialog& _prog_dial, wxArrayString* _arr)
+	void Set(uint _id, u8 _cores, bool* _done, MTProgressDialog& _prog_dial, wxArrayString** _arr)
 	{
 		id = _id;
-		pc = id * 4;
-		length = _length;
 		cores = _cores;
 		done = _done;
 		prog_dial = &_prog_dial;
@@ -193,18 +204,28 @@ public:
 	{
 		ConLog.Write("Start dump in thread %d!", (int)id);
 
-		while(pc < length)
+		const wxArrayPtrVoid& sh_ptr = elf_loader.m_sh_ptr;
+		const u32 max_value = prog_dial->GetMaxValue(id);
+
+		for(u32 sh=0, vsize=0; sh<sh_ptr.GetCount(); ++sh)
 		{
-			//ConLog.Write("%d thread: %d of %d", (int)id, (int)pc, (int)length);
-			prog_dial->Update((int)id, (int)pc, wxString::Format("%d thread: %d of %d", (int)id + 1, (int)pc, (int)length));
+			const ElfLoader::Elf64_Shdr& c_sh = *(ElfLoader::Elf64_Shdr*)sh_ptr[sh];
 
-			disasm->dump_pc = pc;
-			decoder->DoCode(Memory.Read32(pc));
-			
-			arr[id].Add(disasm->last_opcode);
+			for(u64 addr=c_sh.sh_addr + (id * 4), size=0; size<c_sh.sh_size; vsize++, size+=cores)
+			{
+				prog_dial->Update(id, vsize, wxString::Format("%d thread: %d of %d",
+					(int)id + 1, vsize, max_value));
 
-			pc += (cores - id) * 4; //goto next global block
-			pc += id * 4; //goto my block
+				disasm->dump_pc = addr;
+				decoder->DoCode(Memory.Read32(addr));
+
+				if(sh == 1) ConLog.Write(wxString::Format("	%d: %s", addr, disasm->last_opcode));
+
+				arr[id][sh].Add(disasm->last_opcode);
+
+				addr += (cores - id) * 4;
+				addr += id * 4;
+			}
 		}
 
 		ConLog.Write("Finish dump in thread %d!", (int)id);
@@ -232,16 +253,14 @@ struct WaitDumperThread : public ThreadBase
 {
 	volatile bool* done;
 	volatile u8 cores;
-	volatile uint length;
 	wxString patch;
 	MTProgressDialog& prog_dial;
-	wxArrayString* arr;
+	wxArrayString** arr;
 
-	WaitDumperThread(bool* _done, u8 _cores, uint _length, wxString _patch, MTProgressDialog& _prog_dial, wxArrayString* _arr) 
+	WaitDumperThread(bool* _done, u8 _cores, wxString _patch, MTProgressDialog& _prog_dial, wxArrayString** _arr) 
 		: ThreadBase()
 		, done(_done)
 		, cores(_cores)
-		, length(_length)
 		, patch(_patch)
 		, prog_dial(_prog_dial)
 		, arr(_arr)
@@ -264,39 +283,65 @@ struct WaitDumperThread : public ThreadBase
 		}
 
 		ConLog.Write("Saving dump is started!");
+
+		const wxArrayPtrVoid& sh_ptr = elf_loader.m_sh_ptr;
+		const uint length_for_core = prog_dial.GetMaxValue(0);
+		const uint length = length_for_core * cores;
 		prog_dial.Close();
 
 		wxArrayInt max;
 		max.Add(length);
 		MTProgressDialog& prog_dial2 = 
-			*new MTProgressDialog(NULL, wxDefaultSize, "Saving...", "Loading", max, 1);
+			*new MTProgressDialog(NULL, wxDefaultSize, "Saving", "Loading...", max, 1);
 
 		wxFile fd;
 		fd.Open(patch, wxFile::write);
 
-		for(uint i=0, c=0, v=0; i<length; i++, c++)
+		for(uint sh=0; sh<sh_ptr.GetCount(); ++sh)
 		{
-			if(c >= cores)
+			const ElfLoader::Elf64_Shdr& c_sh = *(ElfLoader::Elf64_Shdr*)sh_ptr[sh];
+
+			if(!c_sh.sh_size) continue;
+			const uint c_sh_size = c_sh.sh_size/4;
+
+			fd.Write(wxString::Format("Start of section header %d (instructions count: %d)\n", sh, c_sh_size));
+
+			for(uint i=0, c=0, v=0; i<c_sh_size; i++, c++)
 			{
-				c = 0;
-				v++;
+				if(c >= cores)
+				{
+					c = 0;
+					v++;
+				}
+
+				prog_dial2.Update(0, i, wxString::Format("Saving data to file: %d of %d", i, length));
+
+				if(v >= arr[c][sh].GetCount())
+				{
+					ConLog.Warning("skip!!!");
+					continue;
+				}
+
+				fd.Write("	");
+				fd.Write(arr[c][sh][v]);
 			}
 
-			prog_dial2.Update(0, i, wxString::Format("Saving data to file: %d of %d", i, length));
-
-			if(v >= arr[c].GetCount()) continue;
-
-			fd.Write(arr[c][v]);
+			fd.Write(wxString::Format("End of section header %d\n\n", sh));
 		}
 		
 		ConLog.Write("CleanUp dump saving!");
 
-		for(uint i=0; i<cores; ++i) arr[i].Empty();
+		for(uint c=0; c<cores; ++c)
+		{
+			for(uint sh=0; sh<sh_ptr.GetCount(); ++sh) arr[c][sh].Empty();
+			free(arr[c]);
+		}
+
+		free(arr);
+		free(*arr);
 
 		prog_dial2.Close();
 		fd.Close();
-		Memory.Close();
-		CPU.Reset();
 
 		wxMessageBox("rpcs3 message", "Dumping done.");
 
@@ -311,22 +356,10 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		wxEmptyString, "DumpOpcodes.txt", "*.txt", wxFD_SAVE);
 
 	if(ctrl.ShowModal() == wxID_CANCEL) return;
+	
+	const wxArrayPtrVoid& sh_ptr = elf_loader.m_sh_ptr;
 
-	if(!System.IsStoped()) System.Stop(false);
-
-	Memory.Init();
-
-	if(System.IsSlef)
-	{
-		elf_loader.LoadSelf(true);
-	}
-	else
-	{
-		elf_loader.LoadElf(true);
-	}
-
-	const uint dump_size = elf_loader.elf_size;
-	if(dump_size == 0) return;
+	if(sh_ptr.GetCount() <= 0) return;
 
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
@@ -334,28 +367,38 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		(si.dwNumberOfProcessors < 1 || si.dwNumberOfProcessors > 8 ? 2 : si.dwNumberOfProcessors); 
 
 	wxArrayInt max;
-	for(uint i=0; i<cores_count; ++i)
+	max.Clear();
+
+	u32 max_count = 0;
+	for(uint sh=0; sh<sh_ptr.GetCount(); ++sh)
 	{
-		max.Add(dump_size/cores_count);
+		ElfLoader::Elf64_Shdr& c_sh = *(ElfLoader::Elf64_Shdr*)sh_ptr[sh];
+		while(max_count < c_sh.sh_size) max_count += cores_count;
+	}
+
+	for(uint c=0; c<cores_count; ++c)
+	{
+		max.Add(max_count);
 	}
 
 	MTProgressDialog& prog_dial = *new MTProgressDialog(this, wxDefaultSize, "Dumping...", "Loading", max, cores_count);
 
 	DumperThread* dump = new DumperThread[cores_count];
-	wxArrayString* arr = new wxArrayString[cores_count];
+	wxArrayString** arr = new wxArrayString*[cores_count];
 
 	bool* threads_done = new bool[cores_count];
 
 	for(uint i=0; i<cores_count; ++i)
 	{
-		dump[i].Set(i, dump_size/cores_count, cores_count, &threads_done[i], prog_dial, arr);
+		arr[i] = new wxArrayString[sh_ptr.GetCount()];
+		dump[i].Set(i, cores_count, &threads_done[i], prog_dial, arr);
 		dump[i].Start(true);
 	}
 
 	for(uint i=0; i<cores_count; ++i) dump[i].DoStep();
 
 	WaitDumperThread& wait_dump = 
-		*new WaitDumperThread(threads_done, cores_count, (dump_size/cores_count)/4, ctrl.GetPath(), prog_dial, arr);
+		*new WaitDumperThread(threads_done, cores_count, ctrl.GetPath(), prog_dial, arr);
 	wait_dump.Start(true);
 }
 

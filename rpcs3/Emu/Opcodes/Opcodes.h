@@ -11,7 +11,7 @@
 	virtual void UNK_##x##( \
 		const int code, const int opcode, OP_REG rs, OP_REG rt, OP_REG rd, OP_REG sa, const u32 func,\
 		OP_REG crfs, OP_REG crft, OP_REG crm, OP_REG bd, OP_REG lk, OP_REG ms, OP_REG mt, OP_REG mfm,\
-		OP_REG ls, const s32 imm_m, const s32 imm_s16, const u32 imm_u16, const u32 imm_u26)=0
+		OP_REG ls, OP_REG lt, const s32 imm_m, const s32 imm_s16, const u32 imm_u16, const u32 imm_u26)=0
 
 enum MainOpcodes
 {
@@ -21,8 +21,10 @@ enum MainOpcodes
 	G_0x04 = 0x04,
 	MULLI = 0x07,
 	SUBFIC = 0x08,
+	//0x09, //DOZI???
 	CMPLDI = 0x0a,
-	CMPDI = 0x0b,
+	//CMPDI = 0x0b,
+	G_0x0b = 0x0b,
 	ADDIC = 0x0c,
 	ADDIC_ = 0x0d,
 	G1 = 0x0e,
@@ -42,7 +44,7 @@ enum MainOpcodes
 	XORIS = 0x1b,
 	ANDI_ = 0x1c,
 	ANDIS_ = 0x1d,
-	G_0x1e, //temp
+	G_0x1e = 0x1e,
 	//LRLDIÑ = 0x1e,
 	G4 = 0x1f,
 	LWZ = 0x20,
@@ -153,6 +155,7 @@ enum G_0x04_0x5 //func
 {
 	MULCHW = 0x10,
 	MACCHW = 0x18, //sa0x5
+	NMACCHW = 0x20,
 };
 
 enum G_0x04_0x6 //func
@@ -265,21 +268,20 @@ enum G_0x04_0x1f //func
 	NMACLHWSO_ = 0x1d,
 };
 
+enum G_0x0b //???
+{
+};
+
 enum G1Opcodes //ls
 {
 	LI = 0x0,
 	ADDI = 0x1,
 };
 
-enum G_0x0f //sa??
+enum G_0x0f //lt
 {
-	G_0x0f_0x0 = 0x0,
-};
-
-enum G_0x0f_0x0 //func??
-{
-	ADDIS = 0x3,
-	LIS = 0x20,
+	ADDIS = 0x0,
+	LIS = 0x1,
 };
 
 enum G2Opcodes //sa??
@@ -294,30 +296,53 @@ enum BRANCHOpcodes //lk
 
 enum G3_SOpcodes //sa
 {
+
+	G3_S_0x0 = 0x0,
+	G3_S_0x10 = 0x10,
 };
 
-enum G3_S0Opcodes //sa
+enum G3_S_0x0 //func
 {
-	G3_S0_G0 = 0x0,
-	RLWINM_ = 0x5,
-	CLRLWI = 0x18,
-	CLRLWI_ = 0x1a,
+	MCRF = 0x0,
+	G3_S_0x0_0x20 = 0x20,
 };
 
-enum G3_S0_G0 //func
+enum G3_S_0x0_0x20 //rs
 {
-	RLWINM = 0x3a,
-	ROTLWI = 0x3e,
-	ROTLWI_ = 0x3f,
+	BLELR = 0x4, //rs=4
+	BEQLR = 0xc, //rs=12
+	BLR = 0x14, //rs=20
 };
 
-enum G_0x1e //sa
+enum G3_S_0x10 //func
 {
-	G_0x1e_G_0x14 = 0x14,
+	BCTR = 0x20,
+	BCTRL = 0x21,
 };
 
-enum G_0x1e_G_0x14 //func
+enum G3_S0Opcodes //func
 {
+	RLWINM_ = 0x1b,
+    RLWINM = 0x3a,
+	G3_S0_0x3e = 0x3e,
+	G3_S0_0x3f = 0x3f,
+};
+
+enum G3_S0_0x3e //lt
+{
+    ROTLWI = 0x0,
+	CLRLWI = 0x1,
+};
+
+enum G3_S0_0x3f //lt
+{
+	ROTLWI_ = 0x0,
+	CLRLWI_ = 0x1,
+};
+
+enum G_0x1e //func
+{
+	CLRLDI = 0x20,
 	CLRLDI_ = 0x21,
 };
 
@@ -325,52 +350,37 @@ enum G4Opcodes //sa
 {
 	G4_G0 = 0x0,
 	G4_G1 = 0x1,
-	//MULHW = 0x2,
-	G4_G_0x2 = 0x2, //temp
+	G4_G_0x2 = 0x2,
 	G4_G2 = 0x3,
 	G4_G3 = 0x4,
 	STDUX = 0x5,
-	//ADDZE = 0x6,
 	G4_G_ADDZE = 0x6,
 	G4_G4 = 0x7,
 	G4_G_ADD = 0x8,
-	//LHZUX = 0x9,
-	//XOR = 0x9,
-	//DOZI = 0x9, ???
 	G4_G_0x9 = 0x9,
-	//MFLR = 0xa,
-	G4_G_0xa = 0xa, //temp
-	//LVXL = 0xb,
+	G4_G_0xa = 0xa,
 	G4_G_0xb = 0xb,
 	G4_G5 = 0xc,
 	//MR = 0xd,
 	//OR = 0xd, ???
 	G4_G6 = 0xe,
-	//DIVW = 0xf,
-	G4_G_0xf = 0xf, //temp
+	G4_G_0xf = 0xf,
 	G4_G_ADDCO = 0x10,
-	//SUBFO = 0x11,
 	G4_G_0x11 = 0x11,
-	//LWSYNC = 0x12, //FIXME
 	G4_G_0x12 = 0x12,
 	G4_G7 = 0x13,
-	//STFSX = 0x14,
 	G4_G_ADDEO = 0x14,
 	G4_G8 = 0x16,
 	G4_G9 = 0x17,
-	//SRAW = 0x18,
-	G4_G_ADDO = 0x18, //temp
+	G4_G_ADDO = 0x18,
 	SRAWI = 0x19,
-	//EIEIO = 0x1a, //FIXME
-	G4_G_0x1a = 0x1a, //temp
+	G4_G_0x1a = 0x1a,
 	G4_G10 = 0x1b,
 	EXTSH = 0x1c,
 	EXTSB = 0x1d,
-	G4_G_0x1e = 0x1e, //temp
-	//EXTSW = 0x1e,
-	//DCBZ = 0x1f,
-	G4_G_0x1f = 0x1f, //temp
-	LWZX = 0x2e,
+	G4_G_0x1e = 0x1e,
+	G4_G_0x1f = 0x1f,
+	//LWZX = 0x2e,
 };
 
 enum G4_G0Opcodes //func
@@ -385,11 +395,10 @@ enum G4_G0Opcodes //func
 	ADDC = 0x14,
 	MULHWU = 0x16,
 	MULHWU_ = 0x17,
-	//MFCR = 0x26,
-	//MFOCRF = 0x26,
 	G4_G0_0x26 = 0x26,
 	LWARX = 0x28,
 	LDX = 0x2a,
+	LWZX = 0x2e,
 	CNTLZW = 0x34,
 	AND = 0x38,
 	AND_ = 0x39,
@@ -687,9 +696,9 @@ enum G4_G_0x1f //func
 
 enum G_0x3a //func
 {
-	LDU = 0x9,
+	//LDU = 0x9,
 	LWA = 0x26,
-	LD = 0x28,
+	//LD = 0x28,
 };
 
 enum G4_SOpcodes //func
@@ -761,8 +770,8 @@ enum G5_G0x1cOpcodes //sa
 {
 	FCTIW = 0x0,
 	FCTID = 0x19,
-	//FCFID -> sa==0x1a ???
-	FCFID = 0x1c,
+	FCFID = 0x1a,
+	
 };
 
 enum G5_G0x1eOpcodes //sa
@@ -778,7 +787,6 @@ class Opcodes
 public:
 	virtual void Exit()=0;
 	virtual void Step()=0;
-	//virtual bool DoSysCall(const int code);
 
 	static int branchTarget(const int imm_u26)
 	{
@@ -831,7 +839,7 @@ public:
 	ADD_OPCODE(MULLI,(OP_REG rt, OP_REG rs, OP_sREG imm_s16));
 	ADD_OPCODE(SUBFIC,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
 	ADD_OPCODE(CMPLDI,(OP_REG rs, OP_REG rt, OP_REG imm_u16));
-	ADD_OPCODE(CMPDI,(OP_REG rs, OP_REG rt, OP_REG rd));
+	//ADD_OPCODE(CMPDI,(OP_REG rs, OP_REG rt, OP_REG rd));
 	ADD_OPCODE(ADDIC,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
 	ADD_OPCODE(ADDIC_,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
 
@@ -871,6 +879,7 @@ public:
 		START_OPCODES_GROUP(G_0x04_0x5)
 			ADD_OPCODE(MULCHW,(OP_REG rs, OP_REG rt, OP_REG rd));
 			ADD_OPCODE(MACCHW,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(NMACCHW,(OP_REG rs, OP_REG rt, OP_REG rd));
 		END_OPCODES_GROUP(G_0x04_0x5);
 
 		START_OPCODES_GROUP(G_0x04_0x6)
@@ -965,16 +974,17 @@ public:
 		END_OPCODES_GROUP(G_0x04_0x1f);
 	END_OPCODES_GROUP(G_0x04);
 
+	START_OPCODES_GROUP(G_0x0b)
+	END_OPCODES_GROUP(G_0x0b);
+
 	START_OPCODES_GROUP(G1)
 		ADD_OPCODE(LI,(OP_REG rs, OP_sREG imm_s16));
 		ADD_OPCODE(ADDI,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
 	END_OPCODES_GROUP(G1);
 
 	START_OPCODES_GROUP(G_0x0f)
-		START_OPCODES_GROUP(G_0x0f_0x0)
-			ADD_OPCODE(ADDIS,(OP_REG rt, OP_REG rs, OP_sREG imm_s16));
-			ADD_OPCODE(LIS,(OP_REG rs, OP_sREG imm_s16));
-		END_OPCODES_GROUP(G_0x0f_0x0);
+		ADD_OPCODE(ADDIS,(OP_REG rt, OP_REG rs, OP_sREG imm_s16));
+		ADD_OPCODE(LIS,(OP_REG rs, OP_sREG imm_s16));
 	END_OPCODES_GROUP(G_0x0f);
 
 	START_OPCODES_GROUP(G2)
@@ -988,21 +998,34 @@ public:
 	END_OPCODES_GROUP(BRANCH);
 
 	START_OPCODES_GROUP(G3_S)
+		START_OPCODES_GROUP(G3_S_0x0)
+			ADD_OPCODE(MCRF,(OP_REG crfs, OP_REG crft));
+			START_OPCODES_GROUP(G3_S_0x0_0x20)
+				ADD_OPCODE(BLELR,(OP_REG crft));
+				ADD_NULL_OPCODE(BEQLR);
+				ADD_NULL_OPCODE(BLR);
+			END_OPCODES_GROUP(G3_S_0x0_0x20);
+		END_OPCODES_GROUP(G3_S_0x0);
+		START_OPCODES_GROUP(G3_S_0x10)
+			ADD_NULL_OPCODE(BCTR);
+			ADD_NULL_OPCODE(BCTRL);
+		END_OPCODES_GROUP(G3_S_0x10);
 	END_OPCODES_GROUP(G3_S);
 
 	START_OPCODES_GROUP(G3_S0)
 		ADD_NULL_OPCODE(RLWINM_);
-		ADD_OPCODE(CLRLWI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
-		ADD_OPCODE(CLRLWI_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+		ADD_NULL_OPCODE(RLWINM);
+		START_OPCODES_GROUP(G3_S0_0x3e)
+			ADD_OPCODE(ROTLWI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+			ADD_OPCODE(CLRLWI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+		END_OPCODES_GROUP(G3_S0_0x3e);
+		START_OPCODES_GROUP(G3_S0_0x3f)
+			ADD_OPCODE(ROTLWI_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+			ADD_OPCODE(CLRLWI_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
+		END_OPCODES_GROUP(G3_S0_0x3f);
 	END_OPCODES_GROUP(G3_S0);
 
-	START_OPCODES_GROUP(G3_S0_G0)
-		ADD_NULL_OPCODE(RLWINM);
-		ADD_OPCODE(ROTLWI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
-		ADD_OPCODE(ROTLWI_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
-	END_OPCODES_GROUP(G3_S0_G0);
-
-	//ADD_NULL_OPCODE(RLWINM);
+	
 	ADD_OPCODE(ROTLW,(OP_REG rt, OP_REG rs, OP_REG rd));
 	ADD_OPCODE(ORI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
 	ADD_OPCODE(ORIS,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
@@ -1013,9 +1036,8 @@ public:
 	//ADD_OPCODE(LRLDIÑ,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
 
 	START_OPCODES_GROUP(G_0x1e)
-		START_OPCODES_GROUP(G_0x1e_G_0x14)
+			ADD_OPCODE(CLRLDI,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
 			ADD_OPCODE(CLRLDI_,(OP_REG rt, OP_REG rs, OP_REG imm_u16));
-		END_OPCODES_GROUP(G_0x1e_G_0x14);
 	END_OPCODES_GROUP(G_0x1e);
 
 	START_OPCODES_GROUP(G4)
@@ -1037,6 +1059,7 @@ public:
 
 			ADD_OPCODE(LWARX,(OP_REG rs, OP_REG rd, OP_sREG imm_s16));
 			ADD_OPCODE(LDX,(OP_REG rs, OP_REG rt, OP_REG rd));
+			ADD_OPCODE(LWZX,(OP_REG rs, OP_REG rt, OP_REG rd));
 			ADD_OPCODE(CNTLZW,(OP_REG rt, OP_REG rs));
 			ADD_OPCODE(AND,(OP_REG rt, OP_REG rs, OP_REG rd));
 			ADD_OPCODE(AND_,(OP_REG rt, OP_REG rs, OP_REG rd));
@@ -1305,7 +1328,7 @@ public:
 		ADD_OPCODE(EXTSB,(OP_REG rt, OP_REG rs));
 		//ADD_OPCODE(EXTSW,(OP_REG rt, OP_REG rs));
 		//ADD_OPCODE(DCBZ,(OP_REG rt, OP_REG rd));
-		ADD_OPCODE(LWZX,(OP_REG rs, OP_REG rt, OP_REG rd));
+		//ADD_OPCODE(LWZX,(OP_REG rs, OP_REG rt, OP_REG rd));
 	END_OPCODES_GROUP(G4);
 
 	ADD_OPCODE(LWZ,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
@@ -1333,9 +1356,9 @@ public:
 	//ADD_OPCODE(LD,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
 	
 	START_OPCODES_GROUP(G_0x3a)
-		ADD_OPCODE(LDU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
-		ADD_OPCODE(LWA,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
-		ADD_OPCODE(LD,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+		//ADD_OPCODE(LDU,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+		//ADD_OPCODE(LWA,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
+		//ADD_OPCODE(LD,(OP_REG rs, OP_REG rt, OP_sREG imm_s16));
 	END_OPCODES_GROUP(G_0x3a);
 
 	START_OPCODES_GROUP(G4_S)

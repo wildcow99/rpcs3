@@ -1,17 +1,17 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 
-enum filesystem_oflags
+enum Lv2FsOflag
 {
-	LV2_O_RDONLY = 0x000000,
-	LV2_O_WRONLY = 0x000001,
-	LV2_O_RDWR = 0x000002,
-	LV2_O_ACCMODE = 0x000003,
-	LV2_O_CREAT = 0x000100,
-	LV2_O_EXCL = 0x000200,
-	LV2_O_TRUNC = 0x001000,
-	LV2_O_APPEND = 0x002000,
-	LV2_O_MSELF = 0x010000,
+	LV2_O_RDONLY	= 0x000000,
+	LV2_O_WRONLY	= 0x000001,
+	LV2_O_RDWR		= 0x000002,
+	LV2_O_ACCMODE	= 0x000003,
+	LV2_O_CREAT		= 0x000100,
+	LV2_O_EXCL		= 0x000200,
+	LV2_O_TRUNC		= 0x001000,
+	LV2_O_APPEND	= 0x002000,
+	LV2_O_MSELF		= 0x010000,
 };
 
 #pragma pack(1)
@@ -41,44 +41,41 @@ struct Lv2FsDirent
 	char d_name[256];
 };
 
-class FSFiles : private FreeNumList
+class FSFiles : private SysCallBase
 {
-	wxFile* fs_file;
+	SysCallsArraysList<wxFile> fs_files;
 
 public:
-	FSFiles()
-		: FreeNumList()
-		, fs_file(new wxFile[100])
+	FSFiles() : SysCallBase("FSFiles")
 	{
-		module_name = "FSFiles";
 	}
 
-	u32 Open(wxString patch, s32 oflags)
+	u64 Open(const wxString& patch, const s32 oflags, const s32 mode)
 	{
-		const u32 num = GetNumAndDelete();
-		wxFile::OpenMode mode;
+		const uint id = fs_files.Add();
+		wxFile::OpenMode o_mode;
 
 		if(oflags & LV2_O_RDONLY)
 		{
-			mode = wxFile::read;
+			o_mode = wxFile::read;
 		}
 		else if(oflags & LV2_O_RDWR)
 		{
-			mode = wxFile::read_write;
+			o_mode = wxFile::read_write;
 		}
 		else if(oflags & LV2_O_WRONLY)
 		{
 			if(oflags & LV2_O_EXCL)
 			{
-				mode = wxFile::write_excl;
+				o_mode = wxFile::write_excl;
 			}
 			else if(oflags & LV2_O_APPEND)
 			{
-				mode = wxFile::write_append;
+				o_mode = wxFile::write_append;
 			}
 			else
 			{
-				mode = wxFile::write;
+				o_mode = wxFile::write;
 			}
 		}
 		else
@@ -87,70 +84,107 @@ public:
 			return -1;
 		}
 
-		if(mode == wxFile::read && !wxFile::Access(patch, wxFile::read))
+		if(o_mode == wxFile::read && !wxFile::Access(patch, wxFile::read))
 		{
 			ConLog.Error("%s error: %s not found! flags: 0x%08x", module_name, patch, oflags);
 			return -1;
 		}
 		
-		fs_file[num].Open(patch, mode);
-		return num;
+		fs_files.GetDataById(id)->Open(patch, o_mode);
+		return id;
 	}
 
-	s64 Read(const u32 num, void* buf, const u64 size)
+	ssize_t Read(const u64 id, void* buf, const u64 size)
 	{
-		return fs_file[num].Read(buf, size);
+		bool error;
+		wxFile& data = *fs_files.GetDataById(id, &error);
+		if(error)
+		{
+			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
+			return 0;
+		}
+
+		return data.Read(buf, size);
 	}
 
-	s64 Write(const u32 num, const void* buf, const u64 size)
+	size_t Write(const u64 id, const void* buf, const u64 size)
 	{
-		return fs_file[num].Write(buf, size);
+		bool error;
+		wxFile& data = *fs_files.GetDataById(id, &error);
+		if(error)
+		{
+			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
+			return 0;
+		}
+
+		return data.Write(buf, size);
 	}
 
-	s64 Seek(const u32 num, const s64 offset, const u32 whence)
+	wxFileOffset Seek(const u64 id, const wxFileOffset offset, const u32 whence)
 	{
-		return fs_file[num].Seek(offset);
+		bool error;
+		wxFile& data = *fs_files.GetDataById(id, &error);
+		if(error)
+		{
+			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
+			return 0;
+		}
+		return data.Seek(offset);
 	}
 
-	void Close(u32 num)
+	void Close(const u64 id)
 	{
-		fs_file[num].Close();
-		AddFree(num);
+		bool error;
+		wxFile& data = *fs_files.GetDataById(id, &error);
+		if(error)
+		{
+			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
+			return;
+		}
+		data.Close();
+		fs_files.RemoveById(id);
 	}
 };
 
 FSFiles fs_files;
 
-class FSDirs : private FreeNumList
+class FSDirs : private SysCallBase
 {
-	wxDir* fs_dir;
+	SysCallsArraysList<wxDir> fs_dirs;
 
 public:
-	FSDirs()
-		: FreeNumList()
-		, fs_dir(new wxDir[100])
+	FSDirs() : SysCallBase("FSDirs")
 	{
-		module_name = "FSDirs";
 	}
 
-	u32 Open(wxString patch)
+	u64 Open(const wxString& patch)
 	{
-		const u32 num = GetNumAndDelete();
+		const u64 id = fs_dirs.Add();
 
 		if(wxDirExists(patch))
 		{
-			ConLog.Error("FSDirs error: %s not found!", patch);
+			ConLog.Error("%s error: %s not found!", module_name, patch);
 			return 0;
 		}
 		
-		fs_dir[num].Open(patch);
-		return num;
+		fs_dirs.GetDataById(id)->Open(patch);
+		return id;
 	}
 
-	u32 Read(u32 num, Lv2FsDirent* fs_dirent)
+	size_t Read(const u64 id, Lv2FsDirent* fs_dirent)
 	{
 		wxArrayString files;
-		const u32 ret = wxDir::GetAllFiles(fs_dir[num].GetName(), &files);
+
+		bool error;
+		const wxDir& data = *fs_dirs.GetDataById(id, &error);
+		if(error)
+		{
+			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
+			fs_dirent = NULL;
+			return 0;
+		}
+
+		const size_t ret = wxDir::GetAllFiles(data.GetName(), &files);
 
 		fs_dirent = new Lv2FsDirent[files.GetCount()];
 
@@ -169,9 +203,13 @@ public:
 		return ret;
 	}
 
-	void Close(u32 num)
+	void Close(const u64 id)
 	{
-		AddFree(num);
+		if(!fs_dirs.RemoveById(id))
+		{
+			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
+			return;
+		}
 	}
 };
 
@@ -179,15 +217,15 @@ FSDirs fs_dirs;
 
 int lv2FsOpen()
 {
-	const wxString patch = (char*)&CPU.GPR[3];
+	const wxString& patch = Memory.MemFlags.SearchV(CPU.GPR[3]);
 	const s32 oflags = CPU.GPR[4];
 	s64& fs_file = CPU.GPR[5];
 
-	const s32 mode = CPU.GPR[6]; //???
-	void* arg = (void*)&CPU.GPR[7];//???
+	const s32 mode = CPU.GPR[6];
+	const void* arg = (void*)&CPU.GPR[7];//???
 	const s32 argcount = CPU.GPR[8];
 
-	fs_file = fs_files.Open(patch, oflags);
+	fs_file = fs_files.Open(FixPatch(patch), oflags, mode);
 	return 0;
 }
 
@@ -223,10 +261,10 @@ int lv2FsClose()
 
 int lv2FsOpenDir()
 {
-	const wxString patch = (char*)&CPU.GPR[3];
+	const wxString& patch = (char*)&CPU.GPR[3];
 	s64& fs_file = CPU.GPR[4];
 
-	fs_file = fs_dirs.Open(patch);
+	fs_file = fs_dirs.Open(FixPatch(patch));
 	return 0;
 }
 
@@ -250,7 +288,7 @@ int lv2FsCloseDir()
 
 int lv2FsMkdir()
 {
-	const wxString patch = (char*)&CPU.GPR[3];
+	const wxString& patch = FixPatch((char*)&CPU.GPR[3]);
 	const u32 mode = CPU.GPR[4];//???
 
 	if(wxDirExists(patch)) return -1;
@@ -261,8 +299,8 @@ int lv2FsMkdir()
 
 int lv2FsRename()
 {
-	const wxString patch = (char*)&CPU.GPR[3];
-	const wxString newpatch = (char*)&CPU.GPR[4];
+	const wxString& patch = (char*)&CPU.GPR[3];
+	const wxString& newpatch = (char*)&CPU.GPR[4];
 
 	if(!wxFile::Access(patch, wxFile::read))
 	{
@@ -270,7 +308,7 @@ int lv2FsRename()
 		return -1;
 	}
 
-	wxRenameFile(patch, newpatch);
+	wxRenameFile(FixPatch(patch), FixPatch(newpatch));
 	return 0;
 }
 
@@ -287,7 +325,7 @@ int lv2FsLSeek64()
 
 int lv2FsRmdir()
 {
-	const wxString patch = (char*)&CPU.GPR[3];
+	const wxString& patch = FixPatch((char*)&CPU.GPR[3]);
 
 	if(!wxFile::Access(patch, wxFile::read))
 	{
@@ -301,7 +339,7 @@ int lv2FsRmdir()
 
 int lv2FsUtime()
 {
-	const wxString patch = (char*)&CPU.GPR[3];
+	const wxString& patch = FixPatch((char*)&CPU.GPR[3]);
 	Lv2FsUtimbuf& times = *(Lv2FsUtimbuf*)&CPU.GPR[4];
 
 	if(!wxFile::Access(patch, wxFile::read))
