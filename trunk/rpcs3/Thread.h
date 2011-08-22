@@ -7,6 +7,7 @@
 class Semaphore
 {
 	sem_t semaphore;
+	bool isWait;
 
 public:
 	Semaphore(bool is_create = true)
@@ -17,10 +18,12 @@ public:
 	virtual void Create()
 	{
 		sem_init(&semaphore, 0, 0);
+		isWait = false;
 	}
 
 	virtual void Wait()
 	{
+		isWait = true;
 		sem_wait(&semaphore);
 	}
 
@@ -34,6 +37,7 @@ public:
 
 	virtual void Post(const u32 count = 1)
 	{
+		isWait = false;
 		if(count > 1)
 		{
 			sem_post_multiple(&semaphore, count);
@@ -46,8 +50,11 @@ public:
 
 	virtual void Destroy()
 	{
+		isWait = false;
 		sem_destroy(&semaphore);
 	}
+
+	virtual bool IsWait() const { return isWait; }
 };
 
 class ThreadBase
@@ -62,7 +69,7 @@ private:
     static void* StartThread(void* arg)   { ((ThreadBase*)arg)->Task(); return NULL; }
  
 public: 
-	ThreadBase() : name("Unknown thread")
+	ThreadBase(const wxString& _name = "Unknown thread") : name(_name)
 	{
 		isStarted = false;
 	}
@@ -74,36 +81,39 @@ public:
 
     virtual void Task() = 0;
  
-    const bool Start(bool is_detach = false)
+    const bool Start(bool is_detach = false, s32 stacksize = -1)
 	{
 		if(isStarted) return false;
 
 		isStarted = true;
 		isDetached = is_detach;
 
-		if(isDetached)
-		{
-			pthread_attr_t attr;
+		pthread_attr_t attr;
 
-			pthread_attr_init(&attr);
-			pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+		pthread_attr_init(&attr);
+		if(is_detach) pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+		if(stacksize != -1) pthread_attr_setstacksize(&attr, stacksize);
 
-			const bool ret = pthread_create(&thread, &attr, ThreadBase::StartThread, (void*)this) == 0;
+		const bool ret = pthread_create(&thread, &attr, ThreadBase::StartThread, (void*)this) == 0;
 
-			pthread_attr_destroy(&attr);
+		pthread_attr_destroy(&attr);
 
-			return ret;
-		}
-
-		return pthread_create(&thread, NULL, ThreadBase::StartThread, (void*)this) == 0;
+		return ret;
 	}
 
-	const bool Exit()
+	virtual const bool Exit()
 	{
 		if(!isStarted) return false;
 		isStarted = false;
 
+		Detach();
+
 		return pthread_cancel(thread) == 0;
+	}
+
+	const bool Detach()
+	{
+		return pthread_detach(thread) == 0;
 	}
 
 	const bool SetCancelState(bool enable, int* prev_state = NULL)
@@ -193,9 +203,9 @@ struct ThreadAdv
 		return arg;
 	}
 
-	static void Exit()
+	static void Exit(void* arg = NULL)
 	{
-		pthread_exit(NULL);
+		pthread_exit(arg);
 	}
 
 	static void TestCancel()
@@ -207,27 +217,36 @@ struct ThreadAdv
 class StepThread : public ThreadBase
 {
 	Semaphore m_main_sem;
-	bool doCleanupEveryStep;
+	bool exit;
 
 protected:
-	StepThread()
+	StepThread(const wxString& name = "Unknown StepThread")
+		: ThreadBase(name)
+		, exit(false)
 	{
+	}
+
+	virtual const bool Exit()
+	{
+		const bool ret = ThreadBase::Exit();
+		exit = true;
+		if(m_main_sem.IsWait()) m_main_sem.Post();
+		return ret;
 	}
 
 private:
 	virtual void Task()
 	{
-		for(;;)
+		while(!exit)
 		{
 			m_main_sem.Wait();
-
-			//CleanUpPush(_CleanupInThread, this);
-
+			if(exit) break;
+			ThreadAdv::TestCancel();
 			Step();
-
-			//CleanUpPop(doCleanupEveryStep ? 1 : 0);
-			//TestCancel();
+			ThreadAdv::TestCancel();
 		}
+
+		ThreadAdv::Exit();
 	}
 
 	static void _CleanupInThread(void* arg) {((StepThread*)arg)->CleanupInThread();}

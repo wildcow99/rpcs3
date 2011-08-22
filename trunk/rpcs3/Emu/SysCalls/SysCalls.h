@@ -131,47 +131,57 @@ public:
 	}
 };
 
-//memory
-int lv2MemContinerCreate();
-int lv2MemContinerDestroy();
-
-//filesystem
-int lv2FsOpen();
-int lv2FsRead();
-int lv2FsWrite();
-int lv2FsClose();
-int lv2FsOpenDir();
-int lv2FsReadDir();
-int lv2FsCloseDir();
-int lv2FsMkdir();
-int lv2FsRename();
-int lv2FsLSeek64();
-int lv2FsRmdir();
-int lv2FsUtime();
-
-static int DoSyscall(int code)
+class SysCalls
 {
-	switch(code)
+	//memory
+	int lv2MemContinerCreate();
+	int lv2MemContinerDestroy();
+
+	//filesystem
+	int lv2FsOpen();
+	int lv2FsRead();
+	int lv2FsWrite();
+	int lv2FsClose();
+	int lv2FsOpenDir();
+	int lv2FsReadDir();
+	int lv2FsCloseDir();
+	int lv2FsMkdir();
+	int lv2FsRename();
+	int lv2FsLSeek64();
+	int lv2FsRmdir();
+	int lv2FsUtime();
+
+protected:
+	CPUThread& CPU;
+
+	SysCalls(CPUThread& cpu) : CPU(cpu)
 	{
-		//=== lv2 ===
-		//memory
-		case 324: return lv2MemContinerCreate();
-		case 325: return lv2MemContinerDestroy();
-		//file system
-		case 801: return lv2FsOpen();
-		case 802: return lv2FsRead();
-		case 803: return lv2FsWrite();
-		case 804: return lv2FsClose();
-		case 805: return lv2FsOpenDir();
-		case 806: return lv2FsReadDir();
-		case 807: return lv2FsCloseDir();
-		case 811: return lv2FsMkdir();
-		case 812: return lv2FsRename();
-		case 813: return lv2FsRmdir();
-		case 818: return lv2FsLSeek64();
-		case 815: return lv2FsUtime();
 	}
 
-	ConLog.Error("Unknown syscall: %d - %08x", code, code);
-	return 0;
-}
+	int DoSyscall(int code)
+	{
+		switch(code)
+		{
+			//=== lv2 ===
+			//memory
+			case 324: return lv2MemContinerCreate();
+			case 325: return lv2MemContinerDestroy();
+			//file system
+			case 801: return lv2FsOpen();
+			case 802: return lv2FsRead();
+			case 803: return lv2FsWrite();
+			case 804: return lv2FsClose();
+			case 805: return lv2FsOpenDir();
+			case 806: return lv2FsReadDir();
+			case 807: return lv2FsCloseDir();
+			case 811: return lv2FsMkdir();
+			case 812: return lv2FsRename();
+			case 813: return lv2FsRmdir();
+			case 818: return lv2FsLSeek64();
+			case 815: return lv2FsUtime();
+		}
+
+		ConLog.Error("Unknown syscall: %d - %08x", code, code);
+		return 0;
+	}
+};

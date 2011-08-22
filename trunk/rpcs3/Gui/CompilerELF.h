@@ -99,14 +99,22 @@ public:
 		hex_list->Disable();
 
 		asm_list->SetValue(
-			//"T2R r3,\"opcode\"\n"
-			"li r3, \"tx\"\n"
+			"T2M r3, 0x200, \"outlog.txt\"\n"
 			"li r4, 0x000001\n"
-			"li r5, 0\n"
-			"li r6, 0\n"
-			"li r8, 0\n"
 			"li r11, 801\n"
-			"sc 2");
+			"sc 2\n"
+			"\n"
+			"mr r12, r5\n"
+			"mr r3, r5\n"
+			"T2M r4, 0x200, \"Hello world!\"\n"
+			"li r5, 12 #12 = strlen(\"Hello world!\")\n"
+			"li r11, 803\n"
+			"sc 2\n"
+			"\n"
+			"mr r3, r12\n"
+			"li r11, 804\n"
+			"sc 2\n"
+		);
 	}
 
 	~CompilerELF()
@@ -218,39 +226,42 @@ public:
 	enum MASKS
 	{
 		MASK_ERROR,
-		RS_RT_IMM16,
-		RS_IMM16,
+		R2_IMM16,
+		R1_IMM16,
 		IMM16,
-		IMM26,
+		LL_AA_LK,
+		R2_DS,
+		R2,
 	};
 
 	enum OPCODES
 	{
-		O_MULLI,
-		O_ADDI,
-		O_LI,
-		O_SC,
-		O_B,
-		O_BL,
+		O_STH,	O_ADDI, O_LI, O_SC, O_B,
+		O_BL,	O_MR,
 	};
 
 	MASKS OpcodeToMask(int opcode)
 	{
 		switch(opcode)
 		{
-		case O_MULLI:
+		case O_STH:
+			return R2_DS;
+
 		case O_ADDI:
-			return RS_RT_IMM16;
+			return R2_IMM16;
 
 		case O_LI:
-			return RS_IMM16;
+			return R1_IMM16;
 
 		case O_SC:
 			return IMM16;
 
+		case O_MR:
+			return R2;
+
 		case O_BL:
 		case O_B:
-			return IMM26;
+			return LL_AA_LK;
 
 		default: break;
 		}
@@ -260,18 +271,18 @@ public:
 
 	int StringToOpcode(const wxString& str)
 	{
-		if(!str.Cmp("mulli"))	return O_MULLI;
+		if(!str.Cmp("sth"))		return O_STH;
 		if(!str.Cmp("sc"))		return O_SC;
-		//g1
-			if(!str.Cmp("addi"))return O_ADDI;
-			if(!str.Cmp("li"))	return O_LI;
-		//
-		//BRANCH
+		if(!str.Cmp("mr"))		return O_MR;
+		if(!str.Cmp("addi"))	return O_ADDI;
+		if(!str.Cmp("li"))		return O_LI;
+
+		//b
 			if(!str.Cmp("b"))	return O_B;
 			if(!str.Cmp("bl"))	return O_BL;
 		//
 
-		//if(!str.Cmp("T2R"))  return -2; //TODO
+		if(!str.Cmp("T2M"))		return -2;
 
 		return -1;
 	}
@@ -306,30 +317,49 @@ public:
 		DoAnalyzeCode(true);
 	}
 
-	s32 ToOpcode(u32 i)	const { return i << 26; }
-	s32 ToRS(u32 i)		const { return i << 21; }
-	s32 ToRT(u32 i)		const { return i << 16; }
-	s32 ToIMM16(u32 i)	const { return i & 0xffff; }
-	s32 ToIMM26(u32 i)	const { return i & 0xffffff; }
-	s32 ToLK(u32 i)		const { return i; }
-	s32 ToLS(u32 i)		const { return i << 16; }
+	s32 SetField(s32 src, u32 from, u32 to) const
+	{
+		return (src & ((1 << ((to - from) + 1)) - 1)) << (31 - to);
+	}
+
+	s32 SetField(s32 src, u32 p) const
+	{
+		return (src & 0x1) << (31 - p);
+	}
+
+	//s32 ToOpcode(u32 i)	const { return i << 26; }
+	s32 ToOpcode(s32 i)	const { return SetField(i, 0, 5); }
+	s32 ToRS(s32 i)		const { return SetField(i, 6, 10); }
+	s32 ToRT(s32 i)		const { return SetField(i, 6, 10); }
+	s32 ToRA(s32 i)		const { return SetField(i, 11, 15); }
+	s32 ToRB(s32 i)		const { return SetField(i, 16, 20); }
+	s32 ToLL(s32 i)		const { return SetField(i, 6, 31); }
+	s32 ToAA(s32 i)		const { return SetField(i, 30); }
+	s32 ToLK(s32 i)		const { return SetField(i, 31); }
+	s32 ToIMM16(s32 i)	const { return SetField(i, 16, 31); }
+	s32 ToD(s32 i)		const { return SetField(i, 16, 31); }
+	s32 ToDS(s32 i) const
+	{
+		if(i < 0) return ToD(i + 1);
+		return ToD(i);
+	}
 
 	int Compile(wxArrayLong& arr, MASKS mask)
 	{
 		switch(mask)
 		{
-		case RS_RT_IMM16:
+		case R2_IMM16:
 			switch(arr[0]) //opcode
 			{
-			case O_ADDI: return ToOpcode(G1) | ToLS(ADDI) | ToRS(arr[1]) | ToRT(arr[2]) | ToIMM16(arr[3]);
-			case O_MULLI: return ToOpcode(MULLI) | ToRS(arr[1]) | ToRT(arr[2]) | ToIMM16(arr[3]);
-			default: return 0;
+			case O_ADDI: return ToOpcode(ADDI)  | ToRT(arr[1]) | ToRA(arr[2]) | ToIMM16(arr[3]);
+			//case O_MULLI: return ToOpcode(MULLI) | ToRS(arr[1]) | ToRT(arr[2]) | ToIMM16(arr[3]);
+			default: break;
 			}
 		break;
-		case RS_IMM16:
+		case R1_IMM16:
 			switch(arr[0]) //opcode
 			{
-			case O_LI: return ToOpcode(G1) | ToLS(LI) | ToRS(arr[1]) | ToIMM16(arr[2]);
+			case O_LI: return ToOpcode(ADDI) | ToRT(arr[1]) | ToRA(0) | ToIMM16(arr[2]);
 			default: break;
 			}
 		break;
@@ -342,14 +372,28 @@ public:
 			}
 		break;
 
-		case IMM26:
-			switch(arr[0]) //opcode
+		case R2:
+			switch(arr[0])
 			{
-			case O_B: return ToOpcode(BRANCH) | ToLK(B) | ToIMM26(arr[1]);
-			case O_BL: return ToOpcode(BRANCH) | ToLK(BL) | ToIMM26(arr[1]);
+			case O_MR: return ToOpcode(G_1f) | SetField(MR, 22, 30) | ToRA(arr[1]) | ToRB(arr[2]);
 			default: break;
 			}
 		break;
+		
+		case LL_AA_LK:
+			switch(arr[0]) //opcode
+			{
+			case O_B: return ToOpcode(B) | ToLL(arr[1]) | ToAA(0) | ToLK(0);
+			case O_BL: return ToOpcode(B) | ToLL(arr[1]) | ToAA(0) | ToLK(1);
+			}
+		break;
+
+		case R2_DS:
+			switch(arr[0]) //opcode
+			{
+			case O_STH:  return ToOpcode(STH) | ToRS(arr[1]) | ToRA(arr[2]) | ToD(arr[3]);
+			default: break;
+			}
 		}
 
 		return 0; //NOP
@@ -478,79 +522,162 @@ public:
 		return false;
 	}
 
+	void WriteEhdr(wxFile& f, ElfLoader::Elf64_Ehdr& ehdr)
+	{
+		Write32(f, ehdr.e_magic);
+		Write8(f, ehdr.e_class);
+		Write8(f, ehdr.e_data);
+		Write8(f, ehdr.e_curver);
+		Write8(f, ehdr.e_os_abi);
+		Write64(f, ehdr.e_abi_ver);
+		Write16(f, ehdr.e_type);
+		Write16(f, ehdr.e_machine);
+		Write32(f, ehdr.e_version);
+		Write64(f, ehdr.e_entry);
+		Write64(f, ehdr.e_phoff);
+		Write64(f, ehdr.e_shoff);
+		Write32(f, ehdr.e_flags);
+		Write16(f, ehdr.e_ehsize);
+		Write16(f, ehdr.e_phentsize);
+		Write16(f, ehdr.e_phnum);
+		Write16(f, ehdr.e_shentsize);
+		Write16(f, ehdr.e_shnum);
+		Write16(f, ehdr.e_shstrndx);
+	}
+
+	void WritePhdr(wxFile& f, ElfLoader::Elf64_Phdr& phdr)
+	{
+		Write32(f, phdr.p_type);
+		Write32(f, phdr.p_flags);
+		Write64(f, phdr.p_offset);
+		Write64(f, phdr.p_vaddr);
+		Write64(f, phdr.p_paddr);
+		Write64(f, phdr.p_filesz);
+		Write64(f, phdr.p_memsz);
+		Write64(f, phdr.p_align);
+	}
+
+	void WriteShdr(wxFile& f, ElfLoader::Elf64_Shdr& shdr)
+	{
+		Write32(f, shdr.sh_name);
+		Write32(f, shdr.sh_type);
+		Write64(f, shdr.sh_flags);
+		Write64(f, shdr.sh_addr);
+		Write64(f, shdr.sh_offset);
+		Write64(f, shdr.sh_size);
+		Write32(f, shdr.sh_link);
+		Write32(f, shdr.sh_info);
+		Write64(f, shdr.sh_addralign);
+		Write64(f, shdr.sh_entsize);
+	}
+
+	void WriteShdrName(wxFile& f, const wxString& name, u32 sh_offset, u32& name_offs)
+	{
+		f.Seek(sh_offset + name_offs);
+		f.Write(name.char_str().data(), name.Length());
+		name_offs += name.Length() + 0x2;
+	}
+
 	void DoAnalyzeCode(bool compile)
 	{
 		wxFile f;
 
+		static const u32 ehdr_size = 0x40;
+		static const u32 phdr_size = 0x38;
+		static const u32 shdr_size = 0x40;
+
+		static const u32 phdr_count = 1;
+		static const u32 shdr_count = 2;
+		static const u32 phdr_rcount = phdr_count;
+		static const u32 shdr_rcount = shdr_count + 1;
+
+		static const u32 phoff = ehdr_size + 0x2;
+		static const u32 shoff = phoff + (phdr_size * phdr_rcount) + 0x2;
+		static const u32 entry = 0x10200;
+
+		static const s32 strtab_offs = shoff + (shdr_size * shdr_rcount) + 0x2;
+
+		wxArrayString name_arr;
+		wxArrayInt hex_arr;
+
 		ElfLoader::Elf64_Ehdr ehdr;
-		ElfLoader::Elf64_Phdr phdr;
+		ElfLoader::Elf64_Phdr* phdr = NULL;
+		ElfLoader::Elf64_Shdr* shdr = NULL;
+
+		u32 prog_offset;
+		u32 p_names_size;
 
 		if(compile)
 		{
-			f.Open("compiled.elf", wxFile::write);
+			hex_arr.Clear();
+			name_arr.Clear();
+			prog_offset = 0;
+			p_names_size = 0;
+
+			phdr = new ElfLoader::Elf64_Phdr[phdr_count];
+			shdr = new ElfLoader::Elf64_Shdr[shdr_count];
 
 			//TODO
 			ehdr.e_magic = 0x7F454C46;
-			ehdr.e_class = 2;
+			ehdr.e_class = 2; //ELF64
 			ehdr.e_data = 2;
-			ehdr.e_curver = 1;
-			ehdr.e_os_abi = 0x66;
+			ehdr.e_curver = 1; //ver 1
+			ehdr.e_os_abi = 0x66; //Cell OS LV-2
 			ehdr.e_abi_ver = 0;
-			ehdr.e_type = 2;
-			ehdr.e_machine = 0x15;
-			ehdr.e_version = 1;
-			ehdr.e_entry = 0x20050;
-			ehdr.e_phoff = 0x40;
-			ehdr.e_shoff = 0x0; //FIXME
-			ehdr.e_flags = 0x0; //FIXME
-			ehdr.e_ehsize = 0x40;
-			ehdr.e_phentsize = 0x40;
-			ehdr.e_phnum = 1;
-			ehdr.e_shentsize = 0x0; //FIXME
-			ehdr.e_shnum = 0; //FIXME
-			ehdr.e_shstrndx = 0; //FIXME
+			ehdr.e_type = 2; //EXEC (Executable file)
+			ehdr.e_machine = 0x15; //PowerPC64
+			ehdr.e_version = 1; //ver 1
+			ehdr.e_entry = entry;
+			ehdr.e_phoff = phoff;
+			ehdr.e_shoff = shoff;
+			ehdr.e_flags = 0x0;
+			ehdr.e_ehsize = ehdr_size;
+			ehdr.e_phentsize = phdr_size;
+			ehdr.e_phnum = phdr_rcount;
+			ehdr.e_shentsize = shdr_size;
+			ehdr.e_shnum = shdr_rcount;
+			ehdr.e_shstrndx = 1;
 
-			Write32(f, ehdr.e_magic);
-			Write8(f, ehdr.e_class);
-			Write8(f, ehdr.e_data);
-			Write8(f, ehdr.e_curver);
-			Write8(f, ehdr.e_os_abi);
-			Write64(f, ehdr.e_abi_ver);
-			Write16(f, ehdr.e_type);
-			Write16(f, ehdr.e_machine);
-			Write32(f, ehdr.e_version);
-			Write64(f, ehdr.e_entry);
-			Write64(f, ehdr.e_phoff);
-			Write64(f, ehdr.e_shoff);
-			Write32(f, ehdr.e_flags);
-			Write16(f, ehdr.e_ehsize);
-			Write16(f, ehdr.e_phentsize);
-			Write16(f, ehdr.e_phnum);
-			Write16(f, ehdr.e_shentsize);
-			Write16(f, ehdr.e_shnum);
-			Write16(f, ehdr.e_shstrndx);
+			phdr[0].p_type = 0x1;
+			phdr[0].p_flags = 0x4;
+			//phdr[0].p_offset = p_offset;
+			phdr[0].p_vaddr = entry;
+			phdr[0].p_paddr = entry;
+			//phdr[0].p_filesz = asm_list->GetNumberOfLines() * 4;
+			//phdr[0].p_memsz = phdr[0].p_filesz;
+			phdr[0].p_align = 0x10000;
+	
 
-			for(uint i=ehdr.e_ehsize; i<ehdr.e_phoff; ++i) Write8(f, 0);
+			name_arr.Add(".strtab");
+			//shdr[0].sh_name = name_offs;
+			shdr[0].sh_type = SHT_STRTAB;
+			shdr[0].sh_flags = 0;
+			shdr[0].sh_addr = 0;
+			shdr[0].sh_offset = strtab_offs;
+			//shdr[0].sh_size = name_offs;
+			shdr[0].sh_link = 0;
+			shdr[0].sh_info = 0;
+			shdr[0].sh_addralign = 0x1;
+			shdr[0].sh_entsize = 0;
 
-			phdr.p_type = 0x1;
-			phdr.p_flags = 0x4;
-			phdr.p_offset = ehdr.e_phoff + 0x38 + 0x2;
-			phdr.p_vaddr = 0x20050;
-			phdr.p_paddr = 0x20050;
-			phdr.p_filesz = asm_list->GetNumberOfLines() * 4 * 15000;
-			phdr.p_memsz = phdr.p_filesz;
-			phdr.p_align = 0x0;
+			name_arr.Add(".init");
+			//shdr[1].sh_name = name_offs;
+			shdr[1].sh_type = SHT_PROGBITS;
+			shdr[1].sh_flags = SHF_WRITE;
+			shdr[1].sh_addr = entry;
+			//shdr[1].sh_offset = strtab_offs;
+			//shdr[1].sh_size = phdr[0].p_filesz;
+			shdr[1].sh_link = 0;
+			shdr[1].sh_info = 0;
+			shdr[1].sh_addralign = 0x4;
+			shdr[1].sh_entsize = 0;
 
-			Write32(f, phdr.p_type);
-			Write32(f, phdr.p_flags);
-			Write64(f, phdr.p_offset);
-			Write64(f, phdr.p_vaddr);
-			Write64(f, phdr.p_paddr);
-			Write64(f, phdr.p_filesz);
-			Write64(f, phdr.p_memsz);
-			Write64(f, phdr.p_align);
+			for(uint i=0; i<name_arr.GetCount(); ++i)
+			{
+				p_names_size += name_arr[i].Length() * 2 + 0x2;
+			}
 
-			for(uint i=ehdr.e_phoff + 0x38; i<phdr.p_offset; ++i) Write8(f, 0);
+			prog_offset = strtab_offs + p_names_size;
 		}
 
 		const uint lines_count = (uint)asm_list->GetNumberOfLines();
@@ -590,7 +717,7 @@ public:
 					wxArrayLong arr;
 					arr.Clear();
 
-					if(opcode == -2) //TODO: T2R
+					if(opcode == -2)
 					{
 						if(!SearchReg(p, str, line, arr))
 						{
@@ -598,7 +725,13 @@ public:
 							break;
 						}
 
-						wxString text;
+						if(!SearchImm(p, str, line, arr))
+						{
+							errors_count++;
+							break;
+						}
+
+						wxString text = wxEmptyString;
 						if(!SearchText(p, str, line, text))
 						{
 							errors_count++;
@@ -607,18 +740,18 @@ public:
 
 						if(compile)
 						{
-							Write32(f, ToOpcode(G1) | ToLS(LI) | ToRS(arr[0]) | ToIMM16(0));
+							if(text.Length() & 1) text += " ";
 
-							ConLog.Write("Text size: %d", WXSIZEOF(text));
+							for(u32 i=0; i<text.Length(); i+=2)
+							{
+								const s32& t = *(s32*)(text(i+1, 1) + text(i, 1)).c_str();
+								hex_arr.Add(ToOpcode(ADDI) | ToRT(arr[0]) | ToRA(0) | ToIMM16(t)); //li arr[0], t
+								hex_arr.Add(ToOpcode(STH) | ToRS(arr[0]) | ToRA(0) | ToD(arr[1] + i)); //sth arr[0], r0, arr[1] + 1
+							}
 
-							const u64 text_u64 = *(u64*)text.char_str().data();
-
-							const s16 count = text_u64 / 0x7fff;
-							const u64 l_v = text_u64 - (count * 0x7fff);
-
-							Write32(f, ToOpcode(G1) | ToLS(LI) | ToRS(arr[0]) | ToRT(arr[0]) | ToIMM16(0x7fff));
-							Write32(f, ToOpcode(MULLI) | ToRS(arr[0]) | ToRT(arr[0]) | ToIMM16(count));
-							Write32(f, ToOpcode(G1) | ToLS(ADDI) | ToRS(arr[0]) | ToRT(arr[0]) | ToIMM16(l_v));
+							hex_arr.Add(ToOpcode(ADDI) | ToRT(arr[0]) | ToRA(0) | ToIMM16(0));
+							hex_arr.Add(ToOpcode(STH) | ToRS(arr[0]) | ToRA(0) | ToD(text.Length() + 1));
+							hex_arr.Add(ToOpcode(ADDI) | ToRT(arr[0]) | ToRA(0) | ToIMM16(arr[1])); //li arr[0], arr[1]
 						}
 
 						break;
@@ -636,19 +769,23 @@ public:
 
 					switch(mask)
 					{
-					case RS_RT_IMM16:
+					case R2:
+					case R2_DS:
+					case R2_IMM16:
 						if(!SearchReg(p, str, line, arr))
 						{
 							errors_count++;
 							break;
 						}
-					case RS_IMM16:
+					case R1_IMM16:
 						if(!SearchReg(p, str, line, arr))
 						{
 							errors_count++;
 							break;
 						}
-					case IMM26:
+					if(mask == R2) break;
+
+					case LL_AA_LK:
 					case IMM16:
 						if(!SearchImm(p, str, line, arr))
 						{
@@ -663,7 +800,7 @@ public:
 					const s32 compiled = Compile(arr, mask);
 					hex_list->WriteText(wxString::Format("%08x", compiled));
 
-					if(compile) Write32(f, compiled);
+					if(compile) hex_arr.Add(compiled);
 
 					virt_line++;
 					break;
@@ -673,6 +810,58 @@ public:
 			}
 		}
 
-		if(compile && errors_count == 0) wxMessageBox("Compile done.", "Compile message");
+		if(compile)
+		{
+			if(errors_count == 0)
+			{
+				f.Open("compiled.elf", wxFile::write);
+				f.Seek(0);
+				WriteEhdr(f, ehdr);
+
+				for(uint i=0, p_offset = phoff; i<phdr_count; ++i, p_offset += phdr_size)
+				{
+					phdr[i].p_filesz = hex_arr.GetCount() * 4;
+					phdr[i].p_offset = prog_offset;
+					phdr[i].p_memsz = phdr[i].p_filesz;
+					f.Seek(p_offset);
+					WritePhdr(f, phdr[i]);
+				}
+
+				for(uint i=0, name_offs = 0xb, sh_offset = shoff + shdr_size; i<shdr_count; ++i, sh_offset += shdr_size)
+				{
+					if(ehdr.e_shstrndx-1 == i)
+					{
+						shdr[i].sh_size = p_names_size;
+					}
+					else
+					{
+						shdr[i].sh_size = phdr[i-1].p_filesz;
+						shdr[1].sh_offset = phdr[i-1].p_offset;
+					}
+
+					shdr[i].sh_name = name_offs;
+
+					f.Seek(sh_offset);
+					WriteShdr(f, shdr[i]);
+
+					WriteShdrName(f, name_arr[i], strtab_offs, name_offs);
+				}
+
+				f.Seek(prog_offset);
+
+				for(uint i=0; i<hex_arr.GetCount(); ++i)
+				{
+					Write32(f, hex_arr[i]);
+				}
+
+				wxMessageBox("Compile done.", "Compile message");
+			}
+
+			hex_arr.Clear();
+			name_arr.Clear();
+
+			safe_delete(phdr);
+			safe_delete(shdr);
+		}
 	}
 };

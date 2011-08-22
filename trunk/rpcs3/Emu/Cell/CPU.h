@@ -1,4 +1,5 @@
 #pragma once
+#include "Thread.h"
 
 enum
 {
@@ -17,7 +18,7 @@ enum
 
 static const s32 MAX_INT_VALUE = 0x7fffffff;
 
-class CPUCycle
+class CPUThread : public StepThread
 {
 public:
 	bool isBranch;
@@ -27,7 +28,7 @@ public:
 
 	float FPR[32];
 	s64 GPR[32]; //General-Purpose Register
-	s32 CR[8]; //Condition Register
+	s32 CR; //Condition Register
 
 	//CR0
 	// 0 : LT - Negative (is negative)
@@ -103,11 +104,7 @@ public:
 
 	u64 cycle;
 
-	CPUCycle()
-	{
-		Reset();
-	}
-
+public:
 	inline bool CheckOverflow(const s64 a, const s64 b)
 	{
 		return
@@ -124,7 +121,7 @@ public:
 
 	inline bool IsCarryGen(const s64 a, const s64 b)
 	{
-		if(a == 0 || b == 0) return 0;
+		if(a == 0 || b == 0) return false;
 		
 		s64 c = 0;
 		for(uint i=0; i<32; i++)
@@ -134,68 +131,74 @@ public:
 			c = (x * y) | (x * c) | (y * c);
 		}
 		
-		return !!c;
+		return c > 0;
 	}
 
-	inline void UpdateCR_LT(const uint n, const bool set)
+	inline void UpdateCR_LT(const bool set)
 	{
 		if(set)
 		{
-			CR[n] |= CR0_LT;
+			CR |= CR0_LT;
 		}
 		else
 		{
-			CR[n] &= ~CR0_LT;
+			CR &= ~CR0_LT;
 		}
 	}
 
-	inline void UpdateCR_GT(const uint n, const bool set)
+	inline void UpdateCR_GT(const bool set)
 	{
 		if(set)
 		{
-			CR[n] |= CR0_GT;
+			CR |= CR0_GT;
 		}
 		else
 		{
-			CR[n] &= ~CR0_GT;
+			CR &= ~CR0_GT;
 		}
 	}
 
-	inline void UpdateCR_EQ(const uint n, const bool set)
+	inline void UpdateCR_EQ(const bool set)
 	{
 		if(set)
 		{
-			CR[n] |= CR0_EQ;
+			CR |= CR0_EQ;
 		}
 		else
 		{
-			CR[n] &= ~CR0_EQ;
+			CR &= ~CR0_EQ;
 		}
 	}
 
-	inline void UpdateCR_SO(const uint n, const bool set)
+	inline void UpdateCR_SO(const bool set)
 	{
 		if(set)
 		{
-			CR[n] |= CR0_SO;
+			CR |= CR0_SO;
 		}
 		else
 		{
-			CR[n] &= ~CR0_SO;
+			CR &= ~CR0_SO;
 		}
-	}
-
-	inline void UpdateCRn(const uint n, const int lvalue, const int rvalue)
-	{
-		UpdateCR_LT(n, lvalue < rvalue);
-		UpdateCR_GT(n, lvalue > rvalue);
-		UpdateCR_EQ(n, lvalue == rvalue);
-		UpdateCR_SO(n, IsXER_SO());
 	}
 
 	inline void UpdateCR0(const int value)
 	{
-		UpdateCRn(0, value, 0);
+		CR &= 0x0fffffff;
+		if (!value)
+		{
+			UpdateCR_EQ(true);
+		}
+		else if (value & 0x80000000)
+		{
+			UpdateCR_LT(true);
+		}
+		else
+		{
+			UpdateCR_GT(true);
+		}
+
+		if (IsXER_SO()) UpdateCR_SO(true);
 	}
 
 	inline void UpdateXER_CA(const bool set)
@@ -250,12 +253,16 @@ public:
 
 	inline void UpdateXER_SO_OV(const s64 lvalue, const s64 value, const s64 rvalue)
 	{
-		UpdateXER_SO_OV(CheckOverflow(lvalue, rvalue)
+		UpdateXER_SO_OV(CheckOverflow(lvalue, value)
 			|| (rvalue && IsCarryGen(lvalue + value, rvalue)));
 	}
 
-	const bool IsXER_CA() const { return !!(XER & XER_CA); }
-	const bool IsXER_SO() const { return !!(XER & XER_SO); }
+	const bool IsXER_CA() const { return (XER & XER_CA) > 0; }
+	const bool IsXER_SO() const { return (XER & XER_SO) > 0; }
+
+public:
+	CPUThread(const u8 id);
+	~CPUThread();
 
 	virtual void Reset();
 	virtual void NextPc();
@@ -263,6 +270,35 @@ public:
 	virtual void PrevPc();
 	virtual void SetBranch(const u32 pc);
 	virtual void SetPc(const u32 pc);
-};
 
-extern CPUCycle CPU;
+	virtual void SetError(const u32 error);
+
+	virtual bool IsOk()		const { return m_error == 0; }
+	virtual bool IsRunned()	const { return m_status == Runned; }
+	virtual bool IsPaused()	const { return m_status == Paused; }
+	virtual bool IsStoped()	const { return m_status == Stoped; }
+
+	virtual u32  GetError() const { return m_error; }
+
+	virtual void Run();
+	virtual void Pause();
+	virtual void Resume();
+	virtual void Stop();
+	virtual void SysResume();
+
+private:
+	enum Status
+	{
+		Runned,
+		Paused,
+		Stoped,
+	};
+
+	u32 m_status;
+	u32 m_error;
+	const u8 m_id;
+
+	void* m_dec;
+
+	virtual void Step();
+};

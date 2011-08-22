@@ -215,9 +215,22 @@ public:
 
 FSDirs fs_dirs;
 
-int lv2FsOpen()
+wxString ReadStringInMem(u32 addr)
 {
-	const wxString& patch = Memory.MemFlags.SearchV(CPU.GPR[3]);
+	wxString ret = wxEmptyString;
+	for(;;)
+	{
+		char c = (char)Memory.Read8(addr++);
+		if(c == 0) break;
+		ret += c;
+	}
+
+	return FixPatch(ret);
+}
+
+int SysCalls::lv2FsOpen()
+{
+	const wxString& patch = ReadStringInMem(CPU.GPR[3]);
 	const s32 oflags = CPU.GPR[4];
 	s64& fs_file = CPU.GPR[5];
 
@@ -225,14 +238,14 @@ int lv2FsOpen()
 	const void* arg = (void*)&CPU.GPR[7];//???
 	const s32 argcount = CPU.GPR[8];
 
-	fs_file = fs_files.Open(FixPatch(patch), oflags, mode);
+	fs_file = fs_files.Open(patch, oflags, mode);
 	return 0;
 }
 
-int lv2FsRead()
+int SysCalls::lv2FsRead()
 {
 	const u32 fs_file = CPU.GPR[3];
-	void* buf = (void*)&CPU.GPR[4];
+	void* buf = Memory.GetMemByAddr(CPU.GPR[4]).GetMemFromAddr(CPU.GPR[4]);
 	const u64 size = CPU.GPR[5];
 	s64& read = CPU.GPR[6];
 
@@ -240,10 +253,10 @@ int lv2FsRead()
 	return 0;
 }
 
-int lv2FsWrite()
+int SysCalls::lv2FsWrite()
 {
 	const u32 fs_file = CPU.GPR[3];
-	const void* buf = (void*)&CPU.GPR[4];
+	const void* buf = Memory.GetMemByAddr(CPU.GPR[4]).GetMemFromAddr(CPU.GPR[4]);
 	const u64 size = CPU.GPR[5];
 	s64& written = CPU.GPR[6];
 
@@ -251,7 +264,7 @@ int lv2FsWrite()
 	return 0;
 }
 
-int lv2FsClose()
+int SysCalls::lv2FsClose()
 {
 	const u32 fs_file = CPU.GPR[3];
 
@@ -259,16 +272,16 @@ int lv2FsClose()
 	return 0;
 }
 
-int lv2FsOpenDir()
+int SysCalls::lv2FsOpenDir()
 {
-	const wxString& patch = (char*)&CPU.GPR[3];
+	const wxString& patch = ReadStringInMem(CPU.GPR[3]);
 	s64& fs_file = CPU.GPR[4];
 
-	fs_file = fs_dirs.Open(FixPatch(patch));
+	fs_file = fs_dirs.Open(patch);
 	return 0;
 }
 
-int lv2FsReadDir()
+int SysCalls::lv2FsReadDir()
 {
 	s64 fs_file = CPU.GPR[3];
 	Lv2FsDirent* fs_dirent = (Lv2FsDirent*)&CPU.GPR[4];
@@ -278,7 +291,7 @@ int lv2FsReadDir()
 	return 0;
 }
 
-int lv2FsCloseDir()
+int SysCalls::lv2FsCloseDir()
 {
 	s64 fs_file = CPU.GPR[3];
 
@@ -286,9 +299,9 @@ int lv2FsCloseDir()
 	return 0;
 }
 
-int lv2FsMkdir()
+int SysCalls::lv2FsMkdir()
 {
-	const wxString& patch = FixPatch((char*)&CPU.GPR[3]);
+	const wxString& patch = ReadStringInMem(CPU.GPR[3]);
 	const u32 mode = CPU.GPR[4];//???
 
 	if(wxDirExists(patch)) return -1;
@@ -297,10 +310,10 @@ int lv2FsMkdir()
 	return 0;
 }
 
-int lv2FsRename()
+int SysCalls::lv2FsRename()
 {
-	const wxString& patch = (char*)&CPU.GPR[3];
-	const wxString& newpatch = (char*)&CPU.GPR[4];
+	const wxString& patch = ReadStringInMem(CPU.GPR[3]);
+	const wxString& newpatch = ReadStringInMem(CPU.GPR[4]);
 
 	if(!wxFile::Access(patch, wxFile::read))
 	{
@@ -308,11 +321,11 @@ int lv2FsRename()
 		return -1;
 	}
 
-	wxRenameFile(FixPatch(patch), FixPatch(newpatch));
+	wxRenameFile(patch, newpatch);
 	return 0;
 }
 
-int lv2FsLSeek64()
+int SysCalls::lv2FsLSeek64()
 {
 	const u32 fs_file = CPU.GPR[3];
 	const s64 offset = CPU.GPR[4];
@@ -323,9 +336,9 @@ int lv2FsLSeek64()
 	return 0;
 }
 
-int lv2FsRmdir()
+int SysCalls::lv2FsRmdir()
 {
-	const wxString& patch = FixPatch((char*)&CPU.GPR[3]);
+	const wxString& patch = ReadStringInMem(CPU.GPR[3]);
 
 	if(!wxFile::Access(patch, wxFile::read))
 	{
@@ -337,9 +350,9 @@ int lv2FsRmdir()
 	return 0;
 }
 
-int lv2FsUtime()
+int SysCalls::lv2FsUtime()
 {
-	const wxString& patch = FixPatch((char*)&CPU.GPR[3]);
+	const wxString& patch = ReadStringInMem(CPU.GPR[3]);
 	Lv2FsUtimbuf& times = *(Lv2FsUtimbuf*)&CPU.GPR[4];
 
 	if(!wxFile::Access(patch, wxFile::read))

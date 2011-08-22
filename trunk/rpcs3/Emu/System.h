@@ -1,42 +1,34 @@
 #pragma once
 
-#include "Thread.h"
-#include "Emu/Decoder/Decoder.h"
-#include "Emu/Opcodes/DisAsm.h"
-#include "Emu/Opcodes/Interpreter.h"
-
 #include "Gui/MemoryViewer.h"
+#include "Emu/Cell/CPU.h"
+#include "Utilites/Array.h"
 
-class SysThread : public StepThread
+class Emulator
 {
-	enum
+	enum Status
 	{
-		RUN,
-		PAUSE,
-		STOP,
+		Runned,
+		Paused,
+		Stoped,
 	};
 
-	uint m_cur_state;
-
-	enum
+	enum Mode
 	{
 		DisAsm,
 		Interpreter,
 	};
 
-	Decoder* decoder;
+	uint m_status;
 	uint m_mode;
 
 	MemoryViewerPanel* m_memory_viewer;
+	ArrayF<CPUThread> m_cpu_threads;
 
 public:
 	bool IsSlef;
 
-	SysThread();
-
-	~SysThread()
-	{
-	}
+	Emulator();
 
 	virtual void SetSelf(wxString self_patch);
 	virtual void SetElf(wxString elf_patch);
@@ -46,12 +38,30 @@ public:
 	virtual void Resume();
 	virtual void Stop();
 
-	virtual bool IsRunned() const { return m_cur_state == RUN; }
-	virtual bool IsPaused() const { return m_cur_state == PAUSE; }
-	virtual bool IsStoped() const { return m_cur_state == STOP; }
-	virtual void Step();
+	ArrayF<CPUThread>& GetCPU()
+	{
+		return m_cpu_threads;
+	}
 
-	static void CleanupInThread(void* arg);
+	CPUThread& GetPPU()
+	{
+		return m_cpu_threads.Get(0);
+	}
+
+	CPUThread& GetSPU(const u8 core)
+	{
+		if(core >= m_cpu_threads.GetCount())
+		{
+			ConLog.Error("Get SPU error: unknown number! (%d)", core);
+			return m_cpu_threads.Get(0);
+		}
+
+		return m_cpu_threads.Get(core);
+	}
+
+	virtual bool IsRunned() const { return m_status == Runned; }
+	virtual bool IsPaused() const { return m_status == Paused; }
+	virtual bool IsStoped() const { return m_status == Stoped; }
 };
 
-extern SysThread System;
+extern Emulator Emu;

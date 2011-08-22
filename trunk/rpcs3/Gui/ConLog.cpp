@@ -81,7 +81,7 @@ void LogWriter::Error(const wxString fmt, ...)
 
 	wxString frmt;
 	frmt.PrintfV(fmt, list);
-
+	
 	va_end(list);
 
 	WriteToLog("E", frmt, "Red");
