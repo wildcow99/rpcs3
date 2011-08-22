@@ -63,7 +63,7 @@ public:
 
 MemContiners continers;
 
-int lv2MemContinerCreate()
+int SysCalls::lv2MemContinerCreate()
 {
 	s64& continer = CPU.GPR[3];
 	u32 size = CPU.GPR[4];
@@ -72,7 +72,7 @@ int lv2MemContinerCreate()
 	return 0;
 }
 
-int lv2MemContinerDestroy()
+int SysCalls::lv2MemContinerDestroy()
 {
 	u32 container = CPU.GPR[3];
 

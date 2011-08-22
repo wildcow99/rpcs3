@@ -255,126 +255,104 @@ class NullMemoryBlock : public MemoryBlock
 	virtual bool Read8(const u32 addr, u8* value)
 	{
 		ConLog.Error("Read8 from null block: [%08x]", addr);
+		Emu.Pause();
 		return false;
 	}
 
 	virtual bool Read16(const u32 addr, u16* value)
 	{
 		ConLog.Error("Read16 from null block: [%08x]", addr);
+		Emu.Pause();
 		return false;
 	}
 
 	virtual bool Read32(const u32 addr, u32* value)
 	{
 		ConLog.Error("Read32 from null block: [%08x]", addr);
+		Emu.Pause();
 		return false;
 	}
 
 	virtual bool Read64(const u32 addr, u64* value)
 	{
 		ConLog.Error("Read64 from null block: [%08x]", addr);
+		Emu.Pause();
 		return false;
 	}
 
 	virtual bool Read128(const u32 addr, u128* value)
 	{
 		ConLog.Error("Read128 from null block: [%08x]", addr);
+		Emu.Pause();
 		return false;
 	}
 
 	virtual bool Write8(const u32 addr, const u8 value)
 	{
 		ConLog.Error("Write8 to null block: [%08x]: %x", addr, value);
+		Emu.Pause();
 		return false;
 	}
 
 	virtual bool Write16(const u32 addr, const u16 value)
 	{
 		ConLog.Error("Write16 to null block: [%08x]: %x", addr, value);
+		Emu.Pause();
 		return false;
 	}
 
 	virtual bool Write32(const u32 addr, const u32 value)
 	{
 		ConLog.Error("Write32 to null block: [%08x]: %x", addr, value);
+		Emu.Pause();
 		return false;
 	}
 
 	virtual bool Write64(const u32 addr, const u64 value)
 	{
 		ConLog.Error("Write64 to null block: [%08x]: %x", addr, value);
+		Emu.Pause();
 		return false;
 	}
 
 	virtual bool Write128(const u32 addr, const u128 value)
 	{
 		ConLog.Error("Write128 to null block: [%08x]: %x_%x", addr, value.hi, value.lo);
+		Emu.Pause();
 		return false;
 	}
 };
 
-struct MemoryFlag
-{
-	u32 addr;
-	char* value;
-	u64 size;
-};
-
 class MemoryFlags
 {
-	MemoryFlag* m_memflags;
-	u32 m_count;
+	wxArrayInt m_memflags;
 
 public:
 	MemoryFlags() 
-		: m_memflags(NULL)
-		, m_count(0)
 	{
 	}
 
-	void Add(char* value, const u64 size, const u32 addr)
+	void Add(const u32 addr)
 	{
-		if(!m_memflags)
-		{
-			m_count = 1;
-			m_memflags = (MemoryFlag*)malloc(sizeof(MemoryFlag));
-		}
-		else
-		{
-			m_count++;
-			m_memflags = (MemoryFlag*)realloc(m_memflags, sizeof(MemoryFlag) * m_count);
-		}
-
-		MemoryFlag& mf = m_memflags[m_count-1];
-		mf.addr = addr;
-		mf.size = size;
-		mf.value = value;
+		if(!IsFlag(addr)) m_memflags.Add(addr);
 	}
 
 	void Clear()
 	{
-		m_count = 0;
-		safe_delete(m_memflags);
+		m_memflags.Clear();
 	}
 
-	char* Search(const u32 addr)
+	bool IsFlag(const u32 addr)
 	{
-		for(uint i=0; i<m_count; ++i)
+		for(uint i=0; i<m_memflags.GetCount(); ++i)
 		{
-			if(m_memflags[i].addr == addr) return m_memflags[i].value;
+			if(m_memflags[i] == addr) return true;
 		}
 
-		return NULL;
+		return false;
 	}
 
-	char* SearchV(const s64& value)
-	{
-		char* saddr = Search(value);
-		if(saddr == 0) return (char*)&value;
-		return saddr;
-	}
-
-	u64 GetCount() const { return m_count; }
+	u64 GetCount() const { return m_memflags.GetCount(); }
 };
 
 class MemoryBase
@@ -408,7 +386,6 @@ public:
 		if(num == Video_FrameBuffer.GetNumber()) return Video_FrameBuffer;
 		if(num == Video_GPUdata.	GetNumber()) return Video_GPUdata;
 
-		ConLog.Error("Unknown memory number! (%d)", num);
 		return NullMem;
 	}
 
@@ -420,7 +397,6 @@ public:
 			if(mem.IsMyAddress(addr)) return mem;
 		}
 
-		ConLog.Error("Unknown memory address! (%d)", addr);
 		return NullMem;
 	}
 

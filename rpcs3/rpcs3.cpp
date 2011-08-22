@@ -2,6 +2,7 @@
 #include "rpcs3.h"
 #include "Ini.h"
 #include "Emu/System.h"
+#include <wx/msw/wrapwin.h>
 
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
@@ -16,8 +17,8 @@ bool Rpcs3App::OnInit()
 	ConLogFrame = new LogFrame();
 	ConLogFrame->Show();
 
-	m_main = new MainFrame();
-	m_main->Show();
+	m_MainFrame = new MainFrame();
+	m_MainFrame->Show();
 
 	return true;
 }
@@ -25,18 +26,27 @@ bool Rpcs3App::OnInit()
 void Rpcs3App::Exit()
 {
 	Ini.Save();
-	System.Stop();
-	System.~SysThread();
+	Emu.Stop();
 
 	if(ConLogFrame && ConLogFrame->runned) ConLogFrame->~LogFrame();
 
-	if(m_main && m_main->IsShown())
+	if(m_MainFrame && m_MainFrame->IsShown())
 	{
-		Ini.Gui.m_MainWindow.SetValue(WindowInfo(m_main->GetSize(), m_main->GetPosition()));
-		m_main->~MainFrame();
+		Ini.Gui.m_MainWindow.SetValue(WindowInfo(m_MainFrame->GetSize(), m_MainFrame->GetPosition()));
+		m_MainFrame->~MainFrame();
 	}
 
 	wxApp::Exit();
 }
 
 GameInfo CurGameInfo;
+
+CPUThread& GetPPU()
+{
+	return Emu.GetPPU();
+}
+
+CPUThread& GetSPU(const u8 core)
+{
+	return Emu.GetSPU(core);
+}

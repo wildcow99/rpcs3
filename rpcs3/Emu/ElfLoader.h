@@ -479,4 +479,4 @@ private:
 	virtual void LoadPsf();
 };
 
-extern ElfLoader elf_loader;
+extern ElfLoader Loader;

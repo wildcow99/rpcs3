@@ -1,29 +1,28 @@
 #include "stdafx.h"
 #include "System.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/Cell/CPU.h"
 #include "Emu/ElfLoader.h"
 #include "Ini.h"
 
-SysThread::SysThread() : StepThread()
+Emulator::Emulator()
 {
-	m_cur_state = STOP;
+	m_status = Stoped;
 	m_mode = 0;
 }
 
-void SysThread::SetSelf(wxString self_patch)
+void Emulator::SetSelf(wxString self_patch)
 {
-	elf_loader.SetElf(self_patch);
+	Loader.SetElf(self_patch);
 	IsSlef = true;
 }
 
-void SysThread::SetElf(wxString elf_patch)
+void Emulator::SetElf(wxString elf_patch)
 {
-	elf_loader.SetElf(elf_patch);
+	Loader.SetElf(elf_patch);
 	IsSlef = false;
 }
 
-void SysThread::Run()
+void Emulator::Run()
 {
 	if(IsRunned()) Stop();
 	if(IsPaused())
@@ -32,94 +31,92 @@ void SysThread::Run()
 		return;
 	}
 
-	ConLog.Write("run...");
+	//ConLog.Write("run...");
+	m_status = Runned;
 
 	Memory.Init();
 
+	GetCPU().SetCount(8);
+
 	if(IsSlef)
 	{
-		elf_loader.LoadSelf();
+		Loader.LoadSelf();
 	}
 	else
 	{
-		elf_loader.LoadElf();
+		Loader.LoadElf();
 	}
 	
+	/*
 	m_mode = Ini.Emu.m_DecoderMode.GetValue();
 
 	switch(m_mode)
 	{
 	case DisAsm:
-		decoder = new Decoder(*new DisAsmOpcodes());
+		ppc_decoder = new PPCDecoder(*new DisAsmOpcodes());
+		//decoder = new Decoder(*new DisAsmOpcodes());
 	break;
 	case Interpreter:
 		decoder = new Decoder(*new InterpreterOpcodes());
 	break;
 	};
+	*/
 
 	if(!m_memory_viewer) m_memory_viewer = new MemoryViewerPanel(NULL);
 
-	m_memory_viewer->SetPC(CPU.PC);
+	m_memory_viewer->SetPC(GetPPU().PC);
 	m_memory_viewer->Show();
 	m_memory_viewer->ShowPC();
 
-	m_cur_state = RUN;
-	StepThread::Start();
-	StepThread::DoStep();
+	GetPPU().Run();
+
+	wxGetApp().m_MainFrame->UpdateUI();
 }
 
-void SysThread::Pause()
+void Emulator::Pause()
 {
 	if(!IsRunned()) return;
-	ConLog.Write("pause...");
+	//ConLog.Write("pause...");
 
-	m_cur_state = PAUSE;
+	m_status = Paused;
+	wxGetApp().m_MainFrame->UpdateUI();
 }
 
-void SysThread::Resume()
+void Emulator::Resume()
 {
 	if(!IsPaused()) return;
-	ConLog.Write("resume...");
+	//ConLog.Write("resume...");
 
-	m_cur_state = RUN;
-	StepThread::DoStep();
+	m_status = Runned;
+	wxGetApp().m_MainFrame->UpdateUI();
+
+	for(uint i=0; i<GetCPU().GetCount(); ++i)
+	{
+		GetCPU().Get(i).SysResume();
+	}
 }
 
-void SysThread::Stop()
+void Emulator::Stop()
 {
 	if(IsStoped()) return;
-	ConLog.Write("shutdown...");
+	//ConLog.Write("shutdown...");
 
-	m_cur_state = STOP;
-	StepThread::Exit();
+	m_status = Stoped;
+	wxGetApp().m_MainFrame->UpdateUI();
+
+	for(uint i=0; i<GetCPU().GetCount(); ++i)
+	{
+		CPUThread* cpu = &GetCPU().Get(i);
+		cpu->Stop();
+		cpu->~CPUThread();
+	}
+
+	GetCPU().Clear();
 
 	Memory.Close();
-	CPU.Reset();
 	CurGameInfo.Reset();
 
 	if(m_memory_viewer && !m_memory_viewer->exit) m_memory_viewer->Hide();
-	if(decoder) delete decoder;
 }
 
-void SysThread::Step()
-{
-	while(m_cur_state == RUN)
-	{
-		StepThread::SetCancelState(false);
-		{
-			decoder->DoCode(Memory.Read32(CPU.PC));
-
-			CPU.NextPc();
-		}
-		StepThread::SetCancelState(true);
-	}
-
-	ThreadAdv::Sleep(1);
-}
-
-void SysThread::CleanupInThread(void* arg)
-{
-	(*(SysThread*)arg).Stop();
-}
-
-SysThread System;
+Emulator Emu;

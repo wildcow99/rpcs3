@@ -3,6 +3,7 @@
 class DisAsmFrame : public wxFrame
 {
 	static const uint LINES_OPCODES = 40;
+	u32 count;
 
 	wxListView* m_disasm_list;
 
@@ -12,6 +13,7 @@ class DisAsmFrame : public wxFrame
 	virtual void Next (wxCommandEvent& event);
 	virtual void fPrev(wxCommandEvent& event);
 	virtual void fNext(wxCommandEvent& event);
+	virtual void SetPc(wxCommandEvent& event);
 
 	void Dump(wxCommandEvent& event);
 	void Resume();

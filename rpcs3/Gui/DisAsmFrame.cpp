@@ -4,10 +4,13 @@
 #include "Emu/Cell/CPU.h"
 #include "Emu/System.h"
 #include "Emu/ElfLoader.h"
+#include "Emu/Decoder/Decoder.h"
+#include "Emu/Opcodes/DisAsm.h"
 
 DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 {
 	exit = false;
+	count = 0;
 	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
 	wxBoxSizer& s_b_panel( *new wxBoxSizer(wxHORIZONTAL) );
 
@@ -20,6 +23,8 @@ DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 
 	wxButton& b_dump	= *new wxButton(this, wxID_ANY, L"Dump code");
 
+	wxButton& b_setpc	= *new wxButton(this, wxID_ANY, L"Set PC");
+
 	s_b_panel.Add(&b_fprev);
 	s_b_panel.Add(&b_prev);
 	s_b_panel.AddSpacer(5);
@@ -29,13 +34,19 @@ DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 	s_b_panel.Add(&b_dump);
 
 	s_panel.Add(&s_b_panel);
+	s_panel.Add(&b_setpc);
 	s_panel.Add(m_disasm_list);
 
-	m_disasm_list->InsertColumn(0, "ASM");
+	m_disasm_list->InsertColumn(0, "PC");
+	m_disasm_list->InsertColumn(1, "ASM");
+
+	m_disasm_list->SetColumnWidth( 0, 50 );
+
+	for(uint i=0; i<LINES_OPCODES; ++i) m_disasm_list->InsertItem(i, -1);
 
 	SetSizerAndFit( &s_panel );
 
-	SetSize(50, 650);
+	SetSize(50, 660);
 
 	Connect( wxEVT_SIZE, wxSizeEventHandler(DisAsmFrame::OnResize) );
 
@@ -45,6 +56,7 @@ DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 	Connect(b_next.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Next));
 	Connect(b_fprev.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::fPrev));
 	Connect(b_fnext.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::fNext));
+	Connect(b_setpc.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::SetPc));
 
 	Connect(b_dump.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Dump));
 }
@@ -53,32 +65,37 @@ void DisAsmFrame::OnResize(wxSizeEvent& event)
 {
 	const wxSize size(GetClientSize());
 	m_disasm_list->SetSize( size.GetWidth(), size.GetHeight() - 25 );
-	m_disasm_list->SetColumnWidth( 0, size.GetWidth() - 4 );
+	m_disasm_list->SetColumnWidth( 1, size.GetWidth() - (m_disasm_list->GetColumnWidth(0) + 8) );
 }
 
 void DisAsmFrame::AddLine(const wxString line)
 {
 	static bool finished = false;
-	if(finished && System.IsRunned())
+
+	if(finished && Emu.IsRunned())
 	{
-		m_disasm_list->DeleteAllItems();
+		count = 0;
+		//m_disasm_list->DeleteAllItems();
 		finished = false;
 	}
-	else if(m_disasm_list->GetItemCount() >= LINES_OPCODES || !System.IsRunned())
+	else if(count >= LINES_OPCODES || !Emu.IsRunned())
 	{
-		if(System.IsRunned()) System.Pause();
+		if(Emu.IsRunned()) Emu.Pause();
 		finished = true;
-		CPU.PrevPc();
+		GetPPU().PrevPc();
 		return;
 	}
 
-	m_disasm_list->InsertItem(m_disasm_list->GetItemCount(), line);
+	m_disasm_list->SetItem(count, 0, wxString::Format("%x", GetPPU().PC));
+	m_disasm_list->SetItem(count, 1, line);
+
+	++count;
 }
 
 void DisAsmFrame::Resume()
 {
-	m_disasm_list->DeleteAllItems();
-	System.Resume();
+	//m_disasm_list->DeleteAllItems();
+	Emu.Resume();
 }
 
 #include "Thread.h"
@@ -88,8 +105,8 @@ class MTProgressDialog : public wxDialog
 	wxGauge** m_gauge;
 	wxStaticText** m_msg;
 
-	wxArrayInt m_maximum;
-	uint m_cores;
+	wxArrayLong m_maximum;
+	u8 m_cores;
 
 	static const uint layout = 16;
 	static const uint maxdial = 65536;
@@ -97,7 +114,7 @@ class MTProgressDialog : public wxDialog
 
 public:
 	MTProgressDialog(wxWindow* parent, const wxSize& size, const wxString& title,
-			const wxString& msg, const wxArrayInt& maximum, const uint cores)
+			const wxString& msg, const wxArrayLong& maximum, const u8 cores)
 		: wxDialog(parent, wxID_ANY, title, wxDefaultPosition)
 		, m_maximum(maximum)
 		, m_cores(cores)
@@ -142,7 +159,7 @@ public:
 		Show();
 	}
 
-	__forceinline void Update(const uint thread_id, const u32 value, const wxString& msg)
+	__forceinline void Update(const u8 thread_id, const u64 value, const wxString& msg)
 	{
 		if(thread_id > m_cores) return;
 
@@ -160,6 +177,12 @@ public:
 	{
 		if(thread_id > m_cores) return 0;
 		return m_maximum[thread_id];
+	}
+
+	void SetMaxFor(const uint thread_id, const u64 val)
+	{
+		if(thread_id > m_cores) return;
+		m_maximum[thread_id] = val;
 	}
 
 	virtual void Close(bool force = false)
@@ -204,22 +227,21 @@ public:
 	{
 		ConLog.Write("Start dump in thread %d!", (int)id);
 
-		const wxArrayPtrVoid& sh_ptr = elf_loader.m_sh_ptr;
+		const wxArrayPtrVoid& sh_ptr = Loader.m_sh_ptr;
 		const u32 max_value = prog_dial->GetMaxValue(id);
 
 		for(u32 sh=0, vsize=0; sh<sh_ptr.GetCount(); ++sh)
 		{
 			const ElfLoader::Elf64_Shdr& c_sh = *(ElfLoader::Elf64_Shdr*)sh_ptr[sh];
+			const u64 sh_size = c_sh.sh_size / cores / 4;
 
-			for(u64 addr=c_sh.sh_addr + (id * 4), size=0; size<c_sh.sh_size; vsize++, size+=cores)
+			for(u64 addr=c_sh.sh_addr + (id * 4), size=0; size<sh_size; vsize++, size++)
 			{
 				prog_dial->Update(id, vsize, wxString::Format("%d thread: %d of %d",
 					(int)id + 1, vsize, max_value));
 
 				disasm->dump_pc = addr;
 				decoder->DoCode(Memory.Read32(addr));
-
-				if(sh == 1) ConLog.Write(wxString::Format("	%d: %s", addr, disasm->last_opcode));
 
 				arr[id][sh].Add(disasm->last_opcode);
 
@@ -284,12 +306,12 @@ struct WaitDumperThread : public ThreadBase
 
 		ConLog.Write("Saving dump is started!");
 
-		const wxArrayPtrVoid& sh_ptr = elf_loader.m_sh_ptr;
+		const wxArrayPtrVoid& sh_ptr = Loader.m_sh_ptr;
 		const uint length_for_core = prog_dial.GetMaxValue(0);
 		const uint length = length_for_core * cores;
 		prog_dial.Close();
 
-		wxArrayInt max;
+		wxArrayLong max;
 		max.Add(length);
 		MTProgressDialog& prog_dial2 = 
 			*new MTProgressDialog(NULL, wxDefaultSize, "Saving", "Loading...", max, 1);
@@ -302,7 +324,7 @@ struct WaitDumperThread : public ThreadBase
 			const ElfLoader::Elf64_Shdr& c_sh = *(ElfLoader::Elf64_Shdr*)sh_ptr[sh];
 
 			if(!c_sh.sh_size) continue;
-			const uint c_sh_size = c_sh.sh_size/4;
+			const uint c_sh_size = c_sh.sh_size / 4 / cores;
 
 			fd.Write(wxString::Format("Start of section header %d (instructions count: %d)\n", sh, c_sh_size));
 
@@ -357,7 +379,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 	if(ctrl.ShowModal() == wxID_CANCEL) return;
 	
-	const wxArrayPtrVoid& sh_ptr = elf_loader.m_sh_ptr;
+	const wxArrayPtrVoid& sh_ptr = Loader.m_sh_ptr;
 
 	if(sh_ptr.GetCount() <= 0) return;
 
@@ -366,14 +388,14 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	const uint cores_count =
 		(si.dwNumberOfProcessors < 1 || si.dwNumberOfProcessors > 8 ? 2 : si.dwNumberOfProcessors); 
 
-	wxArrayInt max;
+	wxArrayLong max;
 	max.Clear();
 
-	u32 max_count = 0;
+	u64 max_count = 0;
 	for(uint sh=0; sh<sh_ptr.GetCount(); ++sh)
 	{
 		ElfLoader::Elf64_Shdr& c_sh = *(ElfLoader::Elf64_Shdr*)sh_ptr[sh];
-		while(max_count < c_sh.sh_size) max_count += cores_count;
+		max_count += c_sh.sh_size / cores_count / 4;
 	}
 
 	for(uint c=0; c<cores_count; ++c)
@@ -402,14 +424,42 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	wait_dump.Start(true);
 }
 
-void DisAsmFrame::Prev (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES+1)); Resume(); } }
-void DisAsmFrame::Next (wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES-1)); Resume(); } }
-void DisAsmFrame::fPrev(wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { CPU.SetPc( CPU.PC - (4*LINES_OPCODES)*2); Resume(); } }
-void DisAsmFrame::fNext(wxCommandEvent& WXUNUSED(event)) { if(System.IsPaused()) { Resume(); } }
+void DisAsmFrame::Prev (wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { GetPPU().SetPc( GetPPU().PC - 4*(LINES_OPCODES+1)); Resume(); } }
+void DisAsmFrame::Next (wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { GetPPU().SetPc( GetPPU().PC - 4*(LINES_OPCODES-1)); Resume(); } }
+void DisAsmFrame::fPrev(wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { GetPPU().SetPc( GetPPU().PC - (4*LINES_OPCODES)*2); Resume(); } }
+void DisAsmFrame::fNext(wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { Resume(); } }
+void DisAsmFrame::SetPc(wxCommandEvent& WXUNUSED(event))
+{
+	if(!Emu.IsPaused()) return;
+
+	wxDialog* diag = new wxDialog(this, wxID_ANY, "Set PC", wxDefaultPosition);
+
+	wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
+	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
+	wxTextCtrl* p_pc(new wxTextCtrl(diag, wxID_ANY));
+
+	s_panel->Add(p_pc);
+	s_panel->AddSpacer(8);
+	s_panel->Add(s_b_panel);
+
+	s_b_panel->Add(new wxButton(diag, wxID_OK), wxLEFT, 0, 5);
+	s_b_panel->AddSpacer(5);
+	s_b_panel->Add(new wxButton(diag, wxID_CANCEL), wxRIGHT, 0, 5);
+
+	diag->SetSizerAndFit( s_panel );
+
+	p_pc->SetLabel(wxString::Format("%x", GetPPU().PC));
+
+	if(diag->ShowModal() == wxID_OK)
+	{
+		sscanf(p_pc->GetLabel(), "%x", &GetPPU().PC);
+		Resume();
+	}
+}
 
 void DisAsmFrame::MouseWheel(wxMouseEvent& event)
 {
-	if(!System.IsPaused())
+	if(!Emu.IsPaused())
 	{
 		event.Skip();
 		return;
@@ -419,14 +469,14 @@ void DisAsmFrame::MouseWheel(wxMouseEvent& event)
 
 	if(event.ControlDown())
 	{
-		CPU.SetPc( CPU.PC - (((4*LINES_OPCODES)*2)*value) );
+		GetPPU().SetPc( GetPPU().PC - (((4*LINES_OPCODES)*2)*value) );
 	}
 	else
 	{
-		CPU.SetPc( CPU.PC - 4*(LINES_OPCODES + (value/* * event.m_linesPerAction*/)) );
+		GetPPU().SetPc( GetPPU().PC - 4*(LINES_OPCODES + (value /** event.m_linesPerAction*/)) );
 	}
 
-	System.Resume();
+	Emu.Resume();
 
 	event.Skip();
 }

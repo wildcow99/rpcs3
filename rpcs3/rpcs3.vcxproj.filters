@@ -15,6 +15,7 @@
     </Filter>
     <Filter Include="Emu\SysCalls\lv2">
       <UniqueIdentifier>{adfec460-d940-4482-9fdb-18cb0814c3d5}</UniqueIdentifier>
+      <ParseFiles>true</ParseFiles>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -54,14 +55,14 @@
     <ClCompile Include="Ini.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="Gui\CompilerELF.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="Gui\CompilerELF.cpp">
-      <Filter>Gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
