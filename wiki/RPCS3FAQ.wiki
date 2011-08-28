@@ -1,4 +1,4 @@
-#summary One-sentence summary of this page.
+#summary Rpcs3 emulator Facts and Questions Wiki page
 #labels Featured
 
 = RPCS3 FAQ =
