@@ -1,4 +1,5 @@
 #summary One-sentence summary of this page.
+#labels RPCS3EmulatorFAQ
 
 = RPCS3 FAQ =
 
@@ -8,7 +9,7 @@ This page for FAQ about rpcs3.
 
 = Details =
 
-== RPCS3 is a New Emulator / Debugger for Windows created by DH & Hykem the Demon, Commited by Sheashea and Tested by BlackDeamon. ==
+== RPCS3 is a New Emulator / Debugger for Windows created by DH & Hykem the Demon, Commited by Sheashea and Tested by BlackDemon. ==
 The Following list showing the purpose of making RPCS3 to :
    * Make PS3 developers easily test their apps and homebrews in PC without crashing their PS3 or moving their apps from PC to PS3. 
    * OR Just playing PS3 games in your PC and have fun! ( In the future )
