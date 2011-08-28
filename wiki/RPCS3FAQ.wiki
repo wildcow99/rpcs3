@@ -1,5 +1,5 @@
 #summary One-sentence summary of this page.
-#labels RPCS3EmulatorFAQ
+#labels Featured
 
 = RPCS3 FAQ =
 
