@@ -1,22 +1,22 @@
-#summary Rpcs3 emulator Facts and Questions Wiki page
+#summary Rpcs3 emulator Frequently Asked Question Wiki page
 #labels Featured
 
 = RPCS3 FAQ =
 
 = Welcome RPCS3 ( Sony Playstation 3 emulator/debugger )= 
-This page for FAQ about rpcs3.  
+This page is FAQ about rpcs3.  
 
 
 = Details =
 
-== RPCS3 is a New Emulator / Debugger for Windows created by DH & Hykem the Demon, Commited by Sheashea and Tested by BlackDemon. ==
+== RPCS3 is a New Emulator / Debugger for Windows created by DH & Hykem, committed by Sheashea and tested by BlackDaemon. ==
 The Following list showing the purpose of making RPCS3 to :
-   * Make PS3 developers easily test their apps and homebrews in PC without crashing their PS3 or moving their apps from PC to PS3. 
-   * OR Just playing PS3 games in your PC and have fun! ( In the future )
-   
+   * Make PS3 developers easily test their apps and homebrews on PC without crashing their PS3 or moving their apps from PC to PS3. 
+   * OR Just playing PS3 games on your PC and have fun! ( In the future )
+
 Current Builds of emulator can run small homebrew at acceptable speed
-But we are planning to make it to simulate PS3 in its speed in the near future.
+But we are planning to make it to emulate PS3 on its speed in the near future.
 
 Currently We need all help, and if you wish to help us contact DH.rpcs3@gmail.com .
-Provide him with your information and your google mail information and he will add you to comitter list, But you must know C++ that the emulator written in.
+Provide him with your information and your google mail information and he will add you to committers list, But you must know C++ that the emulator written in.
 But if you aren't going to help us DO NOT EMAIL HIM.
