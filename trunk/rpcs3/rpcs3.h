@@ -16,8 +16,7 @@ public:
 
 DECLARE_APP(Rpcs3App)
 
-extern CPUThread& GetPPU();
-extern CPUThread& GetSPU(const u8 core);
+extern CPUThread& GetCPU(const u8 core);
 
 extern Rpcs3App* TheApp;
 static const u64 PS3_CLK = 3200000000;

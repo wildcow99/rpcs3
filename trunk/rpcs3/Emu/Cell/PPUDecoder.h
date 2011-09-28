@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Emu/Opcodes/Opcodes.h"
-//#include "PPCDecoder.h"
+#include "Emu/Cell/PPUOpcodes.h"
 
 
 #define START_OPCODES_GROUP_(group, reg) \
@@ -22,14 +21,14 @@
 #define ADD_OPCODE(name, regs) case(##name##):m_op.##name####regs##; break
 #define ADD_NULL_OPCODE(name) ADD_OPCODE(##name##, ())
 
-class Decoder
+class PPU_Decoder
 {
 	int m_code;
-	Opcodes& m_op;
+	PPU_Opcodes& m_op;
 
-	OP_REG RS()			const { return GetField(6, 10); }
-	OP_REG RT()			const { return GetField(6, 10); }
-	OP_REG RA()			const { return GetField(11, 15); }
+	OP_REG RS()			const { return (m_code >> 21) & 0x1f/*GetField(6, 10)*/; }
+	OP_REG RT()			const { return (m_code >> 21) & 0x1f/*GetField(6, 10)*/; }
+	OP_REG RA()			const { return (m_code >> 16) & 0x1f/*GetField(11, 15)*/; }
 	OP_REG RB()			const { return GetField(16, 20); }
 	OP_REG NB()			const { return GetField(16, 20); }
 	
@@ -77,6 +76,7 @@ class Decoder
 
 	OP_sIMM simm16()	const { return (s32)(s16)(m_code & 0xffff); }
 	OP_uIMM uimm16()	const { return m_code & 0xffff; }
+	OP_uIMM uimm26()	const { return m_code & 0x3fffffc; }
 	
 	const bool RC()	const { return m_code & 0x1; }
 	
@@ -91,11 +91,11 @@ class Decoder
 	}
 	
 public:
-	Decoder(Opcodes& op) : m_op(op)
+	PPU_Decoder(PPU_Opcodes& op) : m_op(op)
 	{
 	}
 
-	~Decoder()
+	~PPU_Decoder()
 	{
 		m_op.Exit();
 	}

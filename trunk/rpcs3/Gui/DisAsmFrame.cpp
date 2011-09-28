@@ -4,10 +4,13 @@
 #include "Emu/Cell/CPU.h"
 #include "Emu/System.h"
 #include "Emu/ElfLoader.h"
-#include "Emu/Decoder/Decoder.h"
-#include "Emu/Opcodes/DisAsm.h"
+#include "Gui/DisAsmFrame.h"
+#include "Emu/Cell/PPUDecoder.h"
+#include "Emu/Cell/PPUDisAsm.h"
 
-DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
+DisAsmFrame::DisAsmFrame(CPUThread& cpu)
+	: wxFrame(NULL, wxID_ANY, "DisAsm")
+	, CPU(cpu)
 {
 	exit = false;
 	count = 0;
@@ -50,7 +53,7 @@ DisAsmFrame::DisAsmFrame() : wxFrame(NULL, wxID_ANY, "DisAsm")
 
 	Connect( wxEVT_SIZE, wxSizeEventHandler(DisAsmFrame::OnResize) );
 
-	wxTheApp->Connect(m_disasm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(DisAsmFrame::MouseWheel));
+	wxGetApp().Connect(m_disasm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(DisAsmFrame::MouseWheel), (wxObject*)0, this);
 
 	Connect(b_prev.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Prev));
 	Connect(b_next.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Next));
@@ -82,11 +85,11 @@ void DisAsmFrame::AddLine(const wxString line)
 	{
 		if(Emu.IsRunned()) Emu.Pause();
 		finished = true;
-		GetPPU().PrevPc();
+		CPU.PrevPc();
 		return;
 	}
 
-	m_disasm_list->SetItem(count, 0, wxString::Format("%x", GetPPU().PC));
+	m_disasm_list->SetItem(count, 0, wxString::Format("%x", CPU.PC));
 	m_disasm_list->SetItem(count, 1, line);
 
 	++count;
@@ -197,8 +200,8 @@ public:
 class DumperThread : public StepThread
 {
 	volatile uint id;
-	DisAsmOpcodes* disasm;
-	Decoder* decoder;
+	PPU_DisAsm* disasm;
+	PPU_Decoder* decoder;
 	volatile bool* done;
 	volatile u8 cores;
 	MTProgressDialog* prog_dial;
@@ -219,8 +222,8 @@ public:
 
 		*done = false;
 
-		disasm = new DisAsmOpcodes(true);
-		decoder = new Decoder(*disasm);
+		disasm = new PPU_DisAsm(NULL, true);
+		decoder = new PPU_Decoder(*disasm);
 	}
 
 	virtual void Step()
@@ -424,9 +427,9 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	wait_dump.Start(true);
 }
 
-void DisAsmFrame::Prev (wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { GetPPU().SetPc( GetPPU().PC - 4*(LINES_OPCODES+1)); Resume(); } }
-void DisAsmFrame::Next (wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { GetPPU().SetPc( GetPPU().PC - 4*(LINES_OPCODES-1)); Resume(); } }
-void DisAsmFrame::fPrev(wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { GetPPU().SetPc( GetPPU().PC - (4*LINES_OPCODES)*2); Resume(); } }
+void DisAsmFrame::Prev (wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES+1)); Resume(); } }
+void DisAsmFrame::Next (wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { CPU.SetPc( CPU.PC - 4*(LINES_OPCODES-1)); Resume(); } }
+void DisAsmFrame::fPrev(wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { CPU.SetPc( CPU.PC - (4*LINES_OPCODES)*2); Resume(); } }
 void DisAsmFrame::fNext(wxCommandEvent& WXUNUSED(event)) { if(Emu.IsPaused()) { Resume(); } }
 void DisAsmFrame::SetPc(wxCommandEvent& WXUNUSED(event))
 {
@@ -448,11 +451,11 @@ void DisAsmFrame::SetPc(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit( s_panel );
 
-	p_pc->SetLabel(wxString::Format("%x", GetPPU().PC));
+	p_pc->SetLabel(wxString::Format("%x", CPU.PC));
 
 	if(diag->ShowModal() == wxID_OK)
 	{
-		sscanf(p_pc->GetLabel(), "%x", &GetPPU().PC);
+		sscanf(p_pc->GetLabel(), "%x", &CPU.PC);
 		Resume();
 	}
 }
@@ -469,11 +472,11 @@ void DisAsmFrame::MouseWheel(wxMouseEvent& event)
 
 	if(event.ControlDown())
 	{
-		GetPPU().SetPc( GetPPU().PC - (((4*LINES_OPCODES)*2)*value) );
+		CPU.SetPc( CPU.PC - (((4*LINES_OPCODES)*2)*value) );
 	}
 	else
 	{
-		GetPPU().SetPc( GetPPU().PC - 4*(LINES_OPCODES + (value /** event.m_linesPerAction*/)) );
+		CPU.SetPc( CPU.PC - 4*(LINES_OPCODES + (value /** event.m_linesPerAction*/)) );
 	}
 
 	Emu.Resume();

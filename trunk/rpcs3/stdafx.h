@@ -124,9 +124,10 @@ static void safe_realloc(T* ptr, uint new_size)
 	ptr = (T*)((ptr == NULL) ? malloc(new_size * sizeof(T)) : realloc(ptr, new_size * sizeof(T)));
 }
 
-#define safe_delete(x) free(x);(x)=NULL
+#define safe_delete(x) {free(x);(x)=NULL;}
 
 #include "rpcs3.h"
+#include "Ini.h"
 #include "Gui/ConLog.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"

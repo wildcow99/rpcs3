@@ -246,13 +246,12 @@ void ElfLoader::LoadElf32(wxFile& f)
 	Elf32_Ehdr ehdr;
 	ehdr.Load(f);
 
-	GetPPU().SetPc(ehdr.e_entry);
+	isSPU = ehdr.e_machine == 0x17;
+	entry = ehdr.e_entry;
 
 	ConLog.SkipLn();
 	ehdr.Show();
 	ConLog.SkipLn();
-
-	GetPPU().SetPc(ehdr.e_entry);
 
 	LoadPhdr32(f, ehdr);
 }
@@ -262,13 +261,12 @@ void ElfLoader::LoadElf64(wxFile& f)
 	Elf64_Ehdr ehdr;
 	ehdr.Load(f);
 
-	GetPPU().SetPc(ehdr.e_entry);
+	isSPU = ehdr.e_machine == 0x17;
+	entry = ehdr.e_entry;
 
 	ConLog.SkipLn();
 	ehdr.Show();
 	ConLog.SkipLn();
-
-	GetPPU().SetPc(ehdr.e_entry);
 
 	LoadPhdr64(f, ehdr);
 	LoadShdr64(f, ehdr);
@@ -360,6 +358,7 @@ void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 	Elf64_Shdr* strtab	= NULL;
 	Elf64_Shdr* symtab	= NULL;
 	Elf64_Shdr* opd		= NULL;
+	Elf64_Shdr* got		= NULL;
 
 	for(uint i=0; i<ehdr.e_shnum; ++i)
 	{
@@ -396,7 +395,23 @@ void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 
 			ConLog.Write("Name: %s", name);
 
-			if(!opd && !name.CmpNoCase(".opd")) opd = &shdr;
+			if(!opd && !name.CmpNoCase(".opd"))
+			{
+				Memory.MemFlags.SetOPDRange(shdr.sh_addr, shdr.sh_size);
+				opd = &shdr;
+			}
+			else if(!got && !name.CmpNoCase(".got"))
+			{
+				got = &shdr;
+			}
+			else if(!name.CmpNoCase(".data.sceFStub"))
+			{
+				Memory.MemFlags.SetFStubRange(shdr.sh_addr, shdr.sh_size);
+			}
+			else if(!name.CmpNoCase(".rodata.sceFNID"))
+			{
+				Memory.MemFlags.SetFNIDRange(shdr.sh_addr, shdr.sh_size);
+			}
 		}
 
 		shdr.Show();
@@ -404,7 +419,7 @@ void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 
 		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;
 
-		const s64 addr = offset + shdr.sh_addr;
+		const s64 addr = /*offset + */shdr.sh_addr;
 		const s64 size = shdr.sh_size;
 		MemoryBlock* mem = NULL;
 
@@ -423,7 +438,7 @@ void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 
 	if(opd)
 	{
-		const u32 addr = opd->sh_addr;
+		//const u32 addr = opd->sh_addr;
 		const u32 offs = opd->sh_offset;
 		const u32 size = opd->sh_size;
 
@@ -432,6 +447,21 @@ void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 		{
 			Memory.MemFlags.Add(Read32(f));
 			Memory.MemFlags.Add(Read32(f)); //???
+		}
+	}
+
+	if(got)
+	{
+		//const u32 addr = got->sh_addr;
+		const u32 offs = got->sh_offset;
+		const u32 size = got->sh_size;
+
+		f.Seek(offs);
+		for(uint i=0; i<size; i += sizeof(s32))
+		{
+			const u32 code = Read32(f);
+			if(code == 0x7f7f7f7f) break;
+			Memory.MemFlags.Add(code);
 		}
 	}
 
@@ -558,7 +588,7 @@ void ElfLoader::LoadSelf(bool IsDump)
 		Elf32_Ehdr ehdr;
 		ehdr.Load(f);
 
-		GetPPU().SetPc(ehdr.e_entry);
+		entry = ehdr.e_entry;
 
 		ConLog.SkipLn();
 		ehdr.Show();
@@ -573,7 +603,7 @@ void ElfLoader::LoadSelf(bool IsDump)
 		Elf64_Ehdr ehdr;
 		ehdr.Load(f);
 
-		GetPPU().SetPc(ehdr.e_entry);
+		entry = ehdr.e_entry;
 
 		ConLog.SkipLn();
 		ehdr.Show();

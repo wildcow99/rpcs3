@@ -17,6 +17,9 @@
       <UniqueIdentifier>{adfec460-d940-4482-9fdb-18cb0814c3d5}</UniqueIdentifier>
       <ParseFiles>true</ParseFiles>
     </Filter>
+    <Filter Include="Emu\CPU">
+      <UniqueIdentifier>{f66e37f9-5e58-443b-bcff-2e9e002ac89e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -46,9 +49,6 @@
     <ClCompile Include="Emu\System.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\CPU.cpp">
-      <Filter>Emu</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Display\Display.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
@@ -63,6 +63,18 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\CPU.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\InterpreterDisAsm.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\SPU.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\PPU.cpp">
+      <Filter>Emu\CPU</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

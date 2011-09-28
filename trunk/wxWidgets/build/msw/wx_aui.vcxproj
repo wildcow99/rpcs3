@@ -282,11 +282,11 @@
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>.\..\..\lib\vc_lib\</OutDir>
+    <OutDir>.\..\..\..\libs\$(Configuration)</OutDir>
     <IntDir>.\vc_mswd\aui\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>.\..\..\lib\vc_lib\</OutDir>
+    <OutDir>.\..\..\..\libs\$(Configuration)</OutDir>
     <IntDir>.\vc_msw\aui\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DLL Universal Unicode Debug|Win32'">

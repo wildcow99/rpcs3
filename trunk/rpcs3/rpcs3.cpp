@@ -41,12 +41,7 @@ void Rpcs3App::Exit()
 
 GameInfo CurGameInfo;
 
-CPUThread& GetPPU()
+CPUThread& GetCPU(const u8 core)
 {
-	return Emu.GetPPU();
-}
-
-CPUThread& GetSPU(const u8 core)
-{
-	return Emu.GetSPU(core);
+	return Emu.GetCPU().Get(core);
 }

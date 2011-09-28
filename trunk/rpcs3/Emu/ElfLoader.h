@@ -457,10 +457,13 @@ private:
 
 public:
 	uint elf_size;
+	u32 entry;
+	bool isSPU;
 
 	ElfLoader()
 	{
-		elf_size = 0;
+		isSPU = false;
+		entry = elf_size = 0;
 	}
 
 	virtual void SetElf(wxString elf_full_patch);

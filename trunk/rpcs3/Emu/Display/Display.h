@@ -457,7 +457,7 @@ public:
 
 	virtual void UpdatePixels()
 	{
-		if(!Memory.Video_FrameBuffer.GetMemFromAddr(m_topaddr, m_tex.pixels))
+		if(!Memory.Video_FrameBuffer.GetMemFFromAddr(m_tex.pixels, m_topaddr))
 		{
 			ConLog.Error("Update Image ERROR: Unknown topaddr! (%d)", m_topaddr);
 			return;

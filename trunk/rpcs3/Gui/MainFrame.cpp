@@ -35,7 +35,7 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_,
 	menu_boot.Append(id_boot_game, "Boot game");
 	menu_boot.AppendSeparator();
 	menu_boot.Append(id_boot_elf, "Boot Elf");
-	menu_boot.Append(id_boot_self, "Boot Self");
+	//menu_boot.Append(id_boot_self, "Boot Self");
 
 	menu_sys.Append(id_sys_pause, "Pause");
 	menu_sys.Append(id_sys_stop, "Stop");
@@ -78,12 +78,12 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 
 	Emu.Stop();
 
-	const wxString elf0  = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN";
-	const wxString elf1  = ctrl.GetPath() + "\\USRDIR\\BOOT.BIN";
-	const wxString elf2  = ctrl.GetPath() + "\\BOOT.BIN";
-	const wxString self0 = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\EBOOT.BIN";
-	const wxString self1 = ctrl.GetPath() + "\\USRDIR\\EBOOT.BIN";
-	const wxString self2 = ctrl.GetPath() + "\\EBOOT.BIN";
+	const wxString& elf0  = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\BOOT.BIN";
+	const wxString& elf1  = ctrl.GetPath() + "\\USRDIR\\BOOT.BIN";
+	const wxString& elf2  = ctrl.GetPath() + "\\BOOT.BIN";
+	const wxString& self0 = ctrl.GetPath() + "\\PS3_GAME\\USRDIR\\EBOOT.BIN";
+	const wxString& self1 = ctrl.GetPath() + "\\USRDIR\\EBOOT.BIN";
+	const wxString& self2 = ctrl.GetPath() + "\\EBOOT.BIN";
 
 	if(wxFile::Access(elf0, wxFile::read))
 	{
@@ -102,16 +102,19 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	}
 	else if(wxFile::Access(self0, wxFile::read))
 	{
+		goto _ELF_NOT_FOUND_;
 		Emu.SetSelf(self0);
 		ConLog.Warning("Self: booting...");
 	}
 	else if(wxFile::Access(self1, wxFile::read))
 	{
+		goto _ELF_NOT_FOUND_;
 		Emu.SetSelf(self1);
 		ConLog.Warning("Self: booting...");
 	}
 	else if(wxFile::Access(self2, wxFile::read))
 	{
+		goto _ELF_NOT_FOUND_;
 		Emu.SetSelf(self2);
 		ConLog.Warning("Self: booting...");
 	}
@@ -124,6 +127,10 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 	Emu.Run();
 
 	ConLog.Write("Game: boot done.");
+	return;
+
+_ELF_NOT_FOUND_:
+	ConLog.Error("Elf not found!");
 }
 
 void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
@@ -226,6 +233,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_video_render = new wxComboBox(diag, wxID_ANY);
 
 	cbox_decoder->Append("DisAsm");
+	cbox_decoder->Append("Interpreter & DisAsm");
 	cbox_decoder->Append("Interpreter");
 
 	cbox_video_render->Append("Software");

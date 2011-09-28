@@ -1,22 +1,25 @@
 #include "stdafx.h"
 #include "CPU.h"
-#include "Emu/Decoder/Decoder.h"
-#include "Emu/Opcodes/Interpreter.h"
-#include "Emu/Opcodes/DisAsm.h"
 
-CPUThread::CPUThread(const u8 id)
-	: m_id(id)
-	, StepThread(wxString::Format("CPU[%d] Thread", id))
+CPUThread::CPUThread(bool _isSPU, const u16 id)
+	: StepThread(wxString::Format("%s[%d] Thread",(_isSPU ? "SPU" : "PPU"), id))
+	, m_id(id)
+	, isSPU(_isSPU)
 {
 	m_dec = NULL;
-	Reset();
 	StepThread::Start();
 }
 
 CPUThread::~CPUThread()
 {
-	Reset();
+}
+
+void CPUThread::Close()
+{
+	Pause();
+	Stop();
 	StepThread::Exit();
+	this->~CPUThread();
 }
 
 void CPUThread::Reset()
@@ -28,22 +31,8 @@ void CPUThread::Reset()
 
 	m_status = Stoped;
 	m_error = 0;
-
-	//reset regs
-	memset(FPR,  0, sizeof(FPR));
-	memset(GPR,  0, sizeof(GPR));
-	memset(SPRG, 0, sizeof(SPRG));
-	memset(BO,   0, sizeof(BO));
-
-	CR		= 0;
-	LR		= 0;
-	CTR		= 0;
-	USPRG	= 0;
-	TBU		= 0;
-	TBL		= 0;
-	XER		= 0;
-
-	GPR[1] = 0x3ffd0; //Stack address
+	
+	DoReset();
 }
 
 void CPUThread::NextBranchPc()
@@ -78,7 +67,7 @@ void CPUThread::SetBranch(const u32 pc)
 {
 	switch(pc)
 	{
-	case 0x39800000: ConLog.Warning("Initialize TLS #pc: %x", PC); break;
+	case 0x39800000: ConLog.Warning("Initialize TLS #pc: %x", PC); break; //CHECK ME!
 
 	default:
 		nPC = pc;
@@ -107,19 +96,20 @@ void CPUThread::Run()
 		Resume();
 		return;
 	}
-
-	switch(Ini.Emu.m_DecoderMode.GetValue())
+	
+	DoRun();
+	if(Ini.Emu.m_DecoderMode.GetValue() != 1) StepThread::DoStep();
+	else
 	{
-	case 0: m_dec = new Decoder(*new DisAsmOpcodes()); break;
-	case 1: m_dec = new Decoder(*new InterpreterOpcodes(*this)); break;
+		m_status = Runned;
+		Pause();
 	}
-
-	StepThread::DoStep();
 }
 
 void CPUThread::Resume()
 {
 	if(!IsPaused()) return;
+	DoResume();
 	StepThread::DoStep();
 }
 
@@ -127,6 +117,7 @@ void CPUThread::Pause()
 {
 	if(!IsRunned()) return;
 	m_status = Paused;
+	DoPause();
 }
 
 void CPUThread::Stop()
@@ -134,34 +125,38 @@ void CPUThread::Stop()
 	if(IsStoped()) return;
 	m_status = Stoped;
 	Reset();
-
-	if(m_dec)
-	{
-		(*(Decoder*)m_dec).~Decoder();
-		safe_delete(m_dec);
-	}
+	DoStop();
 }
 
 void CPUThread::SysResume()
 {
 	if(!IsRunned()) return;
+	DoSysResume();
 	StepThread::DoStep();
 }
 
 void CPUThread::Step()
 {
 	m_status = Runned;
-	Decoder& dec = *(Decoder*)m_dec;
 
-	while(IsRunned() && Emu.IsRunned())
+	if(Ini.Emu.m_DecoderMode.GetValue() == 1)
 	{
-		dec.DoCode(Memory.Read32(PC));
+		DoCode(Memory.Read32(PC));
 		NextPc();
+		m_status = Paused;
 	}
-
-	if(!IsOk())
+	else
 	{
-		ConLog.Error("CpuThread[%d] stoped with error! Error code: %x", m_id, GetError());
-		SetError(0);
+		while(IsRunned() && Emu.IsRunned())
+		{
+			DoCode(Memory.Read32(PC));
+			NextPc();
+		}
+
+		if(!IsOk())
+		{
+			ConLog.Error("CpuThread[%d] stoped with error! Error code: %x", m_id, GetError());
+			SetError(0);
+		}
 	}
 }

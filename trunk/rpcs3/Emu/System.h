@@ -16,6 +16,7 @@ class Emulator
 	enum Mode
 	{
 		DisAsm,
+		InterpreterDisAsm,
 		Interpreter,
 	};
 
@@ -33,6 +34,8 @@ public:
 	virtual void SetSelf(wxString self_patch);
 	virtual void SetElf(wxString elf_patch);
 
+	CPUThread& AddThread(bool isSPU);
+
 	virtual void Run();
 	virtual void Pause();
 	virtual void Resume();
@@ -43,9 +46,9 @@ public:
 		return m_cpu_threads;
 	}
 
-	CPUThread& GetPPU()
+	CPUThread& GetPPU(const u8 core)
 	{
-		return m_cpu_threads.Get(0);
+		return m_cpu_threads.Get(core);
 	}
 
 	CPUThread& GetSPU(const u8 core)
