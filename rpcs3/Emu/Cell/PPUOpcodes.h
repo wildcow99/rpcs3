@@ -1,16 +1,14 @@
 #pragma once
 
-#include "Emu/Cell/CPU.h"
-
 #define OP_REG const u32
 #define OP_sIMM const s32
 #define OP_uIMM const u32
-#define START_OPCODES_GROUP(x)
+#define START_OPCODES_GROUP(x) /*x*/
 #define ADD_OPCODE(name, regs) virtual void(##name##)##regs##=0
 #define ADD_NULL_OPCODE(name) virtual void(##name##)()=0
-#define END_OPCODES_GROUP(x) 
+#define END_OPCODES_GROUP(x) /*x*/
 
-enum _MainOpcodes
+enum PPU_MainOpcodes
 {
 	DOZI = 0x09,
 	CMPLI = 0x0a,
@@ -23,6 +21,7 @@ enum _MainOpcodes
 	SC = 0x11,
 	B = 0x12,
 	G_13 = 0x13,
+	RLWINM = 0x15,
 	ORI = 0x18,
 	ORIS = 0x19,
 	ANDI_ = 0x1c,
@@ -198,7 +197,7 @@ enum G5Opcodes //Field 21 - 30
 
 //118
 
-class Opcodes
+class PPU_Opcodes
 {
 public:
 	virtual void Exit()=0;
@@ -206,12 +205,12 @@ public:
 
 	static int branchTarget(const u32 pc, const int imm)
 	{
-        return pc + imm;
+        return pc + ext_s26(imm);
     }
 
-	static int jumpTarget(const u32 pc, const int imm_u26)
+	static int condBranchTarget(const u32 pc, const int imm_s16)
 	{
-        return (pc & 0xf0000000) | ext_s26(imm_u26);
+        return pc + (imm_s16 & ~0x3);
     }
 
 	static int ext_s26(const int val)

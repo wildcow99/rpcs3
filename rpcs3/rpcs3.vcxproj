@@ -59,7 +59,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>pthreadVC2_2.8.0.lib;opengl32.lib;glu32.lib;adv.lib;base.lib;core.lib;gl.lib;SDL.lib;SDL_image.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pthreadVC2_2.8.0.lib;opengl32.lib;glu32.lib;adv.lib;base.lib;core.lib;aui.lib;gl.lib;SDL.lib;SDL_image.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
@@ -82,7 +82,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>pthreadVC2_2.8.0.lib;opengl32.lib;glu32.lib;adv.lib;base.lib;core.lib;SDL.lib;SDL_image.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pthreadVC2_2.8.0.lib;opengl32.lib;glu32.lib;adv.lib;base.lib;core.lib;aui.lib;SDL.lib;SDL_image.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -90,6 +90,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Emu\Cell\CPU.cpp" />
+    <ClCompile Include="Emu\Cell\PPU.cpp" />
+    <ClCompile Include="Emu\Cell\SPU.cpp" />
     <ClCompile Include="Emu\Display\Display.cpp" />
     <ClCompile Include="Emu\ElfLoader.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
@@ -99,6 +101,7 @@
     <ClCompile Include="Gui\CompilerELF.cpp" />
     <ClCompile Include="Gui\ConLog.cpp" />
     <ClCompile Include="Gui\DisAsmFrame.cpp" />
+    <ClCompile Include="Gui\InterpreterDisAsm.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Ini.cpp" />

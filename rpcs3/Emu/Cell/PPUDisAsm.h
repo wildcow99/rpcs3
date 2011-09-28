@@ -1,16 +1,16 @@
 #pragma once
 
-#include "Emu/Opcodes/Opcodes.h"
+#include "Emu/Cell/PPUOpcodes.h"
+#include "Emu/Cell/PPU.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/Cell/CPU.h"
 
 #include <wx/generic/progdlgg.h>
 
 #define START_OPCODES_GROUP(x)
 #define END_OPCODES_GROUP(x)
 
-class DisAsmOpcodes : public Opcodes
+class PPU_DisAsm : public PPU_Opcodes
 {
 	wxProgressDialog* m_prog_dial;
 	DisAsmFrame* disasm_frame;
@@ -21,14 +21,28 @@ class DisAsmOpcodes : public Opcodes
 	{
 		if(m_dump_mode)
 		{
-			wxString mem = wxString::Format("%x		", dump_pc);
-			for(u8 i=0; i < 4; ++i)
+			if(CPU)
 			{
-				mem += wxString::Format("%02x", Memory.Read8(dump_pc + i));
-				if(i < 3) mem += " ";
-			}
+				wxString mem = wxString::Format("[%x]  ", dump_pc);
+				for(u8 i=0; i < 4; ++i)
+				{
+					mem += wxString::Format("%02x", Memory.Read8(dump_pc + i));
+					if(i < 3) mem += " ";
+				}
 
-			last_opcode = mem + ": " + value + "\n";
+				last_opcode = mem + ": " + value;
+			}
+			else
+			{
+				wxString mem = wxString::Format("%x		", dump_pc);
+				for(u8 i=0; i < 4; ++i)
+				{
+					mem += wxString::Format("%02x", Memory.Read8(dump_pc + i));
+					if(i < 3) mem += " ";
+				}
+
+				last_opcode = mem + ": " + value + "\n";
+			}
 		}
 		else
 		{
@@ -39,16 +53,19 @@ class DisAsmOpcodes : public Opcodes
 public:
 	wxString last_opcode;
 	uint dump_pc;
+	PPUThread* CPU;
 
-	DisAsmOpcodes(bool DumpMode = false) : m_dump_mode(DumpMode)
+	PPU_DisAsm(PPUThread* cpu, bool DumpMode = false)
+		: CPU(cpu)
+		, m_dump_mode(DumpMode)
 	{
 		if(m_dump_mode) return;
 
-		disasm_frame = new DisAsmFrame();
+		disasm_frame = new DisAsmFrame(*CPU);
 		disasm_frame->Show();
 	}
 
-	~DisAsmOpcodes()
+	~PPU_DisAsm()
 	{
 	}
 
@@ -60,7 +77,7 @@ private:
 			disasm_frame->Close();
 		}
 
-		this->~DisAsmOpcodes();
+		this->~PPU_DisAsm();
 	}
 
 	virtual void Step()
@@ -70,7 +87,7 @@ private:
 	u32 DisAsmBranchTarget(const s32 imm)
 	{
 		if(m_dump_mode) return branchTarget(dump_pc, imm);
-		return branchTarget(GetPPU().PC, imm);
+		return branchTarget(CPU->PC, imm);
 	}
 	
 	void DisAsm_F4_RC(const wxString& op, OP_REG f0, OP_REG f1, OP_REG f2, OP_REG f3, bool rc)

@@ -268,11 +268,11 @@
     <IntDir>.\vc_mswunivd\gl\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>.\..\..\lib\vc_lib\</OutDir>
+    <OutDir>.\..\..\..\libs\$(Configuration)</OutDir>
     <IntDir>.\vc_msw\gl\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>.\..\..\lib\vc_lib\</OutDir>
+    <OutDir>.\..\..\..\libs\$(Configuration)</OutDir>
     <IntDir>.\vc_mswd\gl\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='DLL Universal Debug|Win32'">

@@ -47,7 +47,7 @@ static wxSize StringToSize(const wxString str)
 	s[0].ToLong((long*)&ret.x);
 	s[1].ToLong((long*)&ret.y);
 
-	if(ret.x == 0 || ret.y == 0)
+	if(ret.x <= 0 || ret.y <= 0)
 	{
 		return wxDefaultSize;
 	}
@@ -85,7 +85,7 @@ static wxPoint StringToPosition(const wxString str)
 	s[0].ToLong((long*)&ret.x);
 	s[1].ToLong((long*)&ret.y);
 
-	if(ret.x == 0 || ret.y == 0)
+	if(ret.x <= 0 || ret.y <= 0)
 	{
 		return wxDefaultPosition;
 	}

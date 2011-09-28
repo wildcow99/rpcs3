@@ -105,7 +105,7 @@ public:
 
 	void Load()
 	{
-		m_DecoderMode.Load(1);
+		m_DecoderMode.Load(2);
 		m_RenderMode.Load(1);
 	}
 

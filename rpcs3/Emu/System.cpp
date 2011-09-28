@@ -4,6 +4,9 @@
 #include "Emu/ElfLoader.h"
 #include "Ini.h"
 
+#include "Emu/Cell/PPU.h"
+#include "Emu/Cell/SPU.h"
+
 Emulator::Emulator()
 {
 	m_status = Stoped;
@@ -22,6 +25,21 @@ void Emulator::SetElf(wxString elf_patch)
 	IsSlef = false;
 }
 
+CPUThread& Emulator::AddThread(bool isSPU)
+{
+	const int id = GetCPU().GetCount() + 1;
+	if(isSPU)
+	{
+		GetCPU().Add(*new SPUThread(id));
+	}
+	else
+	{
+		GetCPU().Add(*new PPUThread(id));
+	}
+
+	return GetCPU().Get(GetCPU().GetCount() - 1);
+}
+
 void Emulator::Run()
 {
 	if(IsRunned()) Stop();
@@ -36,8 +54,6 @@ void Emulator::Run()
 
 	Memory.Init();
 
-	GetCPU().SetCount(8);
-
 	if(IsSlef)
 	{
 		Loader.LoadSelf();
@@ -47,28 +63,16 @@ void Emulator::Run()
 		Loader.LoadElf();
 	}
 	
-	/*
-	m_mode = Ini.Emu.m_DecoderMode.GetValue();
-
-	switch(m_mode)
-	{
-	case DisAsm:
-		ppc_decoder = new PPCDecoder(*new DisAsmOpcodes());
-		//decoder = new Decoder(*new DisAsmOpcodes());
-	break;
-	case Interpreter:
-		decoder = new Decoder(*new InterpreterOpcodes());
-	break;
-	};
-	*/
+	CPUThread& cpu_thread = AddThread(Loader.isSPU);
+	cpu_thread.SetPc(Loader.entry);
 
 	if(!m_memory_viewer) m_memory_viewer = new MemoryViewerPanel(NULL);
 
-	m_memory_viewer->SetPC(GetPPU().PC);
+	m_memory_viewer->SetPC(cpu_thread.PC);
 	m_memory_viewer->Show();
 	m_memory_viewer->ShowPC();
 
-	GetPPU().Run();
+	cpu_thread.Run();
 
 	wxGetApp().m_MainFrame->UpdateUI();
 }
@@ -106,9 +110,7 @@ void Emulator::Stop()
 
 	for(uint i=0; i<GetCPU().GetCount(); ++i)
 	{
-		CPUThread* cpu = &GetCPU().Get(i);
-		cpu->Stop();
-		cpu->~CPUThread();
+		GetCPU().Get(i).Close();
 	}
 
 	GetCPU().Clear();

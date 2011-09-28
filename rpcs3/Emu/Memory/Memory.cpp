@@ -30,35 +30,55 @@ void MemoryBase::Write128(u32 addr, const u128 data)
 
 u8 MemoryBase::Read8(u32 addr)
 {
-	u8 ret;
-	GetMemByAddr(addr).Read8(addr, &ret);
-	return ret;
+	MemoryBlock& mem = GetMemByAddr(addr);
+	if(mem.IsNULL())
+	{
+		mem.Read8(addr, NULL);
+		return 0;
+	}
+	return mem.FastRead8(addr);
 }
 
 u16 MemoryBase::Read16(u32 addr)
 {
-	u16 ret;
-	GetMemByAddr(addr).Read16(addr, &ret);
-	return ret;
+	MemoryBlock& mem = GetMemByAddr(addr);
+	if(mem.IsNULL())
+	{
+		mem.Read16(addr, NULL);
+		return 0;
+	}
+	return mem.FastRead16(addr);
 }
 
 u32 MemoryBase::Read32(u32 addr)
 {
-	u32 ret;
-	GetMemByAddr(addr).Read32(addr, &ret);
-	return ret;
+	MemoryBlock& mem = GetMemByAddr(addr);
+	if(mem.IsNULL())
+	{
+		mem.Read32(addr, NULL);
+		return 0;
+	}
+	return mem.FastRead32(addr);
 }
 
 u64 MemoryBase::Read64(u32 addr)
 {
-	u64 ret;
-	GetMemByAddr(addr).Read64(addr, &ret);
-	return ret;
+	MemoryBlock& mem = GetMemByAddr(addr);
+	if(mem.IsNULL())
+	{
+		mem.Read64(addr, NULL);
+		return 0;
+	}
+	return mem.FastRead64(addr);
 }
 
 u128 MemoryBase::Read128(u32 addr)
 {
-	u128 ret;
-	GetMemByAddr(addr).Read128(addr, &ret);
-	return ret;
+	MemoryBlock& mem = GetMemByAddr(addr);
+	if(mem.IsNULL())
+	{
+		mem.Read128(addr, NULL);
+		return u128::From((u64)0);
+	}
+	return mem.FastRead128(addr);
 }

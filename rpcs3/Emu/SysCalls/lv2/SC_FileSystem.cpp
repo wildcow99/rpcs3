@@ -14,6 +14,20 @@ enum Lv2FsOflag
 	LV2_O_MSELF		= 0x010000,
 };
 
+enum Lv2FsSeek
+{
+	LV2_SEEK_SET,
+	LV2_SEEK_CUR,
+	LV2_SEEK_END,
+};
+
+enum Lv2FsLength
+{
+	LV2_MAX_FS_PATH_LENGTH = 1024,
+	LV2_MAX_FS_FILE_NAME_LENGTH = 255,
+	LV2_MAX_FS_MP_LENGTH = 31,
+};
+
 #pragma pack(1)
 struct Lv2FsStat
 {
@@ -38,7 +52,7 @@ struct Lv2FsDirent
 {
 	u8 d_type;
 	u8 d_namlen;
-	char d_name[256];
+	char d_name[LV2_MAX_FS_FILE_NAME_LENGTH + 1];
 };
 
 class FSFiles : private SysCallBase
@@ -55,22 +69,29 @@ public:
 		const uint id = fs_files.Add();
 		wxFile::OpenMode o_mode;
 
+		s32 _oflags = oflags;
 		if(oflags & LV2_O_RDONLY)
 		{
+			_oflags &= ~LV2_O_RDONLY;
 			o_mode = wxFile::read;
 		}
 		else if(oflags & LV2_O_RDWR)
 		{
+			_oflags &= ~LV2_O_RDWR;
 			o_mode = wxFile::read_write;
 		}
 		else if(oflags & LV2_O_WRONLY)
 		{
+			_oflags &= ~LV2_O_WRONLY;
+
 			if(oflags & LV2_O_EXCL)
 			{
+				_oflags &= ~LV2_O_EXCL;
 				o_mode = wxFile::write_excl;
 			}
 			else if(oflags & LV2_O_APPEND)
 			{
+				_oflags &= ~LV2_O_APPEND;
 				o_mode = wxFile::write_append;
 			}
 			else
@@ -80,7 +101,13 @@ public:
 		}
 		else
 		{
-			ConLog.Error("%s error: '%s' has unknown flags! flags: 0x%08x", module_name, patch, oflags);
+			ConLog.Error("%s[%d] error: '%s' has unknown flags! flags: 0x%08x", module_name, id, patch, oflags);
+			return -1;
+		}
+
+		if(_oflags != 0)
+		{
+			ConLog.Error("%s[%d] error: '%s' has unknown flags! flags: 0x%08x", module_name, id, patch, oflags);
 			return -1;
 		}
 
@@ -129,7 +156,18 @@ public:
 			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
 			return 0;
 		}
-		return data.Seek(offset);
+
+		static wxSeekMode seek_mode = wxFromStart;
+		switch(whence)
+		{
+			case LV2_SEEK_SET: seek_mode = wxFromStart; break;
+			case LV2_SEEK_CUR: seek_mode = wxFromCurrent; break;
+			case LV2_SEEK_END: seek_mode = wxFromEnd; break;
+			default:
+				ConLog.Error("%s[%d] error: Unknown seek whence! (%d)", module_name, id, whence);
+				return 0;
+		};
+		return data.Seek(offset, seek_mode);
 	}
 
 	void Close(const u64 id)

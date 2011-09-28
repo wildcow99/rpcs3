@@ -14,26 +14,24 @@ public:
 
 	inline bool RemoveAt(const u64 from, const u64 count = 1)
 	{
-		m_count--;
-		T* new_array = new T[m_count];
-
-		memmove(new_array, m_array, from * sizeof(T));
-		if(from < m_count)
+		if(from + count >= m_count) return false;
+		
+		/*
+		for(uint i=from; i<from+count; ++i)
 		{
-			const u64 mp = from + count;
-			const u64 p = mp > m_count ? from + (mp - (m_count + 1)) : mp;
-			memmove(&new_array[p], &m_array[p + 1], (m_count - from) * sizeof(T));
+			free(m_array[i]);
 		}
+		*/
 
-		free(m_array);
-		m_array = new_array;
+		memmove(&m_array[from], &m_array[from+count], (m_count-(from+count)) * sizeof(T));
 
+		m_count -= count;
 		return true;
 	}
 
 	inline void Add(T* data)
 	{
-		Add(*data)
+		Add(*data);
 	}
 
 	inline void Add(T& data)
@@ -53,12 +51,13 @@ public:
 
 	inline void Clear()
 	{
+		m_count = 0;
 		safe_delete(m_array);
 	}
 
 	inline T& Get(u64 num)
 	{
-		if(num >= m_count) return new T();
+		//if(num >= m_count) return *new T();
 		return m_array[num];
 	}
 
@@ -81,22 +80,17 @@ public:
 	{
 		if(from + count >= m_count) return false;
 
-		m_count -= count;
-		T** new_array = (T**)malloc(sizeof(T*) * m_count);
-
-		memmove(&new_array[0], &m_array[0], from * sizeof(T*));
-		if(from < m_count)
+		for(uint i=from; i<from+count; ++i)
 		{
-			const u64 p = from + count;
-			memmove(&new_array[p], &m_array[p + 1], (m_count - from) * sizeof(T*));
+			free(m_array[i]);
 		}
 
-		free(m_array);
-		m_array = new_array;
+		memmove(&m_array[from], &m_array[from+count], (m_count-(from+count)) * sizeof(T**));
 
+		m_count -= count;
 		return true;
 	}
-
+	/*
 	inline void SetCount(const u64 count)
 	{
 		while(m_count != count)
@@ -114,12 +108,12 @@ public:
 
 	inline void Add()
 	{
-		Add(new T(m_count)); //Set ID
-	}
+		Add(new T());
+	}*/
 
 	inline void Add(T& data)
 	{
-		Add(&data)
+		Add(&data);
 	}
 
 	inline void Add(T* data)
@@ -137,6 +131,13 @@ public:
 		m_count++;
 	}
 
+	inline void ClearF()
+	{
+		if(m_count <= 0) return;
+		m_count = 0;
+		m_array = NULL;
+	}
+
 	inline void Clear()
 	{
 		if(m_count <= 0) return;
@@ -145,11 +146,11 @@ public:
 		safe_delete(m_array);
 	}
 
-	inline T& Get(u64 num)
+	inline T& Get(const u64 num)
 	{
-		if(m_count <= num) *m_array[0]; //TODO
+		//if(m_count <= num) *m_array[0]; //TODO
 		return *m_array[num];
 	}
 
-	u64 GetCount() const { return m_count; }
+	inline u64 GetCount() const { return m_count; }
 };

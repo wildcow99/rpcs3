@@ -1,5 +1,5 @@
 #pragma once
-#include <Emu/Cell/CPU.h>
+#include <Emu/Cell/PPU.h>
 
 class SysCallBase
 {
@@ -151,10 +151,10 @@ class SysCalls
 	int lv2FsRmdir();
 	int lv2FsUtime();
 
-protected:
-	CPUThread& CPU;
+	PPUThread& CPU;
 
-	SysCalls(CPUThread& cpu) : CPU(cpu)
+protected:
+	SysCalls(PPUThread& cpu) : CPU(cpu)
 	{
 	}
 

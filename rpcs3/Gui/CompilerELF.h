@@ -1,7 +1,8 @@
 #pragma once
 
-#include "Emu/Opcodes/Opcodes.h"
+#include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/ElfLoader.h"
+#include "wx/aui/aui.h"
 
 static void Write8(wxFile& f, const u8 data)
 {
@@ -38,10 +39,13 @@ class CompilerELF : public wxFrame
 	wxTimer* scroll_timer;
 
 	wxTextAttr* a_instr;
+	wxAuiManager m_aui_mgr;
 
 public:
 	CompilerELF(wxWindow* parent) : wxFrame(parent, wxID_ANY, "CompilerELF")
 	{
+		m_aui_mgr.SetManagedWindow(this);
+
 		wxMenuBar& menubar(*new wxMenuBar());
 		wxMenu& menu_code(*new wxMenu());
 		menubar.Append(&menu_code, "Code");
@@ -51,43 +55,51 @@ public:
 
 		SetMenuBar(&menubar);
 
-		wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
-		wxBoxSizer* list_sizer = new wxBoxSizer(wxHORIZONTAL);
+		//wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
+		//wxBoxSizer* list_sizer = new wxBoxSizer(wxHORIZONTAL);
 		
-		SetBackgroundStyle(wxBG_STYLE_COLOUR);
-		SetBackgroundColour(wxColour(200, 200, 200));
-		asm_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+		//SetBackgroundStyle(wxBG_STYLE_COLOUR);
+		//SetBackgroundColour(wxColour(200, 200, 200));
+		SetSize(wxSize(640, 680));
+
+		asm_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(500, 500),
 			wxTE_LEFT | wxTE_MULTILINE | wxTE_DONTWRAP);
-		hex_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+		hex_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(640, 180),
 			wxTE_LEFT | wxTE_MULTILINE | wxTE_READONLY | wxTE_DONTWRAP);
-		err_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+		err_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, 200),
 			wxTE_LEFT | wxTE_MULTILINE | wxTE_READONLY);
 
-		const wxSize& size = wxSize(640, 680);
+		m_aui_mgr.AddPane(asm_list, wxAuiPaneInfo().Name(L"asm_list").CenterPane().PaneBorder(false).CloseButton(false));
+		m_aui_mgr.AddPane(hex_list, wxAuiPaneInfo().Name(L"hex_list").Right().PaneBorder(false).CloseButton(false));
+		m_aui_mgr.AddPane(err_list, wxAuiPaneInfo().Name(L"err_list").Bottom().PaneBorder(false).CloseButton(false));
+		m_aui_mgr.GetPane(L"asm_list").Show();
+		m_aui_mgr.GetPane(L"hex_list").Show();
+		m_aui_mgr.GetPane(L"err_list").Show();
+		m_aui_mgr.Update();
 
-		asm_list->SetSize(size.GetWidth() * 0.75, size.GetHeight());
-		hex_list->SetSize(size.GetWidth() * 0.25, size.GetHeight());
+		//const wxSize& size = wxSize(640, 680);
 
-		list_sizer->Add(asm_list);
-		list_sizer->AddSpacer(2);
-		list_sizer->Add(hex_list);
+		//asm_list->SetSize(size.GetWidth() * 0.75, size.GetHeight());
+		//hex_list->SetSize(size.GetWidth() * 0.25, size.GetHeight());
 
-		main_sizer->Add(list_sizer);
-		main_sizer->AddSpacer(2);
-		main_sizer->Add(err_list);
+		//list_sizer->Add(asm_list);
+		//list_sizer->AddSpacer(2);
+		//list_sizer->Add(hex_list);
 
-		SetSizerAndFit(main_sizer);
+		//main_sizer->Add(list_sizer);
+		//main_sizer->AddSpacer(2);
+		//main_sizer->Add(err_list);
+
+		//SetSizerAndFit(main_sizer);
 
 		scroll_timer = new wxTimer(this);
 
-		Connect( wxEVT_SIZE, wxSizeEventHandler(CompilerELF::OnResize) );
+		//Connect( wxEVT_SIZE, wxSizeEventHandler(CompilerELF::OnResize) );
 		Connect(asm_list->GetId(), wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(CompilerELF::OnUpdate));
 		Connect(id_analyze_code, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::AnalyzeCode));
 		Connect(id_compile_code, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::CompileCode));
 
 		Connect(scroll_timer->GetId(), wxEVT_TIMER, wxTimerEventHandler(CompilerELF::OnUpdateScroll));
-
-		SetSize(wxSize(640, 680));
 
 		scroll_timer->Start(5);
 
@@ -404,6 +416,26 @@ public:
 		return !str.Cmp(" ") || !str.Cmp("	");
 	}
 
+	bool IsNewLine(const wxString& str)
+	{
+		return !str.Cmp("\n");
+	}
+
+	bool IsBreakChar2(const wxString& str)
+	{
+		return IsNewLine(str) || !str.Cmp(",") || !str.Cmp("#");
+	}
+
+	bool IsBreakChar(const wxString& str)
+	{
+		return IsSkipChar(str) || IsBreakChar2(str);
+	}
+
+	bool IsSkipRange(const wxString& str, const wxString& buf, const u64 p, const u64 len)
+	{
+		return IsSkipChar(str) && buf.IsEmpty() && p != len - 1;
+	}
+
 	bool SearchReg(u64& p, const wxString& str, const u64 line, wxArrayLong& arr)
 	{
 		wxString buf = wxEmptyString;
@@ -412,9 +444,9 @@ public:
 		{
 			const wxString& cur_str = str(p, 1);
 
-			if(IsSkipChar(cur_str) && buf.IsEmpty() && p != str.Length() - 1) continue;
+			if(IsSkipRange(cur_str, buf, p, str.Length())) continue;
 
-			if(p == str.Length() - 1 || !cur_str.Cmp(",") || !cur_str.Cmp(" ") || !cur_str.Cmp("#"))
+			if(p == str.Length() - 1 || IsBreakChar(cur_str))
 			{
 				if(p == str.Length()-1 && !IsSkipChar(cur_str)) buf += cur_str;
 
@@ -433,6 +465,70 @@ public:
 		return false;
 	}
 
+	enum ImmType
+	{
+		IMM_NUM,
+		IMM_TEXT,
+	};
+
+	bool GetImm(u64& p, const wxString& str, const u64 line, wxArrayLong& arr, ImmType type)
+	{
+		wxString buf = wxEmptyString;
+		for(; p<str.Length(); p++)
+		{
+			const wxString& cur_str = str(p, 1);
+			switch(type)
+			{
+			case IMM_TEXT:
+				if(cur_str.Cmp("\""))
+				{
+					arr.Add(*(s64*)buf(1, buf.Length()).c_str());
+					return true;
+				}
+				if(p == str.Length() - 1) goto _ERROR_;
+			break;
+
+			case IMM_NUM:
+				if(IsSkipRange(cur_str, buf, p, str.Length())) continue;
+
+				if(p == str.Length() - 1 || IsBreakChar(cur_str))
+				{
+					if(p == str.Length() - 1) buf += cur_str;
+					s64 imm;
+					bool is16 = !!buf(0, 2).Cmp("0x");
+					sscanf(buf, (is16 ? "0x%x" : "%d"), &imm);
+
+					if(imm == 0 && (buf.Length() > 1 || (buf.Length() == 1 && !!buf.Cmp("0"))))
+					{
+						goto _ERROR_;
+					}
+					arr.Add(imm);
+
+					return true;
+				}
+			break;
+			};
+
+			buf += cur_str;
+		}
+
+_ERROR_:
+		WriteError(wxString::Format("Unknown immediate '%s'", buf), line+1);
+		return false;
+	}
+	/*
+	bool SearchImm(u64& p, const wxString& str, const u64 line, wxArrayLong& arr)
+	{
+		ImmType type = IMM_NUM;
+		if(!str(p, 1).Cmp("\""))
+		{
+			p++;
+			type = IMM_TEXT;
+		}
+
+		return GetImm(p, str, line, arr, type);
+	}
+	*/
 	bool SearchImm(u64& p, const wxString& str, const u64 line, wxArrayLong& arr)
 	{
 		wxString buf = wxEmptyString;
@@ -440,7 +536,7 @@ public:
 		for(p++; p<str.Length(); p++)
 		{
 			const wxString& cur_str = str(p, 1);
-
+			
 			s64 imm;
 			if(!buf(0, 1).Cmp("\""))
 			{
@@ -467,7 +563,7 @@ public:
 				if(p == str.Length() - 1 || !cur_str.Cmp(",") || !cur_str.Cmp("#"))
 				{
 					if(p == str.Length()-1 && !IsSkipChar(cur_str)) buf += cur_str;
-
+					
 					if(StringToImm(buf, &imm))
 					{
 						arr.Add(imm);
@@ -476,10 +572,10 @@ public:
 					break;
 				}
 			}
-
+			
 			buf += cur_str;
 		}
-
+		
 		WriteError(wxString::Format("Unknown immediate '%s'", buf), line);
 		return false;
 	}
@@ -586,8 +682,8 @@ public:
 		static const u32 phdr_size = 0x38;
 		static const u32 shdr_size = 0x40;
 
-		static const u32 phdr_count = 1;
-		static const u32 shdr_count = 2;
+		static const u32 phdr_count = 3;
+		static const u32 shdr_count = phdr_count + 1;
 		static const u32 phdr_rcount = phdr_count;
 		static const u32 shdr_rcount = shdr_count + 1;
 
@@ -598,6 +694,7 @@ public:
 		static const s32 strtab_offs = shoff + (shdr_size * shdr_rcount) + 0x2;
 
 		wxArrayString name_arr;
+		wxArrayString got_arr;
 		wxArrayInt hex_arr;
 
 		ElfLoader::Elf64_Ehdr ehdr;
@@ -606,11 +703,17 @@ public:
 
 		u32 prog_offset;
 		u32 p_names_size;
+		u32 opd_section_num;
+		u32 got_section_num;
+
+		const u32 got_offs = 0x00080000;
+		u32 cur_got_offs = got_offs;
 
 		if(compile)
 		{
 			hex_arr.Clear();
 			name_arr.Clear();
+			got_arr.Clear();
 			prog_offset = 0;
 			p_names_size = 0;
 
@@ -640,37 +743,55 @@ public:
 
 			phdr[0].p_type = 0x1;
 			phdr[0].p_flags = 0x4;
-			//phdr[0].p_offset = p_offset;
-			phdr[0].p_vaddr = entry;
-			phdr[0].p_paddr = entry;
-			//phdr[0].p_filesz = asm_list->GetNumberOfLines() * 4;
-			//phdr[0].p_memsz = phdr[0].p_filesz;
 			phdr[0].p_align = 0x10000;
-	
+
+			phdr[1].p_type = 0x1;
+			phdr[1].p_flags = 0x4;
+			phdr[1].p_vaddr = entry;
+			phdr[1].p_paddr = entry;
+			phdr[1].p_align = 0x10000;
+			opd_section_num = 1;
+
+			phdr[2].p_type = 0x1;
+			phdr[2].p_flags = 0x4;
+			phdr[2].p_vaddr = got_offs;
+			phdr[2].p_paddr = got_offs;
+			phdr[2].p_align = 0x10000;
+			got_section_num = 2;
 
 			name_arr.Add(".strtab");
-			//shdr[0].sh_name = name_offs;
 			shdr[0].sh_type = SHT_STRTAB;
 			shdr[0].sh_flags = 0;
 			shdr[0].sh_addr = 0;
 			shdr[0].sh_offset = strtab_offs;
-			//shdr[0].sh_size = name_offs;
 			shdr[0].sh_link = 0;
 			shdr[0].sh_info = 0;
-			shdr[0].sh_addralign = 0x1;
+			shdr[0].sh_addralign = 0;
 			shdr[0].sh_entsize = 0;
 
-			name_arr.Add(".init");
-			//shdr[1].sh_name = name_offs;
+			name_arr.Add(".text");
 			shdr[1].sh_type = SHT_PROGBITS;
-			shdr[1].sh_flags = SHF_WRITE;
-			shdr[1].sh_addr = entry;
-			//shdr[1].sh_offset = strtab_offs;
-			//shdr[1].sh_size = phdr[0].p_filesz;
+			shdr[1].sh_flags = SHF_ALLOC | SHF_EXECINSTR;
 			shdr[1].sh_link = 0;
 			shdr[1].sh_info = 0;
-			shdr[1].sh_addralign = 0x4;
+			shdr[1].sh_addralign = 0;
 			shdr[1].sh_entsize = 0;
+
+			name_arr.Add(".opd");
+			shdr[2].sh_type = SHT_PROGBITS;
+			shdr[2].sh_flags = SHF_ALLOC | SHF_WRITE;
+			shdr[2].sh_link = 0;
+			shdr[2].sh_info = 0;
+			shdr[2].sh_addralign = 0;
+			shdr[2].sh_entsize = 0;
+
+			name_arr.Add(".got");
+			shdr[3].sh_type = SHT_PROGBITS;
+			shdr[3].sh_flags = SHF_ALLOC | SHF_WRITE;
+			shdr[3].sh_link = 0;
+			shdr[3].sh_info = 0;
+			shdr[3].sh_addralign = 0;
+			shdr[3].sh_entsize = 0;
 
 			for(uint i=0; i<name_arr.GetCount(); ++i)
 			{
@@ -740,11 +861,15 @@ public:
 
 						if(compile)
 						{
+							got_arr.Add(text);
+							hex_arr.Add(ToOpcode(ADDI) | ToRT(arr[0]) | ToRA(0) | ToIMM16(cur_got_offs));
+							cur_got_offs += text.Length() * 2 + 0x4;
+							/*
 							if(text.Length() & 1) text += " ";
 
 							for(u32 i=0; i<text.Length(); i+=2)
 							{
-								const s32& t = *(s32*)(text(i+1, 1) + text(i, 1)).c_str();
+								const s32& t = *(s32*)text(i, 2).c_str();
 								hex_arr.Add(ToOpcode(ADDI) | ToRT(arr[0]) | ToRA(0) | ToIMM16(t)); //li arr[0], t
 								hex_arr.Add(ToOpcode(STH) | ToRS(arr[0]) | ToRA(0) | ToD(arr[1] + i)); //sth arr[0], r0, arr[1] + 1
 							}
@@ -752,6 +877,7 @@ public:
 							hex_arr.Add(ToOpcode(ADDI) | ToRT(arr[0]) | ToRA(0) | ToIMM16(0));
 							hex_arr.Add(ToOpcode(STH) | ToRS(arr[0]) | ToRA(0) | ToD(text.Length() + 1));
 							hex_arr.Add(ToOpcode(ADDI) | ToRT(arr[0]) | ToRA(0) | ToIMM16(arr[1])); //li arr[0], arr[1]
+							*/
 						}
 
 						break;
@@ -818,13 +944,20 @@ public:
 				f.Seek(0);
 				WriteEhdr(f, ehdr);
 
+				phdr[0].p_filesz = hex_arr.GetCount() * 4;
+				phdr[0].p_paddr = entry - phdr[0].p_filesz - 0x4;
+				phdr[0].p_vaddr = phdr[0].p_paddr;
+
+				phdr[opd_section_num].p_filesz = sizeof(u64);
+				phdr[got_section_num].p_filesz = cur_got_offs - got_offs;
+
 				for(uint i=0, p_offset = phoff; i<phdr_count; ++i, p_offset += phdr_size)
 				{
-					phdr[i].p_filesz = hex_arr.GetCount() * 4;
 					phdr[i].p_offset = prog_offset;
 					phdr[i].p_memsz = phdr[i].p_filesz;
 					f.Seek(p_offset);
 					WritePhdr(f, phdr[i]);
+					prog_offset += phdr[i].p_filesz + 0x4;
 				}
 
 				for(uint i=0, name_offs = 0xb, sh_offset = shoff + shdr_size; i<shdr_count; ++i, sh_offset += shdr_size)
@@ -836,7 +969,8 @@ public:
 					else
 					{
 						shdr[i].sh_size = phdr[i-1].p_filesz;
-						shdr[1].sh_offset = phdr[i-1].p_offset;
+						shdr[i].sh_offset = phdr[i-1].p_offset;
+						shdr[i].sh_addr = phdr[i-1].p_paddr;
 					}
 
 					shdr[i].sh_name = name_offs;
@@ -847,11 +981,22 @@ public:
 					WriteShdrName(f, name_arr[i], strtab_offs, name_offs);
 				}
 
-				f.Seek(prog_offset);
+				f.Seek(phdr[0].p_offset);
 
 				for(uint i=0; i<hex_arr.GetCount(); ++i)
 				{
 					Write32(f, hex_arr[i]);
+				}
+
+				f.Seek(phdr[1].p_offset);
+				Write32(f, phdr[0].p_paddr);
+				Write32(f, 0x00010000);
+
+				f.Seek(phdr[2].p_offset);
+				for(uint i=0; i<got_arr.GetCount(); ++i)
+				{
+					f.Write(got_arr[i]);
+					Write16(f, 0x0);
 				}
 
 				wxMessageBox("Compile done.", "Compile message");
