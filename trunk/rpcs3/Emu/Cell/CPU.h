@@ -1,5 +1,6 @@
 #pragma once
 #include "Thread.h"
+#include "Emu/Memory/MemoryBlock.h"
 
 class CPUThread : public StepThread
 {
@@ -14,8 +15,24 @@ protected:
 	u32 m_status;
 	u32 m_error;
 	void* m_dec;
-	u16 m_id;
+	void* DisAsmFrame;
+	const u16 m_id;
 	bool isSPU;
+
+public:
+	MemoryBlock Stack;
+	u32 stack_num;
+	u32 stack_size;
+	u32 stack_addr;
+
+	virtual void _InitStack()=0;
+
+	virtual void InitStack();
+	virtual void CloseStack();
+	
+	virtual u64 GetStackAddr() const { return stack_addr; }
+	virtual u64 GetStackSize() const { return stack_size; }
+	virtual u64 GetFreeStackSize() const=0;
 	
 public:
 	bool isBranch;
@@ -23,9 +40,10 @@ public:
 	u32 PC;
 	u32 nPC;
 	u64 cycle;
+	u8 core;
 
 protected:
-	CPUThread(bool _isSPU, const u16 id);
+	CPUThread(bool _isSPU, const u8 core);
 	~CPUThread();
 
 public:
@@ -45,6 +63,8 @@ public:
 
 	u32  GetError() const { return m_error; }
 
+	u16 GetId() const { return m_id; }
+
 	void Reset();
 	void Close();
 	void Run();
@@ -52,6 +72,13 @@ public:
 	void Resume();
 	void Stop();
 	void SysResume();
+
+	void WaitForStop();
+
+	virtual wxString RegsToString()
+	{
+		return wxEmptyString;
+	}
 	
 protected:
 	virtual void DoReset()=0;

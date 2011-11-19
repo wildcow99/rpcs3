@@ -7,6 +7,8 @@
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUDisAsm.h"
+#include "Emu/Cell/SPUDecoder.h"
+#include "Emu/Cell/SPUDisAsm.h"
 
 DisAsmFrame::DisAsmFrame(CPUThread& cpu)
 	: wxFrame(NULL, wxID_ANY, "DisAsm")
@@ -200,8 +202,8 @@ public:
 class DumperThread : public StepThread
 {
 	volatile uint id;
-	PPU_DisAsm* disasm;
-	PPU_Decoder* decoder;
+	DisAsm* disasm;
+	Decoder* decoder;
 	volatile bool* done;
 	volatile u8 cores;
 	MTProgressDialog* prog_dial;
@@ -221,9 +223,18 @@ public:
 		arr = _arr;
 
 		*done = false;
-
-		disasm = new PPU_DisAsm(NULL, true);
-		decoder = new PPU_Decoder(*disasm);
+		if(GetCPU(0).IsSPU())
+		{
+			SPU_DisAsm& dis_asm = *new SPU_DisAsm();
+			decoder = new SPU_Decoder(dis_asm);
+			disasm = &dis_asm;
+		}
+		else
+		{
+			PPU_DisAsm& dis_asm = *new PPU_DisAsm();
+			decoder = new PPU_Decoder(dis_asm);
+			disasm = &dis_asm;
+		}
 	}
 
 	virtual void Step()
@@ -244,7 +255,7 @@ public:
 					(int)id + 1, vsize, max_value));
 
 				disasm->dump_pc = addr;
-				decoder->DoCode(Memory.Read32(addr));
+				decoder->Decode(Memory.Read32(addr));
 
 				arr[id][sh].Add(disasm->last_opcode);
 
@@ -267,10 +278,7 @@ public:
 	void Cleanup()
 	{
 		ConLog.Write("CleanUp dump thread (%d)!", (int)id);
-		if(decoder)
-		{
-			safe_delete(decoder);
-		}
+		safe_delete(decoder);
 	}
 };
 

@@ -65,7 +65,7 @@ MemContiners continers;
 
 int SysCalls::lv2MemContinerCreate()
 {
-	s64& continer = CPU.GPR[3];
+	u64& continer = CPU.GPR[3];
 	u32 size = CPU.GPR[4];
 
 	continer = continers.AddContiner(size);
@@ -77,5 +77,23 @@ int SysCalls::lv2MemContinerDestroy()
 	u32 container = CPU.GPR[3];
 
 	continers.DeleteContiner(container);
+	return 0;
+}
+
+struct MemoryInfo
+{
+	u32 free_user_mem;
+	u32 aviable_user_mem;
+};
+
+int SysCalls::lv2MemGetUserMemorySize()
+{
+	ConLog.Write("lv2MemGetUserMemorySize: r3=0x%llx, r4=0x%llx", CPU.GPR[3], CPU.GPR[4]);
+	MemoryInfo mem_info;
+	mem_info.aviable_user_mem = 100*(1024 ^ 3); //100mb
+	mem_info.free_user_mem = mem_info.aviable_user_mem;
+	memcpy(Memory.GetMemFromAddr(CPU.GPR[3]), &mem_info, sizeof(mem_info));
+
+	CPU.GPR[4] = CPU.GPR[3];
 	return 0;
 }

@@ -467,19 +467,21 @@ public:
 	}
 
 	virtual void SetElf(wxString elf_full_patch);
-	virtual void LoadElf(bool IsDump = false);
-	virtual void LoadSelf(bool IsDump = false);
+	virtual bool LoadElf();
+	virtual bool LoadSelf();
+
+	virtual bool Load(bool IsSelf);
 
 private:
-	virtual void LoadElf32(wxFile& f);
-	virtual void LoadElf64(wxFile& f);
+	virtual bool LoadElf32(wxFile& f);
+	virtual bool LoadElf64(wxFile& f);
 
-	virtual void LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset = 0);
-	virtual void LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset = 0);
+	virtual bool LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset = 0);
+	virtual bool LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset = 0);
 
-	virtual void LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset = 0);
+	virtual bool LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset = 0);
 
-	virtual void LoadPsf();
+	virtual bool LoadPsf();
 };
 
 extern ElfLoader Loader;

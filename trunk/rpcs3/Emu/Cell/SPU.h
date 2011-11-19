@@ -8,8 +8,19 @@ public:
 	u64 cycle;
 
 public:
-	SPUThread(const u16 id);
+	SPUThread(const u8 core);
 	~SPUThread();
+
+	virtual wxString RegsToString()
+	{
+		wxString ret = CPUThread::RegsToString();
+		for(uint i=0; i<128; ++i) ret += wxString::Format("GPR[%d] = 0x%x\n", i, GPR[i]);
+		return ret;
+	}
+
+public:
+	virtual void _InitStack(); 
+	virtual u64 GetFreeStackSize() const;
 
 protected:
 	virtual void DoReset();

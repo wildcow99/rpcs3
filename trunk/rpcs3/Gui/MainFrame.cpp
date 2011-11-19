@@ -55,7 +55,7 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_,
 
 	UpdateUI();
 
-	(new CompilerELF(this))->Show();
+	(new CompilerELF(NULL))->Show();
 }
 
 void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))

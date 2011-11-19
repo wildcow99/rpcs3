@@ -32,6 +32,7 @@ enum PPU_MainOpcodes
 	LBZ = 0x22,
 	LBZU = 0x23,
 	STW = 0x24,
+	STB = 0x26,
 	LHZ = 0x28,
 	LHZU = 0x29,
 	LHA = 0x2a,
@@ -66,11 +67,13 @@ enum G_13Opcodes //Field 21 - 30
 	CRORC = 0x1a1,
 	BCCTR = 0x210,
 	BCTR = 0x420,
+	BCTRL = 0x421,
 };
 
 enum G_1eOpcodes //Field 27 - 29
 {
 	CLRLDI = 0x10,
+	RLDICL = 0x81,
 };
 
 enum G_1fOpcodes //Field 22 - 30
@@ -82,6 +85,7 @@ enum G_1fOpcodes //Field 22 - 30
 	AND = 0x1c,
 	CMPL = 0x1f,
 	CMPLD = 0x20,
+	SUBF = 0x28,
 	LDUX = 0x35,
 	DCBST = 0x36,
 	CNTLZD = 0x3a,
@@ -89,6 +93,7 @@ enum G_1fOpcodes //Field 22 - 30
 	LDARX = 0x54,
 	DCBF = 0x56,
 	LBZX = 0x57,
+	NEG = 0x68,
 	LBZUX = 0x77,
 	ADDE = 0x8a,
 	ADDZE = 0xca,
@@ -99,6 +104,7 @@ enum G_1fOpcodes //Field 22 - 30
 	LHZX = 0x117,
 	EQV = 0x11c,
 	ECIWX = 0x136,
+	XOR = 0x13c,
 	DIV = 0x14b,
 	//LHZUX = 0x14b, //ERROR!!!
 	MFLR = 0x153,
@@ -106,6 +112,7 @@ enum G_1fOpcodes //Field 22 - 30
 	ABS = 0x168,
 	DIVS = 0x16b,
 	LHAUX = 0x177,
+	EXTSH = 0x19a,
 	ECOWX = 0x1b6,
 	MR = 0x1bc,
 	DIVDU = 0x1c9,
@@ -124,7 +131,6 @@ enum G_1fOpcodes //Field 22 - 30
 	LFQX = 0x317,
 	LFQUX = 0x337,
 	EIEIO = 0x356,
-	EXTSH = 0x39a,
 	EXTSB = 0x3ba,
 	ICBI = 0x3d6,
 	DCBZ = 0x3f6,
@@ -241,7 +247,7 @@ public:
 	ADD_OPCODE(ADDIC_,(OP_REG rt, OP_REG ra, OP_sIMM simm16));
 	ADD_OPCODE(ADDI,(OP_REG rt, OP_REG ra, OP_sIMM simm16));
 	ADD_OPCODE(ADDIS,(OP_REG rt, OP_REG ra, OP_sIMM simm16));
-	ADD_OPCODE(BC,(OP_REG bo, OP_REG bi, OP_REG bd, OP_REG aa, OP_REG lk));
+	ADD_OPCODE(BC,(OP_REG bo, OP_REG bi, OP_sIMM bd, OP_REG aa, OP_REG lk));
 	ADD_OPCODE(SC,(const s32 sc_code));
 	ADD_OPCODE(B,(OP_sIMM ll, OP_REG aa, OP_REG lk));
 	
@@ -258,8 +264,10 @@ public:
 		ADD_OPCODE(CRORC,(OP_REG bt, OP_REG ba, OP_REG bb));
 		ADD_OPCODE(BCCTR,(OP_REG bo, OP_REG bi, OP_REG bh, OP_REG lk));
 		ADD_OPCODE(BCTR, ());
+		ADD_OPCODE(BCTRL, ());
 	END_OPCODES_GROUP(G_13);
 	
+	ADD_OPCODE(RLWINM,(OP_REG ra, OP_REG rs, OP_REG sh, OP_REG mb, OP_REG me, bool rc));
 	ADD_OPCODE(ORI,(OP_REG rs, OP_REG ra, OP_uIMM uimm16));
 	ADD_OPCODE(ORIS,(OP_REG rs, OP_REG ra, OP_uIMM uimm16));
 	ADD_OPCODE(ANDI_,(OP_REG rs, OP_REG ra, OP_uIMM uimm16));
@@ -267,6 +275,7 @@ public:
 
 	START_OPCODES_GROUP(G_1e)
 		ADD_OPCODE(CLRLDI,(OP_REG rs, OP_REG ra, OP_uIMM uimm16));
+		ADD_OPCODE(RLDICL,(OP_REG ra, OP_REG rs, OP_REG sh, OP_REG mb, bool rc));
 	END_OPCODES_GROUP(G_1e);
 
 	START_OPCODES_GROUP(G_1f)
@@ -279,6 +288,7 @@ public:
 		ADD_OPCODE(AND,(OP_REG rs, OP_REG ra, OP_REG rb, bool rc));
 		ADD_OPCODE(CMPL,(OP_REG bf, OP_REG l, OP_REG ra, OP_REG rb, bool rc));
 		ADD_OPCODE(CMPLD,(OP_REG bf, OP_REG l, OP_REG ra, OP_REG rb, bool rc));
+		ADD_OPCODE(SUBF,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		
 		//ADD_OPCODE(LDUX,(OP_REG rt, OP_REG ra, OP_REG rb));//
 		
@@ -292,6 +302,7 @@ public:
 		
 		//ADD_OPCODE(LBZX,(OP_REG rt, OP_REG ra, OP_REG rb));//
 		
+		ADD_OPCODE(NEG,(OP_REG rt, OP_REG ra, OP_REG oe, bool rc));
 		ADD_OPCODE(ADDE,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		ADD_OPCODE(ADDZE,(OP_REG rs, OP_REG ra, OP_REG oe, bool rc));
 		ADD_OPCODE(ADDME,(OP_REG rs, OP_REG ra, OP_REG oe, bool rc));
@@ -304,7 +315,8 @@ public:
 		ADD_OPCODE(LHZX,());//
 		ADD_OPCODE(EQV,());//
 		ADD_OPCODE(ECIWX,());//*/
-		
+
+		ADD_OPCODE(XOR,(OP_REG rt, OP_REG ra, OP_REG rb, bool rc));
 		ADD_OPCODE(DIV,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		ADD_OPCODE(MFLR,(OP_REG rt));
 		ADD_OPCODE(ABS,(OP_REG rt, OP_REG ra, OP_REG oe, bool rc));
@@ -316,7 +328,7 @@ public:
 		ADD_OPCODE(DIVDU,());//
 		ADD_OPCODE(DIVWU,());//
 		*/
-
+		ADD_OPCODE(EXTSH,(OP_REG ra, OP_REG rs, bool rc));
 		ADD_OPCODE(MR,(OP_REG ra, OP_REG rb));
 
 		START_OPCODES_GROUP(G_1f_1d3)
@@ -349,8 +361,12 @@ public:
 	END_OPCODES_GROUP(G_1f);
 	
 	ADD_OPCODE(LWZ,(OP_REG rt, OP_REG ra, OP_sIMM ds));
+	ADD_OPCODE(LBZ,(OP_REG rt, OP_REG ra, OP_sIMM ds));
 	ADD_OPCODE(STH,(OP_REG rs, OP_REG ra, OP_sIMM ds));
 	ADD_OPCODE(STW,(OP_REG rs, OP_REG ra, OP_sIMM ds));
+	ADD_OPCODE(STB,(OP_REG rs, OP_REG ra, OP_sIMM ds));
+	ADD_OPCODE(LHZ,(OP_REG rs, OP_REG ra, OP_sIMM ds));
+	ADD_OPCODE(LHZU,(OP_REG rs, OP_REG ra, OP_sIMM ds));
 
 	START_OPCODES_GROUP(G_3a)
 		ADD_OPCODE(LD,(OP_REG rt, OP_REG ra, OP_sIMM ds));

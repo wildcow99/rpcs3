@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
 
+typedef u64 GPRtype;
 enum Lv2FsOflag
 {
 	LV2_O_RDONLY	= 0x000000,
@@ -170,17 +171,17 @@ public:
 		return data.Seek(offset, seek_mode);
 	}
 
-	void Close(const u64 id)
+	bool Close(const u64 id)
 	{
 		bool error;
 		wxFile& data = *fs_files.GetDataById(id, &error);
 		if(error)
 		{
 			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
-			return;
+			return false;
 		}
 		data.Close();
-		fs_files.RemoveById(id);
+		return fs_files.RemoveById(id);
 	}
 };
 
@@ -241,89 +242,93 @@ public:
 		return ret;
 	}
 
-	void Close(const u64 id)
+	bool Close(const u64 id)
 	{
 		if(!fs_dirs.RemoveById(id))
 		{
 			ConLog.Error("%s error: id [%d] is not found!", module_name, id);
-			return;
+			return false;
 		}
+
+		return true;
 	}
 };
 
 FSDirs fs_dirs;
 
-wxString ReadStringInMem(u32 addr)
+wxString ReadStringInMem(const u32 addr)
 {
-	wxString ret = wxEmptyString;
-	for(;;)
-	{
-		char c = (char)Memory.Read8(addr++);
-		if(c == 0) break;
-		ret += c;
-	}
-
-	return FixPatch(ret);
+	return FixPatch(Memory.ReadString(addr));
 }
 
 int SysCalls::lv2FsOpen()
 {
 	const wxString& patch = ReadStringInMem(CPU.GPR[3]);
 	const s32 oflags = CPU.GPR[4];
-	s64& fs_file = CPU.GPR[5];
+	GPRtype& fs_file = CPU.GPR[5];
 
 	const s32 mode = CPU.GPR[6];
-	const void* arg = (void*)&CPU.GPR[7];//???
+	const void* arg = Memory.GetMemFromAddr(CPU.GPR[7]);//???
 	const s32 argcount = CPU.GPR[8];
 
+	ConLog.Write("lv2FsOpen: patch: %s, flags: 0x%llx, mode: %lld, arg addr: 0x%llx, argcount: %d",
+		patch, oflags, mode, CPU.GPR[7], argcount);
+
 	fs_file = fs_files.Open(patch, oflags, mode);
-	return 0;
+	return fs_file == -1 ? -1 : 0;
 }
 
 int SysCalls::lv2FsRead()
 {
 	const u32 fs_file = CPU.GPR[3];
-	void* buf = Memory.GetMemByAddr(CPU.GPR[4]).GetMemFromAddr(CPU.GPR[4]);
+	void* buf = Memory.GetMemFromAddr(CPU.GPR[4]);
 	const u64 size = CPU.GPR[5];
-	s64& read = CPU.GPR[6];
+	GPRtype& read = CPU.GPR[6];
+
+	ConLog.Write("lv2FsRead: id: %d, buf addr: 0x%llx, size: %lld",
+		fs_file, CPU.GPR[4], size);
 
 	read = fs_files.Read(fs_file, buf, size);
-	return 0;
+	return read != size ? -1 : 0;
 }
 
 int SysCalls::lv2FsWrite()
 {
 	const u32 fs_file = CPU.GPR[3];
-	const void* buf = Memory.GetMemByAddr(CPU.GPR[4]).GetMemFromAddr(CPU.GPR[4]);
+	const void* buf = Memory.GetMemFromAddr(CPU.GPR[4]);
 	const u64 size = CPU.GPR[5];
-	s64& written = CPU.GPR[6];
+	GPRtype& written = CPU.GPR[6];
+
+	ConLog.Write("lv2FsWrite: id: %d, buf addr: 0x%llx, size: %lld",
+		fs_file, CPU.GPR[4], size);
 
 	written = fs_files.Write(fs_file, buf, size);
-	return 0;
+	return written != size;
 }
 
 int SysCalls::lv2FsClose()
 {
 	const u32 fs_file = CPU.GPR[3];
 
-	fs_files.Close(fs_file);
-	return 0;
+	ConLog.Write("lv2FsClose: id: %d", fs_file);
+
+	return fs_files.Close(fs_file) ? 0 : -1;
 }
 
 int SysCalls::lv2FsOpenDir()
 {
 	const wxString& patch = ReadStringInMem(CPU.GPR[3]);
-	s64& fs_file = CPU.GPR[4];
+	GPRtype& fs_file = CPU.GPR[4];
 
 	fs_file = fs_dirs.Open(patch);
-	return 0;
+	return fs_file == -1 ? -1 : 0;
 }
 
 int SysCalls::lv2FsReadDir()
 {
 	s64 fs_file = CPU.GPR[3];
 	Lv2FsDirent* fs_dirent = (Lv2FsDirent*)&CPU.GPR[4];
-	s64& read = CPU.GPR[5];
+	GPRtype& read = CPU.GPR[5];
 
 	read = fs_dirs.Read(fs_file, fs_dirent);
 	return 0;
@@ -333,8 +338,7 @@ int SysCalls::lv2FsCloseDir()
 {
 	s64 fs_file = CPU.GPR[3];
 
-	fs_dirs.Close(fs_file);
-	return 0;
+	return fs_dirs.Close(fs_file) ? 0 : -1;
 }
 
 int SysCalls::lv2FsMkdir()
@@ -344,8 +348,7 @@ int SysCalls::lv2FsMkdir()
 
 	if(wxDirExists(patch)) return -1;
 
-	wxMkdir(patch);
-	return 0;
+	return wxMkdir(patch) ? 0 : -1;
 }
 
 int SysCalls::lv2FsRename()
@@ -359,8 +362,7 @@ int SysCalls::lv2FsRename()
 		return -1;
 	}
 
-	wxRenameFile(patch, newpatch);
-	return 0;
+	return wxRenameFile(patch, newpatch) ? 0 : -1;
 }
 
 int SysCalls::lv2FsLSeek64()
@@ -368,10 +370,10 @@ int SysCalls::lv2FsLSeek64()
 	const u32 fs_file = CPU.GPR[3];
 	const s64 offset = CPU.GPR[4];
 	const s32 whence = CPU.GPR[5];
-	s64& position = CPU.GPR[6];
+	GPRtype& position = CPU.GPR[6];
 
 	position = fs_files.Seek(fs_file, offset, whence);
-	return 0;
+	return position == offset ? 0 : -1;
 }
 
 int SysCalls::lv2FsRmdir()
@@ -384,8 +386,7 @@ int SysCalls::lv2FsRmdir()
 		return -1;
 	}
 
-	wxFileName::Rmdir(patch);
-	return 0;
+	return wxFileName::Rmdir(patch) ? 0 : -1;
 }
 
 int SysCalls::lv2FsUtime()

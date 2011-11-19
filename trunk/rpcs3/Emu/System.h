@@ -27,7 +27,7 @@ class Emulator
 	ArrayF<CPUThread> m_cpu_threads;
 
 public:
-	bool IsSlef;
+	bool IsSelf;
 
 	Emulator();
 
@@ -35,6 +35,9 @@ public:
 	virtual void SetElf(wxString elf_patch);
 
 	CPUThread& AddThread(bool isSPU);
+	void RemoveThread(const u8 core);
+
+	void CheckStatus();
 
 	virtual void Run();
 	virtual void Pause();

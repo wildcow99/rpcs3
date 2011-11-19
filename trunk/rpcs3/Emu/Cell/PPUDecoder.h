@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Cell/PPUOpcodes.h"
+#include "Emu/Cell/Decoder.h"
 
 
 #define START_OPCODES_GROUP_(group, reg) \
@@ -21,7 +22,7 @@
 #define ADD_OPCODE(name, regs) case(##name##):m_op.##name####regs##; break
 #define ADD_NULL_OPCODE(name) ADD_OPCODE(##name##, ())
 
-class PPU_Decoder
+class PPU_Decoder : public Decoder
 {
 	int m_code;
 	PPU_Opcodes& m_op;
@@ -38,12 +39,16 @@ class PPU_Decoder
 	OP_REG BF()			const { return GetField(6, 10); }
 	OP_REG BO()			const { return GetField(6, 10); }
 	OP_REG BI()			const { return GetField(11, 15); }
-	OP_REG BD()			const { return GetField(16, 31); }
+	OP_sIMM BD()		const { return (s32)(s16)GetField(16, 31); }
 	OP_REG BH()			const { return GetField(19, 20); }
 	OP_REG BFA()		const { return GetField(11, 13); }
 	
 	OP_REG TH()			const { return GetField(6, 10); }
+
+	OP_REG MB()			const { return GetField(21, 25); }
+	OP_REG ME()			const { return GetField(26, 30); }
 	
+	OP_REG SH()			const { return GetField(16); }
 	OP_REG AA()			const { return GetField(30); }
 	OP_sIMM LL() const
 	{
@@ -100,7 +105,7 @@ public:
 		m_op.Exit();
 	}
 
-	void DoCode(const int code)
+	virtual void Decode(const int code)
 	{
 		m_op.Step();
 
@@ -122,6 +127,19 @@ public:
 		ADD_OPCODE(ADDIC_,(RT(), RA(), simm16()));
 		ADD_OPCODE(ADDI,(RT(), RA(), simm16()));
 		ADD_OPCODE(ADDIS,(RT(), RA(), simm16()));
+
+		/*
+		START_OPCODES_GROUP_(G_BRANCH, GetField(6, 10))
+			ADD_OPCODE(BXE,(BI(), BD(), AA(), LK()));
+			ADD_OPCODE(BXEM,(BI(), BD(), AA(), LK()));
+			ADD_OPCODE(BXEP,(BI(), BD(), AA(), LK()));
+			ADD_OPCODE(BX,(BI(), BD(), AA(), LK()));
+			ADD_OPCODE(BXM,(BI(), BD(), AA(), LK()));
+			ADD_OPCODE(BXP,(BI(), BD(), AA(), LK()));
+			ADD_OPCODE(BDNZ,(BI(), BD(), AA(), LK()));
+		END_OPCODES_GROUP(G_BRANCH);
+		*/
+			
 		ADD_OPCODE(BC,(BO(), BI(), BD(), AA(), LK()));
 		ADD_OPCODE(SC,(SYS()));
 		ADD_OPCODE(B,(LL(), AA(), LK()));
@@ -139,8 +157,10 @@ public:
 			ADD_OPCODE(CRORC,(BT(), BA(), BB()));
 			ADD_OPCODE(BCCTR,(BO(), BI(), BH(), LK()));
 			ADD_OPCODE(BCTR, ());
+			ADD_OPCODE(BCTRL, ());
 		END_OPCODES_GROUP(G_13);
 	
+		ADD_OPCODE(RLWINM,(RA(), RS(), SH(), MB(), ME(), RC()));
 		ADD_OPCODE(ORI,(RS(), RA(), uimm16()));
 		ADD_OPCODE(ORIS,(RS(), RA(), uimm16()));
 		ADD_OPCODE(ANDI_,(RS(), RA(), uimm16()));
@@ -148,6 +168,7 @@ public:
 	
 		START_OPCODES_GROUP_(G_0x1e, GetField(22, 30))
 			ADD_OPCODE(CLRLDI,(RS(), RA(), uimm16()));
+			ADD_OPCODE(RLDICL,(RA(), RS(), SH(), MB(), RC()));
 		END_OPCODES_GROUP(G_0x1e);
 
 		START_OPCODES_GROUP_(G_1f, GetField(22, 30))
@@ -157,18 +178,22 @@ public:
 			ADD_OPCODE(AND,(RS(), RA(), RB(), RC()));
 			ADD_OPCODE(CMPL,(BF(), L(), RA(), RB(), RC()));
 			ADD_OPCODE(CMPLD,(BF(), L(), RA(), RB(), RC()));
+			ADD_OPCODE(SUBF,(RT(), RA(), RB(), OE(), RC()));
 			ADD_OPCODE(DCBST,(RA(), RB()));
 			ADD_OPCODE(CNTLZD,(RA(), RS(), RC()));
 			ADD_OPCODE(ANDC,(RS(), RA(), RB(), RC()));
 			ADD_OPCODE(DCBF,(RA(), RB()));
+			ADD_OPCODE(NEG,(RT(), RA(), OE(), RC()));
 			ADD_OPCODE(ADDE,(RT(), RA(), RB(), OE(), RC()));
 			ADD_OPCODE(ADDZE,(RS(), RA(), OE(), RC()));
 			ADD_OPCODE(ADDME,(RS(), RA(), OE(), RC()));
 			ADD_OPCODE(DCBTST,(TH(), RA(), RB()));
 			ADD_OPCODE(ADD,(RT(), RA(), RB(), OE(), RC()));
+			ADD_OPCODE(XOR,(RT(), RA(), RB(), RC()));
 			ADD_OPCODE(DIV,(RT(), RA(), RB(), OE(), RC()));
 			ADD_OPCODE(MFLR,(RT()));
 			ADD_OPCODE(ABS,(RT(), RA(), OE(), RC()));
+			ADD_OPCODE(EXTSH,(RA(), RS(), RC()));
 			ADD_OPCODE(MR,(RA(), RB()));
 
 			START_OPCODES_GROUP_(G_1f_1d3, GetField(11, 21))
@@ -183,8 +208,12 @@ public:
 		END_OPCODES_GROUP(G_1f);
 		
 		ADD_OPCODE(LWZ,(RT(), RA(), D()));
+		ADD_OPCODE(LBZ,(RT(), RA(), D()));
 		ADD_OPCODE(STH,(RS(), RA(), D()));
 		ADD_OPCODE(STW,(RS(), RA(), D()));
+		ADD_OPCODE(STB,(RS(), RA(), D()));
+		ADD_OPCODE(LHZ,(RS(), RA(), D()));
+		ADD_OPCODE(LHZU,(RS(), RA(), D()));
 
 		START_OPCODES_GROUP_(G_3a, GetField(30, 31))
 			ADD_OPCODE(LD,(RT(), RA(), D()));
