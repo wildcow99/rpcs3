@@ -3,17 +3,10 @@
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/PPUDisAsm.h"
-#include "Gui/InterpreterDisAsm.h"
 
-PPUThread::PPUThread(const u16 id) : CPUThread(false, id)
+PPUThread::PPUThread(const u8 core) : CPUThread(false, core)
 {
 	Reset();
-
-	if(Ini.Emu.m_DecoderMode.GetValue() == 1)
-	{
-		InterpreterDisAsmFrame* disasm = new InterpreterDisAsmFrame(StepThread::GetName(), this);
-		disasm->Show();
-	}
 }
 
 PPUThread::~PPUThread()
@@ -27,24 +20,31 @@ void PPUThread::DoReset()
 	memset(FPR,  0, sizeof(FPR));
 	memset(GPR,  0, sizeof(GPR));
 	memset(SPRG, 0, sizeof(SPRG));
-	memset(BO,   0, sizeof(BO));
-	memset(CR,   0, sizeof(CR));
-
+	
+	CR.CR	= 0;
 	LR		= 0;
 	CTR		= 0;
 	USPRG	= 0;
-	TBU		= 0;
-	TBL		= 0;
+	TB		= 0;
 	XER		= 0;
+	FPSCR	= 0;
+}
 
-	GPR[1] = Memory.MainRam.GetEndAddr(); //FIXME: Stack address
+void PPUThread::_InitStack()
+{
+	GPR[1] = Stack.GetEndAddr();
+}
+
+u64 PPUThread::GetFreeStackSize() const
+{
+	return (GetStackAddr() + GetStackSize()) - GPR[1];
 }
 
 void PPUThread::DoRun()
 {
 	switch(Ini.Emu.m_DecoderMode.GetValue())
 	{
-	case 0: m_dec = new PPU_Decoder(*new PPU_DisAsm(this)); break;
+	case 0: m_dec = new PPU_Decoder(*new PPU_DisAsm(*this)); break;
 	case 1:
 	case 2:
 		m_dec = new PPU_Decoder(*new PPU_Interpreter(*this)); break;
@@ -74,5 +74,5 @@ void PPUThread::DoSysResume()
 
 void PPUThread::DoCode(const s32 code)
 {
-	(*(PPU_Decoder*)m_dec).DoCode(code);
+	(*(PPU_Decoder*)m_dec).Decode(code);
 }

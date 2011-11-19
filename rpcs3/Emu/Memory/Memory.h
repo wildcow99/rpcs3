@@ -1,354 +1,5 @@
 #pragma once
-
-class MemoryBlock
-{
-private:
-	u8* mem;
-	u32 range_start;
-	u32 range_end;
-	u32 range_size;
-	s8 number;
-
-public:
-	MemoryBlock()
-	{
-		Init();
-	}
-
-	~MemoryBlock()
-	{
-		Delete();
-	}
-
-private:
-	void Init()
-	{
-		number = -1;
-
-		range_start = 0;
-		range_end = 0;
-		range_size = 0;
-
-		mem = NULL;
-	}
-
-	void InitMemory()
-	{
-		safe_delete(mem);
-		mem = new u8[range_size];
-		memset(mem, 0, sizeof(mem));
-	}
-
-public:
-	void Delete()
-	{
-		safe_delete(mem);
-		Init();
-	}
-
-	virtual bool IsNULL() { return false; }
-
-	bool GetMemFromAddr(void* dst, const u32 addr, const u32 size)
-	{
-		if(!IsMyAddress(addr)) return false;
-		if((addr - GetStartAddr()) + size > GetSize()) return false;
-		memcpy(dst, &mem[addr - GetStartAddr()], size);
-		return true;
-	}
-
-	bool SetMemFromAddr(void* src, const u32 addr, const u32 size)
-	{
-		if(!IsMyAddress(addr)) return false;
-		if((addr - GetStartAddr()) + size > GetSize()) return false;
-		memcpy(&mem[addr - GetStartAddr()], src, size);
-		return true;
-	}
-
-	bool GetMemFFromAddr(void* dst, const u32 addr)
-	{
-		if(!IsMyAddress(addr)) return false;
-		dst = &mem[addr - GetStartAddr()];
-		return true;
-	}
-
-	u8* GetMemFromAddr(const u32 addr)
-	{
-		if(!IsMyAddress(addr)) return NULL;
-
-		return &mem[addr];
-	}
-
-	void SetNumber(const u8 num)
-	{
-		number = num;
-	}
-
-	void SetRange(const u32 start, const u32 size)
-	{
-		range_start = start;
-		range_size = size;
-		range_end = start + size + 1;
-
-		InitMemory();
-	}
-
-	virtual bool IsMyAddress(const u32 addr)
-	{
-		if(addr >= GetStartAddr() && addr < GetEndAddr())
-		{
-			return true;
-		}
-
-		return false;
-	}
-
-	__forceinline const u8 FastRead8(const u32 addr)
-	{
-		return mem[addr - GetStartAddr()];
-	}
-
-	__forceinline const u16 FastRead16(const u32 addr)
-	{
-		return ((s16)FastRead8(addr) << 8) | (s16)FastRead8(addr + 1);
-	}
-
-	__forceinline const u32 FastRead32(const u32 addr)
-	{
-		return ((s32)FastRead16(addr) << 16) | (s32)FastRead16(addr + 2);
-	}
-
-	__forceinline const u64 FastRead64(const u32 addr)
-	{
-		return ((s64)FastRead32(addr) << 32) | (s64)FastRead32(addr + 4);
-	}
-
-	__forceinline const u128 FastRead128(const u32 addr)
-	{
-		u128 ret;
-		ret.hi = (u64)FastRead32(addr);
-		ret.lo = (u64)FastRead32(addr + 8);
-		return ret;
-	}
-
-	virtual bool Read8(const u32 addr, u8* value)
-	{
-		if(!IsMyAddress(addr))
-		{
-			*value = 0;
-			return false;
-		}
-
-		*value = FastRead8(addr);
-		return true;
-	}
-
-	virtual bool Read16(const u32 addr, u16* value)
-	{
-		if(!IsMyAddress(addr))
-		{
-			*value = 0;
-			return false;
-		}
-
-		*value = FastRead16(addr);
-		return true;
-	}
-
-	virtual bool Read32(const u32 addr, u32* value)
-	{
-		if(!IsMyAddress(addr))
-		{
-			*value = 0;
-			return false;
-		}
-
-		*value = FastRead32(addr);
-		return true;
-	}
-
-	virtual bool Read64(const u32 addr, u64* value)
-	{
-		if(!IsMyAddress(addr))
-		{
-			*value = 0;
-			return false;
-		}
-
-		*value = FastRead64(addr);
-		return true;
-	}
-
-	virtual bool Read128(const u32 addr, u128* value)
-	{
-		if(!IsMyAddress(addr))
-		{
-			*value = u128::From((u64)0);
-			return false;
-		}
-
-		*value = FastRead128(addr);
-		return true;
-	}
-
-	__forceinline void FastWrite8(const u32 addr, const s8 value)
-	{
-		mem[addr - GetStartAddr()] = value;
-	}
-
-	__forceinline void FastWrite16(const u32 addr, const s16 value)
-	{
-		const u32 _addr = addr - GetStartAddr();
-		mem[_addr] = (s8)(value >> 8);
-		mem[_addr+1] = (s8)value;
-	}
-
-	__forceinline void FastWrite32(const u32 addr, const s32 value)
-	{
-		const u32 _addr = addr - GetStartAddr();
-		FastWrite16(_addr, (s16)(value >> 16));
-		FastWrite16(_addr+2, (s16)value);
-	}
-
-	__forceinline void FastWrite64(const u32 addr, const s64 value)
-	{
-		const u32 _addr = addr - GetStartAddr();
-		FastWrite32(_addr, (s32)(value >> 32));
-		FastWrite32(_addr+4, (s32)value);
-	}
-
-	__forceinline void FastWrite128(const u32 addr, const u128 value)
-	{
-		const u32 _addr = addr - GetStartAddr();
-		FastWrite64(_addr, value.hi);
-		FastWrite64(_addr+8, value.lo);
-	}
-
-	virtual bool Write8(const u32 addr, const s8 value)
-	{
-		if(!IsMyAddress(addr)) return false;
-
-		FastWrite8(addr, value);
-		return true;
-	}
-
-	virtual bool Write16(const u32 addr, const s16 value)
-	{
-		if(!IsMyAddress(addr)) return false;
-
-		FastWrite16(addr, value);
-		return true;
-	}
-
-	virtual bool Write32(const u32 addr, const s32 value)
-	{
-		if(!IsMyAddress(addr)) return false;
-
-		FastWrite32(addr, value);
-		return true;
-	}
-
-	virtual bool Write64(const u32 addr, const s64 value)
-	{
-		if(!IsMyAddress(addr)) return false;
-
-		FastWrite64(addr, value);
-		return true;
-	}
-
-	virtual bool Write128(const u32 addr, const u128 value)
-	{
-		if(!IsMyAddress(addr)) return false;
-
-		FastWrite128(addr, value);
-		return true;
-	}
-
-	const u32 GetStartAddr() const { return range_start; }
-	const u32 GetEndAddr() const { return range_end; }
-	const u32 GetSize() const { return range_size; }
-	const u8 GetNumber() const { return number; }
-	void* GetMem() const { return mem; }
-};
-
-class NullMemoryBlock : public MemoryBlock
-{
-	virtual bool IsNULL() { return true; }
-
-	virtual bool IsMyAddress(const u32 addr)
-	{
-		return true;
-	}
-
-	virtual bool Read8(const u32 addr, u8* WXUNUSED(value))
-	{
-		ConLog.Error("Read8 from null block: [%08x]", addr);
-		Emu.Pause();
-		return false;
-	}
-
-	virtual bool Read16(const u32 addr, u16* WXUNUSED(value))
-	{
-		ConLog.Error("Read16 from null block: [%08x]", addr);
-		Emu.Pause();
-		return false;
-	}
-
-	virtual bool Read32(const u32 addr, u32* WXUNUSED(value))
-	{
-		ConLog.Error("Read32 from null block: [%08x]", addr);
-		Emu.Pause();
-		return false;
-	}
-
-	virtual bool Read64(const u32 addr, u64* WXUNUSED(value))
-	{
-		ConLog.Error("Read64 from null block: [%08x]", addr);
-		Emu.Pause();
-		return false;
-	}
-
-	virtual bool Read128(const u32 addr, u128* WXUNUSED(value))
-	{
-		ConLog.Error("Read128 from null block: [%08x]", addr);
-		Emu.Pause();
-		return false;
-	}
-
-	virtual bool Write8(const u32 addr, const u8 value)
-	{
-		ConLog.Error("Write8 to null block: [%08x]: %x", addr, value);
-		Emu.Pause();
-		return false;
-	}
-
-	virtual bool Write16(const u32 addr, const u16 value)
-	{
-		ConLog.Error("Write16 to null block: [%08x]: %x", addr, value);
-		Emu.Pause();
-		return false;
-	}
-
-	virtual bool Write32(const u32 addr, const u32 value)
-	{
-		ConLog.Error("Write32 to null block: [%08x]: %x", addr, value);
-		Emu.Pause();
-		return false;
-	}
-
-	virtual bool Write64(const u32 addr, const u64 value)
-	{
-		ConLog.Error("Write64 to null block: [%08x]: %x", addr, value);
-		Emu.Pause();
-		return false;
-	}
-
-	virtual bool Write128(const u32 addr, const u128 value)
-	{
-		ConLog.Error("Write128 to null block: [%08x]: %x_%x", addr, value.hi, value.lo);
-		Emu.Pause();
-		return false;
-	}
-};
+#include "MemoryBlock.h"
 
 class MemoryFlags
 {
@@ -379,17 +30,17 @@ public:
 
 	bool IsFStubRange(const u32 addr) const
 	{
-		return addr >= FStub_lo && addr <= FStub_hi;
+		return addr >= FStub_lo && addr < FStub_hi;
 	}
 
 	bool IsFNIDRange(const u32 addr) const
 	{
-		return addr >= FNID_lo && addr <= FNID_hi;
+		return addr >= FNID_lo && addr < FNID_hi;
 	}
 
 	bool IsOPDRange(const u32 addr) const
 	{
-		return addr >= opd_lo && addr <= opd_hi;
+		return addr >= opd_lo && addr < opd_hi;
 	}
 
 	u32 FindAddr(const u32 addr)
@@ -424,13 +75,13 @@ public:
 		opd_hi = from + size;
 	}
 
-	bool IsFlag(const u32 addr, const u32 pc, s64& gpr)
+	bool IsFlag(const u32 addr, const u32 pc, u64& gpr)
 	{
 		for(uint i=0; i<m_memflags.GetCount(); ++i)
 		{
 			if(m_memflags[i] == addr)
 			{
-				if(IsOPDRange(pc)) gpr = m_memflags[i+1];
+				/*if(IsOPDRange(pc))*/ gpr = m_memflags[i+1];
 				return true;
 			}
 		}
@@ -449,10 +100,10 @@ public:
 	MemoryBlock MainRam;
 	MemoryBlock Video_FrameBuffer;
 	MemoryBlock Video_GPUdata;
+	ArrayF<MemoryBlock> MemoryBlocks;
 
 	MemoryFlags MemFlags;
 
-	u8 mem_count;
 	bool m_inited;
 
 	MemoryBase()
@@ -494,19 +145,15 @@ public:
 
 	MemoryBlock& GetMemByNum(const u8 num)
 	{
-		if(num == MainRam.			GetNumber()) return MainRam;
-		if(num == Video_FrameBuffer.GetNumber()) return Video_FrameBuffer;
-		if(num == Video_GPUdata.	GetNumber()) return Video_GPUdata;
-
-		return NullMem;
+		if(num >= MemoryBlocks.GetCount()) return NullMem;
+		return MemoryBlocks.Get(num);
 	}
 
 	MemoryBlock& GetMemByAddr(const u32 addr)
 	{
-		for(uint i=0; i<mem_count; ++i)
+		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
 		{
-			MemoryBlock& mem = GetMemByNum(i);
-			if(mem.IsMyAddress(addr)) return mem;
+			if(MemoryBlocks.Get(i).IsMyAddress(addr)) return MemoryBlocks.Get(i);
 		}
 
 		return NullMem;
@@ -525,21 +172,18 @@ public:
 		ConLog.Write("Initing memory...");
 
 		MainRam.SetRange(0x00000000, 0x0FFFFFFF); //256 MB
-		Video_FrameBuffer.SetRange(MainRam.GetEndAddr(), 0x0FBFFFFF); //252 MB
+		Video_FrameBuffer.SetRange(MainRam.GetEndAddr(), 0x0FFFFFFF); //252 MB
 		Video_GPUdata.SetRange(Video_FrameBuffer.GetEndAddr(), 0x003FFFFF); //4 MB
-
-		mem_count = 0;
-
-		MainRam.SetNumber(mem_count++);
-		Video_FrameBuffer.SetNumber(mem_count++);
-		Video_GPUdata.SetNumber(mem_count++);
+		MemoryBlocks.Add(MainRam);
+		MemoryBlocks.Add(Video_FrameBuffer);
+		MemoryBlocks.Add(Video_GPUdata);
 	}
 
 	bool IsGoodAddr(const u32 addr)
 	{
-		for(uint i=0; i<mem_count; ++i)
+		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
 		{
-			if(GetMemByNum(i).IsMyAddress(addr)) return true;
+			if(MemoryBlocks.Get(i).IsMyAddress(addr)) return true;
 		}
 
 		return false;
@@ -552,11 +196,12 @@ public:
 
 		ConLog.Write("Closing memory...");
 
-		for(uint i=0; i<mem_count; ++i)
+		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
 		{
-			GetMemByNum(i).Delete();
+			MemoryBlocks.Get(i).Delete();
 		}
 
+		MemoryBlocks.Clear();
 		MemFlags.Clear();
 	}
 
@@ -580,6 +225,40 @@ public:
 	u32 Read32(const u32 addr);
 	u64 Read64(const u32 addr);
 	u128 Read128(const u32 addr);
+
+	wxString ReadString(const u32 addr, const u64 len)
+	{
+		wxString str;
+		str.Clear();
+		wxStringBuffer buf(str, len);
+		memcpy((wxChar*)buf, (const void*)GetMemFromAddr(addr), len);
+
+		return str;
+	}
+
+	wxString ReadString(const u32 addr)
+	{
+		wxString buf = wxEmptyString;
+
+		for(u32 i=addr; ; i++)
+		{
+			const u8 c = Read8(i);
+			if(c == 0) break;
+			buf += c;
+		}
+
+		return buf;
+	}
+
+	void WriteString(const u32 addr, const wxString& str)
+	{
+		for(u32 i=0; i<str.Length(); i++)
+		{
+			Write8(addr + i, str[i]);
+		}
+
+		Write8(addr + str.Length(), 0);
+	}
 };
 
 extern MemoryBase Memory;

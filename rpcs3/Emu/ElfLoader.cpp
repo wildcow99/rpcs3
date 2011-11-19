@@ -42,7 +42,7 @@ void ElfLoader::SetElf(wxString elf_full_patch)
 	CurGameInfo.root = wxFileName(wxFileName(elf_full_patch).GetPath()).GetPath();
 }
 
-void ElfLoader::LoadPsf()
+bool ElfLoader::LoadPsf()
 {
 	const wxString dir = wxFileName(wxFileName(m_elf_fpatch).GetPath()).GetPath();
 	const wxString fpatch = dir + "\\" + "PARAM.SFO";
@@ -50,7 +50,7 @@ void ElfLoader::LoadPsf()
 	if(!wxFile::Access(fpatch, wxFile::read))
 	{
 		ConLog.Error("Error loading %s: not found!", fpatch.c_str());
-		return;
+		return false;
 	}
 	else
 	{
@@ -66,7 +66,7 @@ void ElfLoader::LoadPsf()
 	{
 		ConLog.Error("%s is not PSF!", fpatch);
 		psf.Close();
-		return;
+		return false;
 	}
 
 	psf.Seek(pshdr.ps_listoff);
@@ -239,9 +239,11 @@ void ElfLoader::LoadPsf()
 	{
 		CurGameInfo.serial = "Unknown";
 	}
+
+	return true;
 }
 
-void ElfLoader::LoadElf32(wxFile& f)
+bool ElfLoader::LoadElf32(wxFile& f)
 {
 	Elf32_Ehdr ehdr;
 	ehdr.Load(f);
@@ -253,10 +255,10 @@ void ElfLoader::LoadElf32(wxFile& f)
 	ehdr.Show();
 	ConLog.SkipLn();
 
-	LoadPhdr32(f, ehdr);
+	return LoadPhdr32(f, ehdr);
 }
 
-void ElfLoader::LoadElf64(wxFile& f)
+bool ElfLoader::LoadElf64(wxFile& f)
 {
 	Elf64_Ehdr ehdr;
 	ehdr.Load(f);
@@ -268,16 +270,17 @@ void ElfLoader::LoadElf64(wxFile& f)
 	ehdr.Show();
 	ConLog.SkipLn();
 
-	LoadPhdr64(f, ehdr);
-	LoadShdr64(f, ehdr);
+	if(!LoadPhdr64(f, ehdr)) return false;
+	if(!LoadShdr64(f, ehdr)) return false;
+	return true;
 }
 
-void ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
+bool ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
 {
 	if(ehdr.e_phoff == 0)
 	{
 		ConLog.Error("LoadPhdr32 error: Program header offset is null!");
-		return;
+		return false;
 	}
 
 	for(uint i=0; i<ehdr.e_phnum; ++i)
@@ -306,14 +309,16 @@ void ElfLoader::LoadPhdr32(wxFile& f, Elf32_Ehdr& ehdr, const uint offset)
 
 		ConLog.SkipLn();
 	}
+
+	return true;
 }
 
-void ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
+bool ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 {
 	if(ehdr.e_phoff == 0)
 	{
 		ConLog.Error("LoadPhdr64 error: Program header offset is null!");
-		return;
+		return false;
 	}
 
 	for(uint i=0; i<ehdr.e_phnum; ++i)
@@ -342,14 +347,16 @@ void ElfLoader::LoadPhdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 
 		ConLog.SkipLn();
 	}
+
+	return true;
 }
 
-void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
+bool ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 {
 	if(ehdr.e_shoff == 0 && ehdr.e_shnum > 0)
 	{
 		ConLog.Error("LoadShdr64 error: Section header offset is null!");
-		return;
+		return false;
 	}
 
 	m_sh_ptr.Clear();
@@ -438,7 +445,6 @@ void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 
 	if(opd)
 	{
-		//const u32 addr = opd->sh_addr;
 		const u32 offs = opd->sh_offset;
 		const u32 size = opd->sh_size;
 
@@ -452,7 +458,6 @@ void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 
 	if(got)
 	{
-		//const u32 addr = got->sh_addr;
 		const u32 offs = got->sh_offset;
 		const u32 size = got->sh_size;
 
@@ -469,23 +474,25 @@ void ElfLoader::LoadShdr64(wxFile& f, Elf64_Ehdr& ehdr, const uint offset)
 	{
 		//TODO
 	}
+
+	return true;
 }
 
-void ElfLoader::LoadElf(bool IsDump)
+bool ElfLoader::LoadElf()
 {
 	const wxString elf_name = wxFileName(m_elf_fpatch).GetFullName();
 
 	if(!wxFile::Access(m_elf_fpatch, wxFile::read))
 	{
 		ConLog.Error("Error open %s: not found!", elf_name);
-		return;
+		return false;
 	}
 
 	wxFile f(m_elf_fpatch);
 	if(!f.IsOpened())
 	{
 		ConLog.Error("Error open %s!", elf_name);
-		return;
+		return false;
 	}
 
 	elf_size = f.Length();
@@ -494,17 +501,10 @@ void ElfLoader::LoadElf(bool IsDump)
 	{
 		ConLog.Error("%s is null!", elf_name);
 		f.Close();
-		return;
+		return false;
 	}
 
 	f.Seek(0);
-
-	if(IsDump)
-	{
-		f.Read(Memory.MainRam.GetMem(), elf_size);
-		f.Close();
-		return;
-	}
 
 	const u32 magic = Read32(f);
 	const u8 _class = Read8 (f);
@@ -513,18 +513,19 @@ void ElfLoader::LoadElf(bool IsDump)
 	{
 		ConLog.Error("%s is not correct elf!", elf_name);
 		f.Close();
-		return;
+		return false;
 	}
 
 	f.Seek(0);
 
+	bool ret = true;
 	if(_class == 1)
 	{
-		LoadElf32(f);
+		if(!LoadElf32(f)) ret = false;
 	}
 	else if(_class == 2)
 	{
-		LoadElf64(f);
+		if(!LoadElf64(f)) ret = false;
 	}
 	else
 	{
@@ -535,17 +536,19 @@ void ElfLoader::LoadElf(bool IsDump)
 
 	f.Close();
 
-	LoadPsf();
+	if(ret) LoadPsf();
+
+	return ret;
 }
 
-void ElfLoader::LoadSelf(bool IsDump)
+bool ElfLoader::LoadSelf()
 {
 	wxFile f(m_elf_fpatch);
 	const wxString self_name = wxFileName(m_elf_fpatch).GetFullName();
 	if(!f.IsOpened())
 	{
 		ConLog.Error("Error open %s!", self_name);
-		return;
+		return false;
 	}
 
 	elf_size = f.Length();
@@ -554,7 +557,7 @@ void ElfLoader::LoadSelf(bool IsDump)
 	{
 		ConLog.Error("%s is null!", self_name);
 		f.Close();
-		return;
+		return false;
 	}
 
 	SelfHeader sehdr;
@@ -564,7 +567,7 @@ void ElfLoader::LoadSelf(bool IsDump)
 	{
 		ConLog.Error("%s is not correct self! (0x%08x)", self_name, sehdr.se_magic);
 		f.Close();
-		return;
+		return false;
 	}
 
 	sehdr.Show();
@@ -578,11 +581,12 @@ void ElfLoader::LoadSelf(bool IsDump)
 	{
 		ConLog.Error("%s has no correct elf!", self_name);
 		f.Close();
-		return;
+		return false;
 	}
 
 	f.Seek(sehdr.se_elf);
 
+	bool ret = true;
 	if(_class == 1)
 	{
 		Elf32_Ehdr ehdr;
@@ -596,7 +600,7 @@ void ElfLoader::LoadSelf(bool IsDump)
 
 		f.Seek(sehdr.se_phdr);
 
-		LoadPhdr32(f, ehdr, sehdr.se_elf);
+		if(!LoadPhdr32(f, ehdr, sehdr.se_elf)) ret = false;
 	}
 	else if(_class == 2)
 	{
@@ -611,7 +615,7 @@ void ElfLoader::LoadSelf(bool IsDump)
 
 		f.Seek(sehdr.se_phdr);
 
-		LoadPhdr64(f, ehdr, sehdr.se_elf);
+		if(!LoadPhdr64(f, ehdr, sehdr.se_elf)) ret = false;
 	}
 	else
 	{
@@ -623,7 +627,15 @@ void ElfLoader::LoadSelf(bool IsDump)
 
 	f.Close();
 
-	LoadPsf();
+	if(ret) LoadPsf();
+
+	return ret;
+}
+
+bool ElfLoader::Load(bool IsSelf)
+{
+	if(IsSelf) return LoadSelf();
+	return LoadElf();
 }
 
 ElfLoader Loader;

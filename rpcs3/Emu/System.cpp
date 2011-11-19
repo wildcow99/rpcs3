@@ -16,28 +16,71 @@ Emulator::Emulator()
 void Emulator::SetSelf(wxString self_patch)
 {
 	Loader.SetElf(self_patch);
-	IsSlef = true;
+	IsSelf = true;
 }
 
 void Emulator::SetElf(wxString elf_patch)
 {
 	Loader.SetElf(elf_patch);
-	IsSlef = false;
+	IsSelf = false;
 }
 
 CPUThread& Emulator::AddThread(bool isSPU)
 {
-	const int id = GetCPU().GetCount() + 1;
-	if(isSPU)
+	CPUThread* cpu; 
+	if(isSPU) cpu = new SPUThread(GetCPU().GetCount());
+	else cpu = new PPUThread(GetCPU().GetCount());
+	GetCPU().Add(cpu);
+	return *cpu;
+}
+
+void Emulator::RemoveThread(const u8 core)
+{
+	ConLog.Warning("Remove Thread %d of %d", core+1, GetCPU().GetCount());
+	if(core >= GetCPU().GetCount()) return;
+	GetCPU().RemoveFAt(core);
+	
+	for(uint i=core; i<GetCPU().GetCount(); ++i)
 	{
-		GetCPU().Add(*new SPUThread(id));
-	}
-	else
-	{
-		GetCPU().Add(*new PPUThread(id));
+		GetCPU().Get(i).core--;
 	}
 
-	return GetCPU().Get(GetCPU().GetCount() - 1);
+	CheckStatus();
+}
+
+void Emulator::CheckStatus()
+{
+	if(GetCPU().GetCount() == 0)
+	{
+		Stop();
+		return;	
+	}
+
+	bool IsAllPaused = true;
+	for(uint i=0; i<GetCPU().GetCount(); ++i)
+	{
+		if(!GetCPU().Get(i).IsPaused())
+		{
+			IsAllPaused = false;
+			break;
+		}
+	}
+	if(IsAllPaused)
+	{
+		Pause();
+		return;
+	}
+
+	bool IsAllStoped = true;
+	for(uint i=0; i<GetCPU().GetCount(); ++i)
+	{
+		if(!GetCPU().Get(i).IsStoped())
+		{
+			IsAllStoped = false;
+			break;
+		}
+	}
+	if(IsAllStoped) Stop();
 }
 
 void Emulator::Run()
@@ -54,18 +97,23 @@ void Emulator::Run()
 
 	Memory.Init();
 
-	if(IsSlef)
+	if(!Loader.Load(IsSelf))
 	{
-		Loader.LoadSelf();
-	}
-	else
-	{
-		Loader.LoadElf();
+		Memory.Close();
+		return;
 	}
 	
 	CPUThread& cpu_thread = AddThread(Loader.isSPU);
-	cpu_thread.SetPc(Loader.entry);
+	if(Ini.Emu.m_DecoderMode.GetValue() == 1)
+	{
+		cpu_thread.SetPc(Loader.entry - 4);
+	}
+	else
+	{
+		cpu_thread.SetPc(Loader.entry);
+	}
 
+	if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
 	if(!m_memory_viewer) m_memory_viewer = new MemoryViewerPanel(NULL);
 
 	m_memory_viewer->SetPC(cpu_thread.PC);
@@ -98,6 +146,8 @@ void Emulator::Resume()
 	{
 		GetCPU().Get(i).SysResume();
 	}
+
+	CheckStatus();
 }
 
 void Emulator::Stop()

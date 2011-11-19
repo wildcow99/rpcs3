@@ -133,9 +133,28 @@ public:
 
 class SysCalls
 {
+public:
+	//process
+	int lv2ProcessGetPid();
+	int lv2ProcessWaitForChild();
+	int lv2ProcessGetStatus();
+	int lv2ProcessDetachChild();
+	int lv2ProcessGetNumberOfObject();
+	int lv2ProcessGetId();
+	int lv2ProcessGetPpid();
+	int lv2ProcessKill();
+	int lv2ProcessExit();
+	int lv2ProcessWaitForChild2();
+	int lv2ProcessGetSdkVersion();
+
 	//memory
 	int lv2MemContinerCreate();
 	int lv2MemContinerDestroy();
+	int lv2MemGetUserMemorySize();
+
+	//tty
+	int lv2TtyRead();
+	int lv2TtyWrite();
 
 	//filesystem
 	int lv2FsOpen();
@@ -151,6 +170,7 @@ class SysCalls
 	int lv2FsRmdir();
 	int lv2FsUtime();
 
+protected:
 	PPUThread& CPU;
 
 protected:
@@ -163,9 +183,25 @@ protected:
 		switch(code)
 		{
 			//=== lv2 ===
+			//process
+			case 1: return lv2ProcessGetPid();
+			case 2: return lv2ProcessWaitForChild();
+			case 4: return lv2ProcessGetStatus();
+			case 5: return lv2ProcessDetachChild();
+			case 12: return lv2ProcessGetNumberOfObject();
+			case 13: return lv2ProcessGetId();
+			case 18: return lv2ProcessGetPpid();
+			case 19: return lv2ProcessKill();
+			case 22: return lv2ProcessExit();
+			case 23: return lv2ProcessWaitForChild2();
+			case 25: return lv2ProcessGetSdkVersion();
 			//memory
 			case 324: return lv2MemContinerCreate();
 			case 325: return lv2MemContinerDestroy();
+			case 352: return lv2MemGetUserMemorySize();
+			//tty
+			case 402: return lv2TtyRead();
+			case 403: return lv2TtyWrite();
 			//file system
 			case 801: return lv2FsOpen();
 			case 802: return lv2FsRead();
@@ -179,6 +215,10 @@ protected:
 			case 813: return lv2FsRmdir();
 			case 818: return lv2FsLSeek64();
 			case 815: return lv2FsUtime();
+			case 988:
+				ConLog.Warning("SysCall 988! r3: 0x%x, r4: 0x%x, r5: 0x%x, pc: 0x%x",
+					(u32)CPU.GPR[3], (u32)CPU.GPR[4], (u32)CPU.GPR[5], (u32)CPU.PC);
+				return 0;
 		}
 
 		ConLog.Error("Unknown syscall: %d - %08x", code, code);

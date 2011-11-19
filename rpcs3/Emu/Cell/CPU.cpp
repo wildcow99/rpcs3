@@ -1,13 +1,33 @@
 #include "stdafx.h"
 #include "CPU.h"
+#include "Utilites/IdManager.h"
+#include "Gui/InterpreterDisAsm.h"
 
-CPUThread::CPUThread(bool _isSPU, const u16 id)
-	: StepThread(wxString::Format("%s[%d] Thread",(_isSPU ? "SPU" : "PPU"), id))
-	, m_id(id)
+IdManager CPU_IDs;
+
+CPUThread::CPUThread(bool _isSPU, const u8 _core)
+	: StepThread()
 	, isSPU(_isSPU)
+	, m_id(CPU_IDs.GetNewID())
+	, core(_core)
+	, DisAsmFrame(NULL)
 {
+	ID& id = CPU_IDs.GetIDData(m_id);
+	id.name = wxString::Format("%s[%d] Thread",(isSPU ? "SPU" : "PPU"), m_id);
+	id.attr = isSPU ? 2 : 1;
+	StepThread::SetName(id.name);
 	m_dec = NULL;
 	StepThread::Start();
+
+	if(Ini.Emu.m_DecoderMode.GetValue() == 1)
+	{
+		DisAsmFrame = new InterpreterDisAsmFrame(StepThread::GetName(), this);
+		(*(InterpreterDisAsmFrame*)DisAsmFrame).Show();
+	}
+
+	stack_num = 0;
+	stack_size = 0;
+	stack_addr = 0;
 }
 
 CPUThread::~CPUThread()
@@ -16,14 +36,22 @@ CPUThread::~CPUThread()
 
 void CPUThread::Close()
 {
-	Pause();
+	CPU_IDs.RemoveID(GetId());
+	Emu.RemoveThread(core);
+	if(DisAsmFrame && Ini.Emu.m_DecoderMode.GetValue() == 1)
+	{
+		(*(InterpreterDisAsmFrame*)DisAsmFrame).Close();
+	}
 	Stop();
+	WaitForStop();
 	StepThread::Exit();
 	this->~CPUThread();
 }
 
 void CPUThread::Reset()
 {
+	CloseStack();
+
 	SetPc(0);
 	cycle = 0;
 
@@ -33,6 +61,37 @@ void CPUThread::Reset()
 	m_error = 0;
 	
 	DoReset();
+}
+
+void CPUThread::InitStack()
+{
+	if(stack_num != 0) return;
+
+	stack_num = Memory.MemoryBlocks.GetCount();
+	stack_addr = Memory.MemoryBlocks.Get(stack_num - 1).GetEndAddr();
+	stack_size = 0x100;
+	Stack.SetRange(stack_addr, stack_size);
+	Memory.MemoryBlocks.Add(Stack);
+
+	_InitStack();
+}
+
+void CPUThread::CloseStack()
+{
+	if(stack_num == 0) return;
+
+	Stack.Delete();
+	Memory.MemoryBlocks.RemoveAt(stack_num);
+
+	for(uint i=0; i<Emu.GetCPU().GetCount(); ++i)
+	{
+		u32& num = Emu.GetCPU().Get(i).stack_num;
+		if(num > stack_num) num--;
+	}
+
+	stack_addr = 0;
+	stack_size = 0;
+	stack_num = 0;
 }
 
 void CPUThread::NextBranchPc()
@@ -65,15 +124,8 @@ void CPUThread::SetPc(const u32 pc)
 
 void CPUThread::SetBranch(const u32 pc)
 {
-	switch(pc)
-	{
-	case 0x39800000: ConLog.Warning("Initialize TLS #pc: %x", PC); break; //CHECK ME!
-
-	default:
-		nPC = pc;
-		isBranch = true;
-	break;
-	};
+	nPC = pc;
+	isBranch = true;
 }
 
 void CPUThread::SetError(const u32 error)
@@ -97,7 +149,9 @@ void CPUThread::Run()
 		return;
 	}
 	
+	InitStack();
 	DoRun();
+
 	if(Ini.Emu.m_DecoderMode.GetValue() != 1) StepThread::DoStep();
 	else
 	{
@@ -135,14 +189,17 @@ void CPUThread::SysResume()
 	StepThread::DoStep();
 }
 
+void CPUThread::WaitForStop()
+{
+	while(!StepThread::IsWait() && StepThread::IsStarted()) Sleep(1);
+}
+
 void CPUThread::Step()
 {
 	m_status = Runned;
-
 	if(Ini.Emu.m_DecoderMode.GetValue() == 1)
 	{
 		DoCode(Memory.Read32(PC));
-		NextPc();
 		m_status = Paused;
 	}
 	else

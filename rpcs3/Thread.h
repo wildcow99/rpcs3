@@ -230,8 +230,18 @@ protected:
 	{
 		const bool ret = ThreadBase::Exit();
 		exit = true;
-		if(m_main_sem.IsWait()) m_main_sem.Post();
+		if(IsWait()) m_main_sem.Post();
 		return ret;
+	}
+
+	bool IsWait() const
+	{
+		return m_main_sem.IsWait();
+	}
+
+	bool IsExit() const
+	{
+		return exit;
 	}
 
 private:

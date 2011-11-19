@@ -76,19 +76,26 @@ public:
 	{
 	}
 
+	inline bool RemoveFAt(const u64 from, const u64 count = 1)
+	{
+		if(from + count > m_count) return false;
+
+		memmove(&m_array[from], &m_array[from+count], (m_count-(from+count)) * sizeof(T**));
+
+		m_count -= count;
+		return true;
+	}
+
 	inline bool RemoveAt(const u64 from, const u64 count = 1)
 	{
-		if(from + count >= m_count) return false;
+		if(from + count > m_count) return false;
 
 		for(uint i=from; i<from+count; ++i)
 		{
 			free(m_array[i]);
 		}
 
-		memmove(&m_array[from], &m_array[from+count], (m_count-(from+count)) * sizeof(T**));
-
-		m_count -= count;
-		return true;
+		return RemoveFAt(from, count);
 	}
 	/*
 	inline void SetCount(const u64 count)
