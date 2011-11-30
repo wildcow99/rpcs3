@@ -629,9 +629,9 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 {
 	wxFile f;
 
-	static const u32 ehdr_size = 0x40;
-	static const u32 phdr_size = 0x38;
-	static const u32 shdr_size = 0x40;
+	static const u32 ehdr_size = sizeof(Elf64_Ehdr);
+	static const u32 phdr_size = sizeof(Elf64_Phdr);
+	static const u32 shdr_size = sizeof(Elf64_Shdr);
 
 	static const u32 phdr_count = 4;
 	static const u32 shdr_count = phdr_count + 1;
