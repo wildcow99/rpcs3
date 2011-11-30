@@ -5,9 +5,7 @@
 #include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUDisAsm.h"
 
-#include "Emu/ElfLoader.h"
-
-class InterpreterDisAsmFrame : public wxFrame
+class InterpreterDisAsmFrame : public FrameBase
 {
 	wxListView* m_list;
 	wxPanel& m_main_panel;
@@ -27,7 +25,7 @@ class InterpreterDisAsmFrame : public wxFrame
 
 public:
 	InterpreterDisAsmFrame(const wxString& title, CPUThread* cpu)
-		: wxFrame(NULL, wxID_ANY, title)
+		: FrameBase(NULL, wxID_ANY, title, "InterpreterDisAsmFrame", wxSize(500, 700))
 		, m_main_panel(*new wxPanel(this))
 		, CPU(*cpu)
 		, PC(0)
@@ -51,13 +49,10 @@ public:
 		m_list = new wxListView(&m_main_panel);
 		wxButton& b_show_Val = *new wxButton(&m_main_panel, wxID_ANY, "Show value");
 		wxButton& b_show_PC = *new wxButton(&m_main_panel, wxID_ANY, "Show PC");
-		wxButton& b_show_nPC = *new wxButton(&m_main_panel, wxID_ANY, "Show nPC");
 		wxButton& b_next_opcode = *new wxButton(&m_main_panel, wxID_ANY, "Do next opcode");
 		s_b_main.Add(&b_show_Val);
 		s_b_main.AddSpacer(5);
 		s_b_main.Add(&b_show_PC);
-		s_b_main.AddSpacer(5);
-		s_b_main.Add(&b_show_nPC);
 		s_b_main.AddSpacer(5);
 		s_b_main.Add(&b_next_opcode);
 
@@ -96,15 +91,13 @@ public:
 
 		Connect(m_regs->GetId(), wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(InterpreterDisAsmFrame::OnUpdate));
 		Connect( b_show_Val.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( InterpreterDisAsmFrame::Show_Val ));
-		Connect( b_show_PC.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( InterpreterDisAsmFrame::Show_cPC ));
-		Connect( b_show_nPC.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( InterpreterDisAsmFrame::Show_nPC ));
+		Connect( b_show_PC.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( InterpreterDisAsmFrame::Show_PC ));
 		Connect( b_next_opcode.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( InterpreterDisAsmFrame::DoOpcode ));
 		Connect( wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize) );
 		wxGetApp().Connect(m_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(InterpreterDisAsmFrame::MouseWheel), (wxObject*)0, this);
 		wxGetApp().Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(InterpreterDisAsmFrame::OnKeyDown), (wxObject*)0, this);
-		SetSize(500, 700);
 
-		ShowPc(Loader.entry);
+		//ShowPc(Loader.entry);
 		WriteRegs();
 	}
 
@@ -131,6 +124,12 @@ public:
 		//event.Skip();
 	}
 
+	void DoUpdate()
+	{
+		Show_PC(wxCommandEvent());
+		WriteRegs();
+	}
+
 	void ShowPc(const int pc)
 	{
 		PC = pc;
@@ -141,22 +140,12 @@ public:
 				m_list->SetItem(i, 0, wxString::Format("[%08x] illegal address", PC));
 				continue;
 			}
+
 			disasm->dump_pc = PC;
 			decoder->Decode(Memory.Read32(PC));
 			m_list->SetItem(i, 0, disasm->last_opcode);
 
-			if(PC == CPU.PC)
-			{
-				m_list->SetItemBackgroundColour( i, wxColour("Wheat") );
-			}
-			else if(PC == CPU.nPC)
-			{
-				m_list->SetItemBackgroundColour( i, wxColour("Green") );
-			}
-			else
-			{
-				m_list->SetItemBackgroundColour( i, wxColour("White") );
-			}
+			m_list->SetItemBackgroundColour( i, PC == CPU.PC ? wxColour("Green") : wxColour("White") );
 		}
 	}
 
@@ -199,24 +188,14 @@ public:
 		}
 	}
 
-	virtual void Show_cPC(wxCommandEvent& WXUNUSED(event))
+	virtual void Show_PC(wxCommandEvent& WXUNUSED(event))
 	{
 		ShowPc(FixPc(CPU.PC));
 	}
 
-	virtual void Show_nPC(wxCommandEvent& WXUNUSED(event))
-	{
-		ShowPc(FixPc(CPU.nPC));
-	}
-
 	virtual void DoOpcode(wxCommandEvent& WXUNUSED(event))
 	{
-		CPU.NextPc();
 		CPU.Resume();
-		while(CPU.IsRunned() && !exit) Sleep(5);
-		if(exit) return;
-		Show_nPC(wxCommandEvent());
-		WriteRegs();
 	}
 	
 	void OnResize(wxSizeEvent& event)

@@ -1,9 +1,11 @@
 #pragma once
 #include "Thread.h"
 #include <wx/listctrl.h>
+#include "Ini.h"
+#include "Gui/FrameBase.h"
 
 class LogFrame 
-	: public wxFrame
+	: public FrameBase
 	, public StepThread
 {
 	Semaphore m_sem_waitdata;

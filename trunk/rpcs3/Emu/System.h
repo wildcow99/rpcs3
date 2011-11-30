@@ -27,12 +27,13 @@ class Emulator
 	ArrayF<CPUThread> m_cpu_threads;
 
 public:
+	wxString m_path;
 	bool IsSelf;
 
 	Emulator();
 
-	virtual void SetSelf(wxString self_patch);
-	virtual void SetElf(wxString elf_patch);
+	virtual void SetSelf(const wxString& path);
+	virtual void SetElf(const wxString& path);
 
 	CPUThread& AddThread(bool isSPU);
 	void RemoveThread(const u8 core);

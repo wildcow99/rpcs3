@@ -32,12 +32,13 @@ static const s32 ext_zero_masks[5] =
 	0xffffffff,
 };
 
-static u32 rotate_mask[64][64];
+static u32 rotate_mask32[32][32];
+static u64 rotate_mask64[64][64];
 void InitRotateMask()
 {
 	static bool inited = false;
 	if(inited) return;
-
+	/*
 	for(u32 mb=0; mb<32; mb++)
 	{
 		for(u32 me=0; me<32; me++)
@@ -56,10 +57,53 @@ void InitRotateMask()
 				((u64)0xFFFFFFFFFFFFFFFF >> mb) ^ ((me >= 63) ? 0 : ((u64)0xFFFFFFFFFFFFFFFF >> (me + 1)));
 			rotate_mask[mb][me] = mb > me ? ~mask : mask;
 		}
+	}*/
+	#define MASK64_L(mb)    (~0UL >> (mb))
+	#define MASK64_R(me)    ((signed long)0x8000000000000000L >> (me))
+	#define MASK64(mb, me)  (MASK64_L(mb) + MASK64_R(me) + ((me) >= (mb)))
+
+	#define MASK32(mb, me)  ((0xffffffffUL >> (mb)) + \
+                         ((signed long)0x80000000L >> (me)) + ((me) >= (mb)))
+
+	for(u32 mb=0; mb<32; mb++)for(u32 me=0; me<32; me++)
+	{
+		rotate_mask32[mb][me] = MASK32(mb, me);
+	}
+
+	for(u32 mb=0; mb<64; mb++)for(u32 me=0; me<64; me++)
+	{
+		rotate_mask64[mb][me] = MASK64(mb, me);
 	}
 
 	inited = true;
 }
+
+/*
+u32 rotl32(const u32 x, const u8 n)
+{
+	return (x << n) | (x >> (32 - n));
+}
+
+u64 rotl64(const u64 x, const u8 n)
+{
+	return (x << n) | (x >> (64 - n));
+}
+
+u32 rotr32(const u32 x, const u8 n)
+{
+	return (x >> n) | (x << (32 - n));
+}
+
+u64 rotr64(const u64 x, const u8 n)
+{
+	return (x >> n) | (x << (64 - n));
+}
+*/
+
+#define rotl64 _rotl64
+#define rotl32 _rotl
+#define rotr64 _rotr64
+#define rotr32 _rotr
 
 class PPU_Interpreter
 	: public PPU_Opcodes
@@ -87,13 +131,36 @@ private:
 		static bool tested = false;
 		if(tested) return;
 
+		u64 gpr3 = CPU.GPR[3];
 		u64 gpr4 = CPU.GPR[4];
 		u64 gpr6 = CPU.GPR[6];
 
 		CPU.GPR[4] = 0x90003000;
 		RLWINM(6, 4, 2, 0, 0x1D, false);
-		if(CPU.GPR[6] != 0x4000C000) ConLog.Error("Test RLWINM is filed! [0x%x]", CPU.GPR[6]);
+		if(CPU.GPR[6] != 0x4000C000) ConLog.Error("Test RLWINM is failed! [0x%x]", CPU.GPR[6]);
 
+		CPU.GPR[6] = 0x00040000;
+		CPU.GPR[3] = 0x00004000;
+		ADD(4,6,3,false,false);
+		if(CPU.GPR[4] != 0x00044000) ConLog.Error("Test ADD is failed! [0x%x]", CPU.GPR[4]);
+
+		CPU.GPR[4] = 0xFFF25730;
+		CPU.GPR[6] = 0x7B4192C0;
+		AND(3,4,6, false);
+		if(CPU.GPR[3] != 0x7B401200) ConLog.Error("Test AND is failed! [0x%x]", CPU.GPR[3]);
+
+		/*
+		# Assume GPR 4 contains 0x9000 3000.
+		# Assume GPR 7 contains 0x789A 789B.
+		xor 6,4,7
+		# GPR 6 now contains 0xE89A 489B.
+		*/
+		CPU.GPR[4] = 0x90003000;
+		CPU.GPR[6] = 0x789A789B;
+		XOR(3,4,6, false);
+		if(CPU.GPR[3] != 0xE89A489B) ConLog.Error("Test XOR is failed! [0x%x]", CPU.GPR[3]);
+
+		CPU.GPR[3] = gpr3;
 		CPU.GPR[4] = gpr4;
 		CPU.GPR[6] = gpr6;
 		
@@ -287,8 +354,7 @@ private:
 
 	virtual void RLWINM(OP_REG ra, OP_REG rs, OP_REG sh, OP_REG mb, OP_REG me, bool rc)
 	{
-		const u32 r = (CPU.GPR[rs] << sh) | (CPU.GPR[rs] >> (32 - sh));
-		CPU.GPR[ra] = r & rotate_mask[mb][me];
+		CPU.GPR[ra] = rotl32(CPU.GPR[rs], sh) & rotate_mask32[mb][me];
 		if(rc) CPU.UpdateCR0(CPU.GPR[ra]);
 	}
 
@@ -328,8 +394,7 @@ private:
 		}
 		virtual void RLDICL(OP_REG ra, OP_REG rs, OP_REG sh, OP_REG mb, bool rc)
 		{
-			const u64 r = (CPU.GPR[rs] << sh) | (CPU.GPR[rs] >> (64 - sh));
-			CPU.GPR[ra] = r & rotate_mask[mb][63];
+			CPU.GPR[ra] = rotl64(CPU.GPR[rs], sh) & rotate_mask64[mb][63];
 			if(rc) CPU.UpdateCR0(CPU.GPR[ra]);
 		}
 	END_OPCODES_GROUP(G_1e);
@@ -360,7 +425,7 @@ private:
 				}
 			}
 		}
-		virtual void AND(OP_REG rs, OP_REG ra, OP_REG rb, bool rc)
+		virtual void AND(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
 		{
 			CPU.GPR[ra] = CPU.GPR[rs] & CPU.GPR[rb];
 			if(rc) CPU.UpdateCR0(CPU.GPR[ra]);
@@ -450,10 +515,34 @@ private:
 			if(oe) CPU.UpdateXER_OV(CPU.IsADD_OV(CPU.GPR[rt], RA, RB));
 			if(rc) CPU.UpdateCR0(CPU.GPR[rt]);
 		}
-		virtual void XOR(OP_REG rt, OP_REG ra, OP_REG rb, bool rc)
+		virtual void SRAWI(OP_REG ra, OP_REG rs, OP_REG sh, bool rc)
 		{
-			CPU.GPR[rt] = ~(CPU.GPR[ra] | CPU.GPR[rb]);
-			if(rc) CPU.UpdateCR0(CPU.GPR[rt]);
+			CPU.GPR[ra] = CPU.GPR[rs];
+			if(CPU.GPR[ra] & 0x80000000)
+			{
+				for (u32 i=0; i<sh; i++)
+				{
+					CPU.GPR[ra] >>= 1;
+					CPU.GPR[ra] |= 0x80000000;
+				}
+			}
+			else
+			{
+				if(sh > 31)
+				{
+					CPU.GPR[ra] = 0;
+				}
+				else
+				{
+					CPU.GPR[ra] >>= sh;
+				}
+			}
+			if(rc) CPU.UpdateCR0(CPU.GPR[ra]);
+		}
+		virtual void XOR(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
+		{
+			CPU.GPR[ra] = CPU.GPR[rs] ^ CPU.GPR[rb];
+			if(rc) CPU.UpdateCR0(CPU.GPR[ra]);
 		}
 		virtual void DIV(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
@@ -526,8 +615,6 @@ private:
 
 		if(!DoFunc(val, rt))
 			ConLog.Error("Unknown FStub value: 0x%x #pc: 0x%x", val, CPU.PC);
-
-		CPU.GPR[31] = CPU.GPR[30]; //?
 	}
 	virtual void LBZ(OP_REG rt, OP_REG ra, OP_sIMM ds)
 	{
@@ -775,7 +862,6 @@ private:
 
 	bool DoFunc(const u32 code, int r0 = -1)
 	{
-		static int num = 0;
 		struct lwmutex
 		{
 			u64 lock_var;
@@ -791,6 +877,10 @@ private:
 			u32 attr_recursive;
 			char name[8];
 		};
+
+		//CPU.GPR[31] += 40;
+		//GPR[30] = 0x313f8
+		//GPR[31] = 0x31380
 		
 #define FUNC_LOG_ERROR(x) ConLog.Error(x); CPU.GPR[3] = 0; goto _RETURN_
 		switch(code)
@@ -809,7 +899,6 @@ private:
 		case 0xaff080a4: FUNC_LOG_ERROR("TODO: ppu thread exit"); return true;
 		case 0x24a1ea07: FUNC_LOG_ERROR("TODO: ppu thread create ex"); return true;
 		case 0x350d454e: //ppu thread get id
-			//FUNC_LOG_ERROR("TODO: ppu thread get id");
 			ConLog.Warning("ppu thread get id");
 			CPU.GPR[3] = 0;
 			CPU.GPR[4] = CPU.GetId();
@@ -822,14 +911,29 @@ private:
 		
 		case 0x2f85c0ef:
 		{
-			lwmutex& _lwmutex = *(lwmutex*)Memory.GetMemFromAddr(CPU.GPR[3]);
+			ConLog.Write("lwmutex create: r3=0x%llx, r4=0x%llx", CPU.GPR[3], CPU.GPR[4]);
+			if(CPU.GPR[3] == CPU.GPR[4])
+			{
+				CPU.GPR[3] = -1;
+			}
+			else
+			{
+				lwmutex& _lwmutex = *(lwmutex*)Memory.GetMemFromAddr(CPU.GPR[3]);
+				lwmutex_attr& _lwmutex_attr = *(lwmutex_attr*)Memory.GetMemFromAddr(CPU.GPR[4]);
 
-			ConLog.Write("lwmutex attribute: %x", _lwmutex.attribute);
-			ConLog.Write("lwmutex lock_var: %x", _lwmutex.lock_var);
-			ConLog.Write("lwmutex recursive_count: %x", _lwmutex.recursive_count);
-			ConLog.Write("lwmutex sleep_queue: %x", _lwmutex.sleep_queue);
-			CPU.GPR[3] = 0;
-			FUNC_LOG_ERROR("TODO: lwmutex create");
+				ConLog.Write("lwmutex_attr:");
+				ConLog.Write("**** attr_protocol: 0x%x", _lwmutex_attr.attr_protocol);
+				ConLog.Write("**** attr_protocol: 0x%x", _lwmutex_attr.attr_recursive);
+				ConLog.Write("**** name: %s", _lwmutex_attr.name);
+				ConLog.Write("lwmutex:");
+				ConLog.Write("**** lwmutex attribute: %x", _lwmutex.attribute);
+				ConLog.Write("**** lwmutex lock_var: %x", _lwmutex.lock_var);
+				ConLog.Write("**** lwmutex recursive_count: %x", _lwmutex.recursive_count);
+				ConLog.Write("**** lwmutex sleep_queue: %x", _lwmutex.sleep_queue);
+
+				CPU.GPR[3] = 0;
+			}
+			goto _RETURN_;
 		}
 		return true;
 		case 0xc3476d0c: FUNC_LOG_ERROR("TODO: lwmutex destroy"); return true;
@@ -935,8 +1039,6 @@ _RETURN_:
 		if(Memory.MemFlags.IsFlag(code, CPU.PC, patch))
 		{
 			CPU.GPR[2] = patch;
-			CPU.GPR[3] = 2; //?
-			CPU.GPR[9] = code;
 			CPU.SetBranch(code);
 			return;
 		}

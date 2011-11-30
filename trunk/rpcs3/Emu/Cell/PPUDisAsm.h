@@ -347,7 +347,7 @@ private:
 		{
 			DisAsm_R2_RC("cntlzw", ra, rs, rc);
 		}
-		virtual void AND(OP_REG rs, OP_REG ra, OP_REG rb, bool rc)
+		virtual void AND(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
 		{
 			DisAsm_R3_RC("and", ra, rs, rb, rc);
 		}
@@ -403,9 +403,13 @@ private:
 		{
 			DisAsm_R3_OE_RC("add", rt, ra, rb, oe, rc);
 		}
-		virtual void XOR(OP_REG rt, OP_REG ra, OP_REG rb, bool rc)
+		virtual void SRAWI(OP_REG ra, OP_REG rs, OP_REG sh, bool rc)
 		{
-			DisAsm_R3_RC("xor", rt, ra, rb, rc);
+			DisAsm_R3_RC("srawi", ra, rs, sh, rc);
+		}
+		virtual void XOR(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
+		{
+			DisAsm_R3_RC("xor", ra, rs, rb, rc);
 		}
 		virtual void DIV(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{

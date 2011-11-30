@@ -104,6 +104,7 @@ enum G_1fOpcodes //Field 22 - 30
 	LHZX = 0x117,
 	EQV = 0x11c,
 	ECIWX = 0x136,
+	SRAWI = 0x138,
 	XOR = 0x13c,
 	DIV = 0x14b,
 	//LHZUX = 0x14b, //ERROR!!!
@@ -285,7 +286,7 @@ public:
 		//ADD_OPCODE(LDX,(OP_REG rt, OP_REG ra, OP_REG rb));//
 		
 		ADD_OPCODE(CNTLZW,(OP_REG rs, OP_REG ra, bool rc));
-		ADD_OPCODE(AND,(OP_REG rs, OP_REG ra, OP_REG rb, bool rc));
+		ADD_OPCODE(AND,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		ADD_OPCODE(CMPL,(OP_REG bf, OP_REG l, OP_REG ra, OP_REG rb, bool rc));
 		ADD_OPCODE(CMPLD,(OP_REG bf, OP_REG l, OP_REG ra, OP_REG rb, bool rc));
 		ADD_OPCODE(SUBF,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
@@ -315,8 +316,9 @@ public:
 		ADD_OPCODE(LHZX,());//
 		ADD_OPCODE(EQV,());//
 		ADD_OPCODE(ECIWX,());//*/
+		ADD_OPCODE(SRAWI,(OP_REG ra, OP_REG rs, OP_REG sh, bool rc));
 
-		ADD_OPCODE(XOR,(OP_REG rt, OP_REG ra, OP_REG rb, bool rc));
+		ADD_OPCODE(XOR,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		ADD_OPCODE(DIV,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		ADD_OPCODE(MFLR,(OP_REG rt));
 		ADD_OPCODE(ABS,(OP_REG rt, OP_REG ra, OP_REG oe, bool rc));

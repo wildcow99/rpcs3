@@ -149,7 +149,6 @@ public:
 	{
 		if(m_count <= 0) return;
 		m_count = 0;
-		free(*m_array);
 		safe_delete(m_array);
 	}
 
@@ -160,4 +159,6 @@ public:
 	}
 
 	inline u64 GetCount() const { return m_count; }
+
+	T& operator[](u64 num) const { return *m_array[num]; }
 };

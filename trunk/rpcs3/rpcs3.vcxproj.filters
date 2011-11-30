@@ -20,6 +20,9 @@
     <Filter Include="Emu\CPU">
       <UniqueIdentifier>{f66e37f9-5e58-443b-bcff-2e9e002ac89e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Loader">
+      <UniqueIdentifier>{6c36f15e-07fd-45d6-a81c-1ab43ee1b58b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -35,9 +38,6 @@
       <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Memory\Memory.cpp">
-      <Filter>Emu</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\ElfLoader.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
     <ClCompile Include="Gui\MemoryViewer.cpp">
@@ -81,6 +81,27 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\GameViewer.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\ELF.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\ELF32.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\ELF64.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\PSF.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\SELF.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\Loader.cpp">
+      <Filter>Loader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

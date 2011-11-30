@@ -1,4 +1,5 @@
 #include "stdafx.h"
+
 #include "Thread.h"
 #include "Gui/ConLog.h"
 #include <wx/listctrl.h>
@@ -118,7 +119,7 @@ void LogWriter::SkipLn()
 }
 
 LogFrame::LogFrame() 
-	: wxFrame(NULL, wxID_ANY, "Log Console")
+	: FrameBase(NULL, wxID_ANY, "Log Console", wxEmptyString, wxSize(600, 450))
 	, StepThread()
 	, m_log(*new wxListView(this))
 {
@@ -135,9 +136,6 @@ LogFrame::LogFrame()
 
 	SetSizerAndFit( &s_panel );
 
-	SetSize(Ini.Gui.m_LogWindow.GetValue().size);
-	SetPosition(Ini.Gui.m_LogWindow.GetValue().position);
-
 	Connect( wxEVT_SIZE, wxSizeEventHandler(LogFrame::OnResize) );
 	Connect( m_log.GetId(), wxEVT_COMMAND_LIST_COL_BEGIN_DRAG, wxListEventHandler( LogFrame::OnColBeginDrag ));
 
@@ -148,7 +146,6 @@ LogFrame::LogFrame()
 
 LogFrame::~LogFrame()
 {
-	Ini.Gui.m_LogWindow.SetValue(WindowInfo(GetSize(), GetPosition()));
 	StepThread::Exit();
 	runned = false;
 }
@@ -162,13 +159,14 @@ void LogFrame::Step()
 {
 	for(;;)
 	{
-		static const uint max_item_count = 1000;
+
+		static const uint max_item_count = 500;
 
 		while
 		(
 			ConLogData.colour.GetCount() == 0 &&
 			ConLogData.prefix.GetCount() == 0 &&
-			ConLogData.text.  GetCount() == 0
+			ConLogData.text.  GetCount() == 0 && runned
 		)
 		{
 			ThreadAdv::Sleep(200);
@@ -240,7 +238,11 @@ void LogFrame::Step()
 		}
 		StepThread::SetCancelState(true);
 
-		if(!runned) ThreadAdv::Exit();
+		if(!runned)
+		{
+			ThreadAdv::Exit();
+			ThreadAdv::Sleep(200);
+		}
 	}
 
 	ThreadAdv::Sleep(1);

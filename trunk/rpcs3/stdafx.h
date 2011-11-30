@@ -128,6 +128,7 @@ static void safe_realloc(T* ptr, uint new_size)
 
 #include "rpcs3.h"
 #include "Ini.h"
+#include "Gui/FrameBase.h"
 #include "Gui/ConLog.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"

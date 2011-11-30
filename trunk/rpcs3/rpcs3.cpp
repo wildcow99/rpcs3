@@ -32,7 +32,6 @@ void Rpcs3App::Exit()
 
 	if(m_MainFrame && m_MainFrame->IsShown())
 	{
-		Ini.Gui.m_MainWindow.SetValue(WindowInfo(m_MainFrame->GetSize(), m_MainFrame->GetPosition()));
 		m_MainFrame->~MainFrame();
 	}
 

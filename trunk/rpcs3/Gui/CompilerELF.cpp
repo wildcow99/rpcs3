@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CompilerELF.h"
+#include "Loader/ELF64.h"
 
 void Write8(wxFile& f, const u8 data)
 {
@@ -27,7 +28,7 @@ enum CompilerIDs
 	id_compile_code,
 };
 
-CompilerELF::CompilerELF(wxWindow* parent) : wxFrame(parent, wxID_ANY, "CompilerELF")
+CompilerELF::CompilerELF(wxWindow* parent) : FrameBase(parent, wxID_ANY, "CompilerELF", wxEmptyString, wxSize(640, 680))
 {
 	m_aui_mgr.SetManagedWindow(this);
 
@@ -39,7 +40,6 @@ CompilerELF::CompilerELF(wxWindow* parent) : wxFrame(parent, wxID_ANY, "Compiler
 	menu_code.Append(id_compile_code, "Compile");
 
 	SetMenuBar(&menubar);
-	SetSize(wxSize(640, 680));
 
 	asm_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(500, 500),
 		wxTE_LEFT | wxTE_MULTILINE | wxTE_DONTWRAP);
@@ -57,6 +57,8 @@ CompilerELF::CompilerELF(wxWindow* parent) : wxFrame(parent, wxID_ANY, "Compiler
 	m_aui_mgr.GetPane(L"hex_list").CaptionVisible(false).Show();
 	m_aui_mgr.GetPane(L"err_list").Caption("Output").Show();
 	m_aui_mgr.Update();
+
+	FrameBase::LoadInfo();
 
 	scroll_timer = new wxTimer(this);
 
@@ -567,7 +569,7 @@ bool CompilerELF::SearchText(u64& p, const wxString& str, const u64 line, wxStri
 	return false;
 }
 
-void WriteEhdr(wxFile& f, ElfLoader::Elf64_Ehdr& ehdr)
+void WriteEhdr(wxFile& f, Elf64_Ehdr& ehdr)
 {
 	Write32(f, ehdr.e_magic);
 	Write8(f, ehdr.e_class);
@@ -590,7 +592,7 @@ void WriteEhdr(wxFile& f, ElfLoader::Elf64_Ehdr& ehdr)
 	Write16(f, ehdr.e_shstrndx);
 }
 
-void WritePhdr(wxFile& f, ElfLoader::Elf64_Phdr& phdr)
+void WritePhdr(wxFile& f, Elf64_Phdr& phdr)
 {
 	Write32(f, phdr.p_type);
 	Write32(f, phdr.p_flags);
@@ -602,7 +604,7 @@ void WritePhdr(wxFile& f, ElfLoader::Elf64_Phdr& phdr)
 	Write64(f, phdr.p_align);
 }
 
-void WriteShdr(wxFile& f, ElfLoader::Elf64_Shdr& shdr)
+void WriteShdr(wxFile& f, Elf64_Shdr& shdr)
 {
 	Write32(f, shdr.sh_name);
 	Write32(f, shdr.sh_type);
@@ -648,9 +650,9 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 	wxArrayInt rodata_offs;
 	wxArrayInt hex_arr;
 
-	ElfLoader::Elf64_Ehdr ehdr;
-	ElfLoader::Elf64_Phdr* phdr = NULL;
-	ElfLoader::Elf64_Shdr* shdr = NULL;
+	Elf64_Ehdr ehdr;
+	Elf64_Phdr* phdr = NULL;
+	Elf64_Shdr* shdr = NULL;
 
 	u32 prog_offset;
 	u32 p_names_size;
@@ -671,8 +673,8 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 		p_names_size = 0;
 		cur_string_addr = string_addr;
 
-		phdr = new ElfLoader::Elf64_Phdr[phdr_count];
-		shdr = new ElfLoader::Elf64_Shdr[shdr_count];
+		phdr = new Elf64_Phdr[phdr_count];
+		shdr = new Elf64_Shdr[shdr_count];
 
 		//TODO
 		ehdr.e_magic = 0x7F454C46;

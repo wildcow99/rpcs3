@@ -3,7 +3,7 @@
 #include "Emu/Memory/Memory.h"
 
 MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent) 
-	: wxFrame(parent, wxID_ANY, L"Memory Viewer", wxDefaultPosition, wxDefaultSize,
+	: FrameBase(parent, wxID_ANY, L"Memory Viewer", wxEmptyString, wxSize(700, 450), wxDefaultPosition,
 	wxSYSTEM_MENU | wxRESIZE_BORDER | wxMINIMIZE_BOX | wxMAXIMIZE_BOX | wxCLOSE_BOX | wxCAPTION | wxCLIP_CHILDREN)
 {
 	exit = false;
@@ -50,8 +50,6 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	s_panel.Add(hex_wind);
 
 	SetSizerAndFit( &s_panel );
-
-	SetSize(700, 450);
 
 	Connect( wxEVT_SIZE, wxSizeEventHandler(MemoryViewerPanel::OnResize) );
 
