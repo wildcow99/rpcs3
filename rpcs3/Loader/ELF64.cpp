@@ -136,11 +136,11 @@ bool ELF64Loader::LoadShdr()
 
 	for(uint i=0; i<ehdr.e_shnum; ++i)
 	{
-		Elf64_Shdr shdr;
+		Elf64_Shdr& shdr = *new Elf64_Shdr();
 		elf64_f.Seek(ehdr.e_shoff + (ehdr.e_shentsize * i));
 		shdr.Load(elf64_f);
 
-		shdr_arr.Add(new Elf64_Shdr(shdr));
+		shdr_arr.Add(shdr);
 
 		if(ehdr.e_shstrndx == i && shdr.sh_type == SHT_STRTAB)
 		{
@@ -154,7 +154,7 @@ bool ELF64Loader::LoadShdr()
 
 	for(uint i=0; i<shdr_arr.GetCount(); ++i)
 	{
-		Elf64_Shdr& shdr = shdr_arr.Get(i);
+		Elf64_Shdr& shdr = shdr_arr[i];
 		if(strtab)
 		{
 			elf64_f.Seek(strtab->sh_offset + shdr.sh_name);
@@ -240,7 +240,7 @@ bool ELF64Loader::LoadShdr()
 					for(uint sh=0; sh<shdr_arr.GetCount() && is_done; ++sh)
 					{
 						if(sh == i) continue;
-						Elf64_Shdr& _shdr = shdr_arr.Get(sh);
+						Elf64_Shdr& _shdr = shdr_arr[sh];
 						is_done = shdr.sh_size > _shdr.sh_size;
 					}
 
