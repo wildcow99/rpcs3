@@ -48,7 +48,7 @@ class PPU_Decoder : public Decoder
 	OP_REG MB()			const { return GetField(21, 25); }
 	OP_REG ME()			const { return GetField(26, 30); }
 	
-	OP_REG SH()			const { return GetField(16); }
+	OP_REG SH()			const { return GetField(16, 20); }
 	OP_REG AA()			const { return GetField(30); }
 	OP_sIMM LL() const
 	{
@@ -175,7 +175,7 @@ public:
 			ADD_OPCODE(CMP,(BF(), L(), RA(), RB()));
 			ADD_OPCODE(ADDC,(RT(), RA(), RB(), OE(), RC()));
 			ADD_OPCODE(CNTLZW,(RS(), RA(), RC()));
-			ADD_OPCODE(AND,(RS(), RA(), RB(), RC()));
+			ADD_OPCODE(AND,(RA(), RS(), RB(), RC()));
 			ADD_OPCODE(CMPL,(BF(), L(), RA(), RB(), RC()));
 			ADD_OPCODE(CMPLD,(BF(), L(), RA(), RB(), RC()));
 			ADD_OPCODE(SUBF,(RT(), RA(), RB(), OE(), RC()));
@@ -189,7 +189,8 @@ public:
 			ADD_OPCODE(ADDME,(RS(), RA(), OE(), RC()));
 			ADD_OPCODE(DCBTST,(TH(), RA(), RB()));
 			ADD_OPCODE(ADD,(RT(), RA(), RB(), OE(), RC()));
-			ADD_OPCODE(XOR,(RT(), RA(), RB(), RC()));
+			ADD_OPCODE(SRAWI,(RA(), RS(), SH(), RC()));
+			ADD_OPCODE(XOR,(RA(), RS(), RB(), RC()));
 			ADD_OPCODE(DIV,(RT(), RA(), RB(), OE(), RC()));
 			ADD_OPCODE(MFLR,(RT()));
 			ADD_OPCODE(ABS,(RT(), RA(), OE(), RC()));

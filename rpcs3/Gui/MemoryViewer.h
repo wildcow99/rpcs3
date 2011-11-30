@@ -2,7 +2,7 @@
 
 #include <wx/listctrl.h>
 
-class MemoryViewerPanel : public wxFrame
+class MemoryViewerPanel : public FrameBase
 {
 	static const uint LINE_COUNT = 50;
 	static const uint COL_COUNT  = 17;

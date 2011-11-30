@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Emu/ElfLoader.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/CPU.h"
 #include "Ini.h"
@@ -486,7 +485,7 @@ class Display
 public:
 	Display()
 	{
-		switch(Ini.Emu.m_RenderMode.GetValue())
+		switch(Ini.m_RenderMode.GetValue())
 		{
 		case 0: renderer = new RenderSoftware(); break;
 		

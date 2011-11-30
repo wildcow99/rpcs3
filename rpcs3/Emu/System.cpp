@@ -1,11 +1,12 @@
 #include "stdafx.h"
 #include "System.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/ElfLoader.h"
 #include "Ini.h"
 
 #include "Emu/Cell/PPU.h"
 #include "Emu/Cell/SPU.h"
+
+#include "Loader/Loader.h"
 
 Emulator::Emulator()
 {
@@ -13,15 +14,17 @@ Emulator::Emulator()
 	m_mode = 0;
 }
 
-void Emulator::SetSelf(wxString self_patch)
+void Emulator::SetSelf(const wxString& path)
 {
-	Loader.SetElf(self_patch);
+	//Loader.SetElf(path);
+	m_path = path;
 	IsSelf = true;
 }
 
-void Emulator::SetElf(wxString elf_patch)
+void Emulator::SetElf(const wxString& path)
 {
-	Loader.SetElf(elf_patch);
+	//Loader.SetElf(path);
+	m_path = path;
 	IsSelf = false;
 }
 
@@ -80,7 +83,7 @@ void Emulator::CheckStatus()
 			break;
 		}
 	}
-	if(IsAllStoped) Stop();
+	if(IsAllStoped) Pause(); //Stop();
 }
 
 void Emulator::Run()
@@ -97,21 +100,22 @@ void Emulator::Run()
 
 	Memory.Init();
 
-	if(!Loader.Load(IsSelf))
+	Loader& loader = Loader(m_path);
+	if(!loader.Load())
 	{
 		Memory.Close();
 		return;
 	}
 	
-	CPUThread& cpu_thread = AddThread(Loader.isSPU);
-	if(Ini.Emu.m_DecoderMode.GetValue() == 1)
+	if(loader.GetMachine() == MACHINE_Unknown)
 	{
-		cpu_thread.SetPc(Loader.entry - 4);
+		ConLog.Error("Unknown machine type");
+		Memory.Close();
+		return;
 	}
-	else
-	{
-		cpu_thread.SetPc(Loader.entry);
-	}
+
+	CPUThread& cpu_thread = AddThread(loader.GetMachine() == MACHINE_SPU);
+	cpu_thread.SetPc(loader.GetEntry());
 
 	if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
 	if(!m_memory_viewer) m_memory_viewer = new MemoryViewerPanel(NULL);

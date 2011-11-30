@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Emu/Cell/PPUOpcodes.h"
-#include "Emu/ElfLoader.h"
 #include "wx/aui/aui.h"
 
 void Write8(wxFile& f, const u8 data);
@@ -9,7 +8,7 @@ void Write16(wxFile& f, const u16 data);
 void Write32(wxFile& f, const u32 data);
 void Write64(wxFile& f, const u64 data);
 
-class CompilerELF : public wxFrame
+class CompilerELF : public FrameBase
 {
 	wxTextCtrl* asm_list;
 	wxTextCtrl* hex_list;

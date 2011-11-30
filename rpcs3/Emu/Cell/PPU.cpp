@@ -42,7 +42,7 @@ u64 PPUThread::GetFreeStackSize() const
 
 void PPUThread::DoRun()
 {
-	switch(Ini.Emu.m_DecoderMode.GetValue())
+	switch(Ini.m_DecoderMode.GetValue())
 	{
 	case 0: m_dec = new PPU_Decoder(*new PPU_DisAsm(*this)); break;
 	case 1:

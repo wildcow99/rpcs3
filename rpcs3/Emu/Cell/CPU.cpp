@@ -13,13 +13,13 @@ CPUThread::CPUThread(bool _isSPU, const u8 _core)
 	, DisAsmFrame(NULL)
 {
 	ID& id = CPU_IDs.GetIDData(m_id);
-	id.name = wxString::Format("%s[%d] Thread",(isSPU ? "SPU" : "PPU"), m_id);
+	id.name = wxString::Format("%s[%d] Thread", (isSPU ? "SPU" : "PPU"), m_id);
 	id.attr = isSPU ? 2 : 1;
 	StepThread::SetName(id.name);
 	m_dec = NULL;
 	StepThread::Start();
 
-	if(Ini.Emu.m_DecoderMode.GetValue() == 1)
+	if(Ini.m_DecoderMode.GetValue() == 1)
 	{
 		DisAsmFrame = new InterpreterDisAsmFrame(StepThread::GetName(), this);
 		(*(InterpreterDisAsmFrame*)DisAsmFrame).Show();
@@ -38,14 +38,19 @@ void CPUThread::Close()
 {
 	CPU_IDs.RemoveID(GetId());
 	Emu.RemoveThread(core);
-	if(DisAsmFrame && Ini.Emu.m_DecoderMode.GetValue() == 1)
-	{
-		(*(InterpreterDisAsmFrame*)DisAsmFrame).Close();
-	}
+	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).Close();
 	Stop();
-	WaitForStop();
-	StepThread::Exit();
-	this->~CPUThread();
+	
+	if(wxIsMainThread())
+	{
+		WaitForStop();
+		StepThread::Exit();
+		this->~CPUThread();
+	}
+	else
+	{
+		ThreadAdv::Exit();
+	}
 }
 
 void CPUThread::Reset()
@@ -69,7 +74,7 @@ void CPUThread::InitStack()
 
 	stack_num = Memory.MemoryBlocks.GetCount();
 	stack_addr = Memory.MemoryBlocks.Get(stack_num - 1).GetEndAddr();
-	stack_size = 0x100;
+	if(stack_size == 0) stack_size = 0x100;
 	Stack.SetRange(stack_addr, stack_size);
 	Memory.MemoryBlocks.Add(Stack);
 
@@ -81,7 +86,7 @@ void CPUThread::CloseStack()
 	if(stack_num == 0) return;
 
 	Stack.Delete();
-	Memory.MemoryBlocks.RemoveAt(stack_num);
+	Memory.MemoryBlocks.RemoveFAt(stack_num);
 
 	for(uint i=0; i<Emu.GetCPU().GetCount(); ++i)
 	{
@@ -152,11 +157,12 @@ void CPUThread::Run()
 	InitStack();
 	DoRun();
 
-	if(Ini.Emu.m_DecoderMode.GetValue() != 1) StepThread::DoStep();
+	if(Ini.m_DecoderMode.GetValue() != 1) StepThread::DoStep();
 	else
 	{
 		m_status = Runned;
 		Pause();
+		if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).DoUpdate();
 	}
 }
 
@@ -196,14 +202,16 @@ void CPUThread::WaitForStop()
 
 void CPUThread::Step()
 {
-	m_status = Runned;
-	if(Ini.Emu.m_DecoderMode.GetValue() == 1)
+	if(Ini.m_DecoderMode.GetValue() == 1)
 	{
 		DoCode(Memory.Read32(PC));
-		m_status = Paused;
+		NextPc();
+		if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).DoUpdate();
 	}
 	else
 	{
+		m_status = Runned;
+
 		while(IsRunned() && Emu.IsRunned())
 		{
 			DoCode(Memory.Read32(PC));

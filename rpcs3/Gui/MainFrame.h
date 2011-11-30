@@ -1,11 +1,16 @@
 #pragma once
+#include "GameViewer.h"
 
-class MainFrame : public wxFrame
+class MainFrame : public FrameBase
 {
+	GameViewer* m_game_viewer;
+
 public:
 	MainFrame();
 
+private:
 	virtual void OnQuit(wxCloseEvent& event);
+	virtual void OnResize(wxSizeEvent& event);
 
 	virtual void BootGame(wxCommandEvent& event);
 	virtual void BootElf(wxCommandEvent& event);
@@ -14,6 +19,7 @@ public:
 	virtual void Stop(wxCommandEvent& event);
 	virtual void Config(wxCommandEvent& event);
 
+public:
 	virtual void UpdateUI();
 
 private:

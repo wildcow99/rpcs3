@@ -5,7 +5,7 @@
 #include "Emu/System.h"
 #include "Ini.h"
 
-BEGIN_EVENT_TABLE(MainFrame, wxFrame)
+BEGIN_EVENT_TABLE(MainFrame, FrameBase)
 	EVT_CLOSE(MainFrame::OnQuit)
 END_EVENT_TABLE()
 
@@ -19,8 +19,7 @@ enum IDs
 	id_config_emu,
 };
 
-MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_, 
-	Ini.Gui.m_MainWindow.GetValue().position, Ini.Gui.m_MainWindow.GetValue().size)
+MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_, "MainFrame", wxSize(280, 180))
 {
 	wxMenuBar& menubar(*new wxMenuBar());
 
@@ -44,18 +43,32 @@ MainFrame::MainFrame() : wxFrame(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_,
 
 	SetMenuBar(&menubar);
 
-	Connect( id_boot_game, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
-	Connect( id_boot_elf,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
-	Connect( id_boot_self, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootSelf) );
+	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
 
-	Connect( id_sys_pause, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
-	Connect( id_sys_stop, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
+	m_game_viewer = new GameViewer(this);
+	s_panel.Add( m_game_viewer );
+
+	SetSizerAndFit( &s_panel );
+
+	Connect(wxEVT_SIZE, wxSizeEventHandler(MainFrame::OnResize));
+
+	Connect( id_boot_game,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
+	Connect( id_boot_elf,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
+	Connect( id_boot_self,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootSelf) );
+
+	Connect( id_sys_pause,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
+	Connect( id_sys_stop,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
 
 	Connect( id_config_emu, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
 
 	UpdateUI();
 
 	(new CompilerELF(NULL))->Show();
+}
+
+void MainFrame::OnResize(wxSizeEvent& WXUNUSED(event))
+{
+	m_game_viewer->DoResize(GetClientSize());
 }
 
 void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
@@ -143,7 +156,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 		stoped = true;
 	}
 
-	wxFileDialog ctrl( this, L"Select ELF", wxEmptyString, wxEmptyString, "*.*",
+	wxFileDialog ctrl(this, L"Select ELF", wxEmptyString, wxEmptyString, "*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
 	if(ctrl.ShowModal() == wxID_CANCEL)
@@ -172,7 +185,7 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 		stoped = true;
 	}
 
-	wxFileDialog ctrl( this, L"Select SELF", wxEmptyString, wxEmptyString, "*.*",
+	wxFileDialog ctrl(this, L"Select SELF", wxEmptyString, wxEmptyString, "*.*",
 		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
 	if(ctrl.ShowModal() == wxID_CANCEL)
@@ -239,8 +252,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_video_render->Append("Software");
 	cbox_video_render->Append("OGL");
 
-	cbox_decoder->SetSelection(Ini.Emu.m_DecoderMode.GetValue());
-	cbox_video_render->SetSelection(Ini.Emu.m_RenderMode.GetValue());
+	cbox_decoder->SetSelection(Ini.m_DecoderMode.GetValue());
+	cbox_video_render->SetSelection(Ini.m_RenderMode.GetValue());
 
 	s_round_decoder->Add(cbox_decoder);
 
@@ -263,8 +276,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	
 	if(diag->ShowModal() == wxID_OK)
 	{
-		Ini.Emu.m_DecoderMode.SetValue(cbox_decoder->GetSelection());
-		Ini.Emu.m_RenderMode.SetValue(cbox_video_render->GetSelection());
+		Ini.m_DecoderMode.SetValue(cbox_decoder->GetSelection());
+		Ini.m_RenderMode.SetValue(cbox_video_render->GetSelection());
+		Ini.Save();
 	}
 
 	delete diag;
@@ -274,7 +288,6 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 void MainFrame::OnQuit(wxCloseEvent& event)
 {
-	Ini.Gui.m_MainWindow.SetValue(WindowInfo(GetSize(), GetPosition()));
 	TheApp->Exit();
 }
 
@@ -286,19 +299,14 @@ void MainFrame::UpdateUI()
 
 	if(Emu.IsRunned())
 	{
-		pause.SetText(_("Pause"));
-		pause.Enable();
-		stop.Enable();
-	}
-	else if(Emu.IsPaused())
-	{
-		pause.SetText(_("Resume"));
+		pause.SetText("Pause");
 		pause.Enable();
 		stop.Enable();
 	}
 	else
 	{
-		pause.Enable(false);
-		stop.Enable(false);
+		pause.SetText("Resume");
+		pause.Enable(Emu.IsPaused());
+		stop.Enable(Emu.IsPaused());
 	}
 }

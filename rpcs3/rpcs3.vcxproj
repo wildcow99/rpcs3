@@ -93,7 +93,6 @@
     <ClCompile Include="Emu\Cell\PPU.cpp" />
     <ClCompile Include="Emu\Cell\SPU.cpp" />
     <ClCompile Include="Emu\Display\Display.cpp" />
-    <ClCompile Include="Emu\ElfLoader.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp" />
@@ -103,10 +102,17 @@
     <ClCompile Include="Gui\CompilerELF.cpp" />
     <ClCompile Include="Gui\ConLog.cpp" />
     <ClCompile Include="Gui\DisAsmFrame.cpp" />
+    <ClCompile Include="Gui\GameViewer.cpp" />
     <ClCompile Include="Gui\InterpreterDisAsm.cpp" />
     <ClCompile Include="Gui\MainFrame.cpp" />
     <ClCompile Include="Gui\MemoryViewer.cpp" />
     <ClCompile Include="Ini.cpp" />
+    <ClCompile Include="Loader\ELF.cpp" />
+    <ClCompile Include="Loader\ELF32.cpp" />
+    <ClCompile Include="Loader\ELF64.cpp" />
+    <ClCompile Include="Loader\Loader.cpp" />
+    <ClCompile Include="Loader\PSF.cpp" />
+    <ClCompile Include="Loader\SELF.cpp" />
     <ClCompile Include="rpcs3.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>

@@ -108,7 +108,8 @@ public:
 
 		Detach();
 
-		return pthread_cancel(thread) == 0;
+		return pthread_join(thread, NULL) == 0;
+		//return pthread_cancel(thread) == 0;
 	}
 
 	const bool Detach()

@@ -7,8 +7,7 @@ struct WindowInfo
 	wxSize size;
 	wxPoint position;
 
-	WindowInfo() {}
-	WindowInfo(const wxSize _size, const wxPoint _position = wxDefaultPosition)
+	WindowInfo(const wxSize _size = wxDefaultSize, const wxPoint _position = wxDefaultPosition)
 		: size(_size)
 		, position(_position)
 	{
@@ -68,7 +67,7 @@ template<typename T> struct IniEntry : public Ini
 
 	T LoadValue(const T defvalue)
 	{
-		return Ini::Load(m_key, defvalue)
+		return Ini::Load(m_key, defvalue);
 	}
 
 	void Save()
@@ -82,7 +81,7 @@ template<typename T> struct IniEntry : public Ini
 	}
 };
 
-class EmuIni
+class Inis
 {
 private:
 	const wxString m_DefPath;
@@ -90,11 +89,11 @@ private:
 	const wxString m_MainPath;
 
 public:
-	IniEntry<int> m_DecoderMode;
-	IniEntry<int> m_RenderMode;
+	IniEntry<u8> m_DecoderMode;
+	IniEntry<u8> m_RenderMode;
 
 public:
-	EmuIni()
+	Inis()
 		: m_DefPath("EmuSettings")
 		, m_MainPath(m_DefPath + "\\" + "Main")
 		, m_VideoPath(m_DefPath + "\\" + "Video")
@@ -113,54 +112,6 @@ public:
 	{
 		m_DecoderMode.Save();
 		m_RenderMode.Save();
-	}
-};
-
-class GuiIni
-{
-private:
-	const wxString  m_DefPath;
-
-public:
-	IniEntry<WindowInfo> m_MainWindow;
-	IniEntry<WindowInfo> m_LogWindow;
-
-public:
-	GuiIni() : m_DefPath("GuiSettings")
-	{
-		m_MainWindow.Init("MainWindow", m_DefPath);
-		m_LogWindow.Init("LogWindow", m_DefPath);
-	}
-
-	void Load()
-	{
-		m_MainWindow.Load(WindowInfo(wxSize(280, 180)));
-		m_LogWindow.Load(WindowInfo(wxSize(600, 450)));
-	}
-
-	void Save()
-	{
-		m_MainWindow.Save();
-		m_LogWindow.Save();
-	}
-};
-
-class Inis
-{
-public:
-	EmuIni Emu;
-	GuiIni Gui;
-
-	void Load()
-	{
-		Emu.Load();
-		Gui.Load();
-	}
-
-	void Save()
-	{
-		Emu.Save();
-		Gui.Save();
 	}
 };
 

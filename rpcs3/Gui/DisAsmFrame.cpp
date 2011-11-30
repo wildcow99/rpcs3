@@ -3,7 +3,6 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/CPU.h"
 #include "Emu/System.h"
-#include "Emu/ElfLoader.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUDisAsm.h"
@@ -80,7 +79,6 @@ void DisAsmFrame::AddLine(const wxString line)
 	if(finished && Emu.IsRunned())
 	{
 		count = 0;
-		//m_disasm_list->DeleteAllItems();
 		finished = false;
 	}
 	else if(count >= LINES_OPCODES || !Emu.IsRunned())
@@ -99,7 +97,6 @@ void DisAsmFrame::AddLine(const wxString line)
 
 void DisAsmFrame::Resume()
 {
-	//m_disasm_list->DeleteAllItems();
 	Emu.Resume();
 }
 
@@ -199,6 +196,10 @@ public:
 	}
 };
 
+#include "Loader/ELF.h"
+ArrayF<Elf64_Shdr>* shdr_arr = NULL;
+ELF64Loader* l_elf64 = NULL;
+
 class DumperThread : public StepThread
 {
 	volatile uint id;
@@ -240,32 +241,36 @@ public:
 	virtual void Step()
 	{
 		ConLog.Write("Start dump in thread %d!", (int)id);
-
-		const wxArrayPtrVoid& sh_ptr = Loader.m_sh_ptr;
 		const u32 max_value = prog_dial->GetMaxValue(id);
 
-		for(u32 sh=0, vsize=0; sh<sh_ptr.GetCount(); ++sh)
+		wxFile f(Emu.m_path);
+
+		for(u32 sh=0, vsize=0; sh<shdr_arr->GetCount(); ++sh)
 		{
-			const ElfLoader::Elf64_Shdr& c_sh = *(ElfLoader::Elf64_Shdr*)sh_ptr[sh];
+			const Elf64_Shdr& c_sh = (*shdr_arr)[sh];
 			const u64 sh_size = c_sh.sh_size / cores / 4;
 
-			for(u64 addr=c_sh.sh_addr + (id * 4), size=0; size<sh_size; vsize++, size++)
+			for(u64 off = id * 4, size=0; size<sh_size; vsize++, size++)
 			{
-				prog_dial->Update(id, vsize, wxString::Format("%d thread: %d of %d",
-					(int)id + 1, vsize, max_value));
+				prog_dial->Update(id, vsize,
+					wxString::Format("%d thread: %d of %d", (int)id + 1, vsize, max_value));
 
-				disasm->dump_pc = addr;
-				decoder->Decode(Memory.Read32(addr));
+				disasm->dump_pc = c_sh.sh_addr + off;
+				//f.Seek(c_sh.sh_offset + off);
+				//u32 buf;
+				//f.Read(&buf, sizeof(buf));
+				decoder->Decode(Memory.Read32(disasm->dump_pc));
 
 				arr[id][sh].Add(disasm->last_opcode);
 
-				addr += (cores - id) * 4;
-				addr += id * 4;
+				off += (cores - id) * 4;
+				off += id * 4;
 			}
 		}
 
 		ConLog.Write("Finish dump in thread %d!", (int)id);
 
+		f.Close();
 		*done = true;
 
 		Cleanup();
@@ -316,8 +321,6 @@ struct WaitDumperThread : public ThreadBase
 		}
 
 		ConLog.Write("Saving dump is started!");
-
-		const wxArrayPtrVoid& sh_ptr = Loader.m_sh_ptr;
 		const uint length_for_core = prog_dial.GetMaxValue(0);
 		const uint length = length_for_core * cores;
 		prog_dial.Close();
@@ -330,16 +333,16 @@ struct WaitDumperThread : public ThreadBase
 		wxFile fd;
 		fd.Open(patch, wxFile::write);
 
-		for(uint sh=0; sh<sh_ptr.GetCount(); ++sh)
+		for(uint sh=0, counter=0; sh<shdr_arr->GetCount(); ++sh)
 		{
-			const ElfLoader::Elf64_Shdr& c_sh = *(ElfLoader::Elf64_Shdr*)sh_ptr[sh];
+			const Elf64_Shdr& c_sh = (*shdr_arr)[sh];
 
 			if(!c_sh.sh_size) continue;
-			const uint c_sh_size = c_sh.sh_size / 4 / cores;
+			const uint c_sh_size = c_sh.sh_size / 4;
 
 			fd.Write(wxString::Format("Start of section header %d (instructions count: %d)\n", sh, c_sh_size));
 
-			for(uint i=0, c=0, v=0; i<c_sh_size; i++, c++)
+			for(uint i=0, c=0, v=0; i<c_sh_size; i++, c++, counter++)
 			{
 				if(c >= cores)
 				{
@@ -347,13 +350,9 @@ struct WaitDumperThread : public ThreadBase
 					v++;
 				}
 
-				prog_dial2.Update(0, i, wxString::Format("Saving data to file: %d of %d", i, length));
+				prog_dial2.Update(0, counter, wxString::Format("Saving data to file: %d of %d", counter, length));
 
-				if(v >= arr[c][sh].GetCount())
-				{
-					ConLog.Warning("skip!!!");
-					continue;
-				}
+				if(v >= arr[c][sh].GetCount()) continue;
 
 				fd.Write("	");
 				fd.Write(arr[c][sh][v]);
@@ -366,17 +365,20 @@ struct WaitDumperThread : public ThreadBase
 
 		for(uint c=0; c<cores; ++c)
 		{
-			for(uint sh=0; sh<sh_ptr.GetCount(); ++sh) arr[c][sh].Empty();
-			free(arr[c]);
+			for(uint sh=0; sh<shdr_arr->GetCount(); ++sh) arr[c][sh].Empty();
 		}
 
 		free(arr);
-		free(*arr);
+
+		//safe_delete(shdr_arr);
+		//safe_delete(l_elf64);
 
 		prog_dial2.Close();
 		fd.Close();
 
 		wxMessageBox("rpcs3 message", "Dumping done.");
+
+		Emu.Stop();
 
 		ThreadBase::Exit();
 		delete this;
@@ -389,10 +391,36 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		wxEmptyString, "DumpOpcodes.txt", "*.txt", wxFD_SAVE);
 
 	if(ctrl.ShowModal() == wxID_CANCEL) return;
-	
-	const wxArrayPtrVoid& sh_ptr = Loader.m_sh_ptr;
 
-	if(sh_ptr.GetCount() <= 0) return;
+	wxFile& f_elf = *new wxFile(Emu.m_path);
+	ConLog.Write("path: %s", Emu.m_path);
+	Elf_Ehdr ehdr;
+	ehdr.Load(f_elf);
+	f_elf.Close();
+	if(!ehdr.CheckMagic())
+	{
+		ConLog.Error("Corrupted ELF!");
+		return;
+	}
+
+	l_elf64 = new ELF64Loader(Emu.m_path);
+
+	switch(ehdr.GetClass())
+	{
+	case CLASS_ELF64:  break;
+	case CLASS_ELF32:
+		ConLog.Error("Dump from ELF32 not supported yet!");
+		free(l_elf64);
+	return;
+	default:
+		ConLog.Error("Corrupted ELF!");
+		free(l_elf64);
+		return;
+	}
+
+	if(!l_elf64->Load()) return;
+	shdr_arr = &l_elf64->shdr_arr;
+	if(l_elf64->shdr_arr.GetCount() <= 0) return;
 
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
@@ -403,16 +431,12 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	max.Clear();
 
 	u64 max_count = 0;
-	for(uint sh=0; sh<sh_ptr.GetCount(); ++sh)
+	for(uint sh=0; sh<l_elf64->shdr_arr.GetCount(); ++sh)
 	{
-		ElfLoader::Elf64_Shdr& c_sh = *(ElfLoader::Elf64_Shdr*)sh_ptr[sh];
-		max_count += c_sh.sh_size / cores_count / 4;
+		max_count += l_elf64->shdr_arr[sh].sh_size / cores_count / 4;
 	}
 
-	for(uint c=0; c<cores_count; ++c)
-	{
-		max.Add(max_count);
-	}
+	for(uint c=0; c<cores_count; ++c) max.Add(max_count);
 
 	MTProgressDialog& prog_dial = *new MTProgressDialog(this, wxDefaultSize, "Dumping...", "Loading", max, cores_count);
 
@@ -423,7 +447,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 	for(uint i=0; i<cores_count; ++i)
 	{
-		arr[i] = new wxArrayString[sh_ptr.GetCount()];
+		arr[i] = new wxArrayString[l_elf64->shdr_arr.GetCount()];
 		dump[i].Set(i, cores_count, &threads_done[i], prog_dial, arr);
 		dump[i].Start(true);
 	}
