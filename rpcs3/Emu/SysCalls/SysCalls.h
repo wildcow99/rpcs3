@@ -1,16 +1,68 @@
 #pragma once
-#include <Emu/Cell/PPU.h>
+#include <Emu/Cell/PPUThread.h>
+//#include <Emu/Cell/SPUThread.h>
+#include "Utilites/IdManager.h"
+#include "ErrorCodes.h"
 
 class SysCallBase
 {
-protected:
-	wxString module_name;
+private:
+	wxString m_module_name;
 
-	SysCallBase(const wxString& name) : module_name(name)
+public:
+	SysCallBase(const wxString& name) : m_module_name(name)
 	{
 	}
 
-	//TODO
+	wxString GetName() { return m_module_name; }
+
+	void Log(const u32 id, wxString fmt, ...)
+	{
+		va_list list;
+		va_start(list, fmt);
+		ConLog.Warning(GetName() + wxString::Format("[%d]: ", id) + wxString::FormatV(fmt, list));
+		va_end(list);
+	}
+
+	void Log(wxString fmt, ...)
+	{
+		va_list list;
+		va_start(list, fmt);
+		ConLog.Warning(GetName() + ": " + wxString::FormatV(fmt, list));
+		va_end(list);
+	}
+
+	void Warning(const u32 id, wxString fmt, ...)
+	{
+		va_list list;
+		va_start(list, fmt);
+		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id) + wxString::FormatV(fmt, list));
+		va_end(list);
+	}
+
+	void Warning(wxString fmt, ...)
+	{
+		va_list list;
+		va_start(list, fmt);
+		ConLog.Warning(GetName() + wxString::Format(" warning: ") + wxString::FormatV(fmt, list));
+		va_end(list);
+	}
+
+	void Error(const u32 id, wxString fmt, ...)
+	{
+		va_list list;
+		va_start(list, fmt);
+		ConLog.Error(GetName() + wxString::Format("[%d] error: ", id) + wxString::FormatV(fmt, list));
+		va_end(list);
+	}
+
+	void Error(wxString fmt, ...)
+	{
+		va_list list;
+		va_start(list, fmt);
+		ConLog.Error(GetName() + wxString::Format(" error: ") + wxString::FormatV(fmt, list));
+		va_end(list);
+	}
 };
 
 static wxString FixPatch(const wxString& patch)
@@ -21,207 +73,155 @@ static wxString FixPatch(const wxString& patch)
 	return patch;
 }
 
-template<typename T> struct SysCallsData
-{
-	T* data;
-	u64 id;
-};
-
-template<typename T> class SysCallsArraysList
-{
-	u64 m_count;
-	SysCallsData<T>* m_array;
-
-public:
-	SysCallsArraysList()
-		: m_count(0)
-		, m_array(NULL)
-	{
-	}
-
-	__forceinline bool RemoveById(const u64 id)
-	{
-		const int num = GetNumById(id);
-		if(num < 0 || num >= m_count) return false;
-
-		m_count--;
-		SysCallsData<T>* new_array = (SysCallsData<T>*)malloc(sizeof(SysCallsData<T>) * m_count);
-		memmove(new_array, m_array, num * sizeof(T));
-		if(m_count > num) memmove(&new_array[num], &m_array[num + 1], (m_count - num) * sizeof(T));
-		safe_delete(m_array);
-		m_array = new_array;
-
-		return true;
-	}
-
-	__forceinline int GetNumById(const u64 id)
-	{
-		for(uint i=0; i<m_count; ++i)
-		{
-			if(m_array[i].id == id) return i;
-		}
-
-		return -1;
-	}
-
-	__forceinline T* GetDataById(const u64 id, bool* is_error = NULL)
-	{
-		if(is_error) *is_error = false;
-
-		for(uint i=0; i<m_count; ++i)
-		{
-			if(m_array[i].id == id) return m_array[i].data;
-		}
-
-		if(is_error) *is_error = true;
-		return NULL;
-	}
-
-	__forceinline u64 GetFreeId()
-	{
-		for(u64 id=1; id>0; id++)
-		{
-			bool found = false;
-			for(u64 arr=0; arr<m_count; ++arr)
-			{
-				if(m_array[arr].id == id)
-				{
-					found = true;
-					break;
-				}
-			}
-
-			if(!found) return id;
-		}
-
-		return 0;
-	}
-
-	__forceinline u64 Add()
-	{
-		return Add(new T());
-	}
-
-	__forceinline u64 Add(T* data)
-	{
-		if(!m_array)
-		{
-			m_array = (SysCallsData<T>*)malloc(sizeof(SysCallsData<T>));
-		}
-		else
-		{
-			m_array = (SysCallsData<T>*)realloc(m_array, sizeof(SysCallsData<T>) * (m_count + 1));
-		}
-		const u64 id = GetFreeId();
-		m_array[m_count].data = data;
-		m_array[m_count].id = id;
-		m_count++;
-
-		return id;
-	}
-
-	__forceinline u64 Add(T& data)
-	{
-		return Add(&data);
-	}
-
-	__forceinline void Clear()
-	{
-		safe_delete(m_array);
-	}
-};
-
 class SysCalls
 {
+	IdManager SysCalls_IDs;
+
 public:
 	//process
-	int lv2ProcessGetPid();
-	int lv2ProcessWaitForChild();
-	int lv2ProcessGetStatus();
-	int lv2ProcessDetachChild();
-	int lv2ProcessGetNumberOfObject();
-	int lv2ProcessGetId();
-	int lv2ProcessGetPpid();
-	int lv2ProcessKill();
-	int lv2ProcessExit();
-	int lv2ProcessWaitForChild2();
-	int lv2ProcessGetSdkVersion();
+	int lv2ProcessGetPid(PPUThread& CPU);
+	int lv2ProcessWaitForChild(PPUThread& CPU);
+	int lv2ProcessGetStatus(PPUThread& CPU);
+	int lv2ProcessDetachChild(PPUThread& CPU);
+	int lv2ProcessGetNumberOfObject(PPUThread& CPU);
+	int lv2ProcessGetId(PPUThread& CPU);
+	int lv2ProcessGetPpid(PPUThread& CPU);
+	int lv2ProcessKill(PPUThread& CPU);
+	int lv2ProcessExit(PPUThread& CPU);
+	int lv2ProcessWaitForChild2(PPUThread& CPU);
+	int lv2ProcessGetSdkVersion(PPUThread& CPU);
+
+	//ppu thread
+	int lv2PPUThreadCreate(PPUThread& CPU);
+	int lv2PPUThreadExit(PPUThread& CPU);
+	int lv2PPUThreadYield(PPUThread& CPU);
+	int lv2PPUThreadJoin(PPUThread& CPU);
+	int lv2PPUThreadDetach(PPUThread& CPU);
+	int lv2PPUThreadGetJoinState(PPUThread& CPU);
+	int lv2PPUThreadSetPriority(PPUThread& CPU);
+	int lv2PPUThreadGetPriority(PPUThread& CPU);
+	int lv2PPUThreadGetStackInformation(PPUThread& CPU);
+	int lv2PPUThreadRename(PPUThread& CPU);
+	int lv2PPUThreadRecoverPageFault(PPUThread& CPU);
+	int lv2PPUThreadGetPageFaultContext(PPUThread& CPU);
+
+	//lwmutex
+	int Lv2LwmutexCreate(PPUThread& CPU);
+	int Lv2LwmutexDestroy(PPUThread& CPU);
+	int Lv2LwmutexLock(PPUThread& CPU);
+	int Lv2LwmutexTrylock(PPUThread& CPU);
+	int Lv2LwmutexUnlock(PPUThread& CPU);
 
 	//memory
-	int lv2MemContinerCreate();
-	int lv2MemContinerDestroy();
-	int lv2MemGetUserMemorySize();
+	int lv2MemContinerCreate(PPUThread& CPU);
+	int lv2MemContinerDestroy(PPUThread& CPU);
+	int lv2MemAllocate(PPUThread& CPU);
+	int lv2MemGetUserMemorySize(PPUThread& CPU);
 
 	//tty
-	int lv2TtyRead();
-	int lv2TtyWrite();
+	int lv2TtyRead(PPUThread& CPU);
+	int lv2TtyWrite(PPUThread& CPU);
 
 	//filesystem
-	int lv2FsOpen();
-	int lv2FsRead();
-	int lv2FsWrite();
-	int lv2FsClose();
-	int lv2FsOpenDir();
-	int lv2FsReadDir();
-	int lv2FsCloseDir();
-	int lv2FsMkdir();
-	int lv2FsRename();
-	int lv2FsLSeek64();
-	int lv2FsRmdir();
-	int lv2FsUtime();
+	int lv2FsOpen(PPUThread& CPU);
+	int lv2FsRead(PPUThread& CPU);
+	int lv2FsWrite(PPUThread& CPU);
+	int lv2FsClose(PPUThread& CPU);
+	int lv2FsOpenDir(PPUThread& CPU);
+	int lv2FsReadDir(PPUThread& CPU);
+	int lv2FsCloseDir(PPUThread& CPU);
+	int lv2FsMkdir(PPUThread& CPU);
+	int lv2FsRename(PPUThread& CPU);
+	int lv2FsLSeek64(PPUThread& CPU);
+	int lv2FsRmdir(PPUThread& CPU);
+	int lv2FsUtime(PPUThread& CPU);
 
-protected:
-	PPUThread& CPU;
-
-protected:
-	SysCalls(PPUThread& cpu) : CPU(cpu)
+public:
+	SysCalls()// : CPU(cpu)
 	{
 	}
 
-	int DoSyscall(int code)
+	~SysCalls()
+	{
+		Close();
+	}
+
+	void Close()
+	{
+		SysCalls_IDs.Clear();
+	}
+
+	u64 DoSyscall(int code, PPUThread& CPU)
 	{
 		switch(code)
 		{
 			//=== lv2 ===
 			//process
-			case 1: return lv2ProcessGetPid();
-			case 2: return lv2ProcessWaitForChild();
-			case 4: return lv2ProcessGetStatus();
-			case 5: return lv2ProcessDetachChild();
-			case 12: return lv2ProcessGetNumberOfObject();
-			case 13: return lv2ProcessGetId();
-			case 18: return lv2ProcessGetPpid();
-			case 19: return lv2ProcessKill();
-			case 22: return lv2ProcessExit();
-			case 23: return lv2ProcessWaitForChild2();
-			case 25: return lv2ProcessGetSdkVersion();
+			case 1: return lv2ProcessGetPid(CPU);
+			case 2: return lv2ProcessWaitForChild(CPU);
+			case 4: return lv2ProcessGetStatus(CPU);
+			case 5: return lv2ProcessDetachChild(CPU);
+			case 12: return lv2ProcessGetNumberOfObject(CPU);
+			case 13: return lv2ProcessGetId(CPU);
+			case 18: return lv2ProcessGetPpid(CPU);
+			case 19: return lv2ProcessKill(CPU);
+			case 22: return lv2ProcessExit(CPU);
+			case 23: return lv2ProcessWaitForChild2(CPU);
+			case 25: return lv2ProcessGetSdkVersion(CPU);
+			//ppu thread
+			//case ?: return lv2PPUThreadCreate(CPU);
+			//case ?: return lv2PPUThreadExit(CPU);
+			case 43: return lv2PPUThreadYield(CPU);
+			case 44: return lv2PPUThreadJoin(CPU);
+			case 45: return lv2PPUThreadDetach(CPU);
+			case 46: return lv2PPUThreadGetJoinState(CPU);
+			case 47: return lv2PPUThreadSetPriority(CPU);
+			case 48: return lv2PPUThreadGetPriority(CPU);
+			case 49: return lv2PPUThreadGetStackInformation(CPU);
+			case 56: return lv2PPUThreadRename(CPU);
+			case 57: return lv2PPUThreadRecoverPageFault(CPU);
+			case 58: return lv2PPUThreadGetPageFaultContext(CPU);
+			//lwmutex
+			case 95: return Lv2LwmutexCreate(CPU);
+			case 96: return Lv2LwmutexDestroy(CPU);
+			case 97: return Lv2LwmutexLock(CPU);
+			case 98: return Lv2LwmutexTrylock(CPU);
+			case 99: return Lv2LwmutexUnlock(CPU);
+			//time
+			case 146: return wxDateTime::GetTimeNow(); 	//sys_time_get_system_time
+			case 147: return 79800000; //get timebase frequency
 			//memory
-			case 324: return lv2MemContinerCreate();
-			case 325: return lv2MemContinerDestroy();
-			case 352: return lv2MemGetUserMemorySize();
+			case 324: return lv2MemContinerCreate(CPU);
+			case 325: return lv2MemContinerDestroy(CPU);
+			case 348: return lv2MemAllocate(CPU);
+			case 352: return lv2MemGetUserMemorySize(CPU);
 			//tty
-			case 402: return lv2TtyRead();
-			case 403: return lv2TtyWrite();
+			case 402: return lv2TtyRead(CPU);
+			case 403: return lv2TtyWrite(CPU);
 			//file system
-			case 801: return lv2FsOpen();
-			case 802: return lv2FsRead();
-			case 803: return lv2FsWrite();
-			case 804: return lv2FsClose();
-			case 805: return lv2FsOpenDir();
-			case 806: return lv2FsReadDir();
-			case 807: return lv2FsCloseDir();
-			case 811: return lv2FsMkdir();
-			case 812: return lv2FsRename();
-			case 813: return lv2FsRmdir();
-			case 818: return lv2FsLSeek64();
-			case 815: return lv2FsUtime();
+			case 801: return lv2FsOpen(CPU);
+			case 802: return lv2FsRead(CPU);
+			case 803: return lv2FsWrite(CPU);
+			case 804: return lv2FsClose(CPU);
+			case 805: return lv2FsOpenDir(CPU);
+			case 806: return lv2FsReadDir(CPU);
+			case 807: return lv2FsCloseDir(CPU);
+			case 811: return lv2FsMkdir(CPU);
+			case 812: return lv2FsRename(CPU);
+			case 813: return lv2FsRmdir(CPU);
+			case 818: return lv2FsLSeek64(CPU);
+			case 815: return lv2FsUtime(CPU);
 			case 988:
-				ConLog.Warning("SysCall 988! r3: 0x%x, r4: 0x%x, r5: 0x%x, pc: 0x%x",
-					(u32)CPU.GPR[3], (u32)CPU.GPR[4], (u32)CPU.GPR[5], (u32)CPU.PC);
+				ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, r5: 0x%llx, pc: 0x%llx",
+					CPU.GPR[3], CPU.GPR[4], CPU.GPR[5], CPU.PC);
 				return 0;
 		}
 
 		ConLog.Error("Unknown syscall: %d - %08x", code, code);
 		return 0;
 	}
+	
+	u64 DoFunc(const u32 id, PPUThread& CPU);
 };
+
+extern SysCalls SysCallsManager;

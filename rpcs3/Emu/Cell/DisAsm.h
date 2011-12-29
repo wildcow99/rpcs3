@@ -22,20 +22,20 @@ protected:
 		{
 			case DumpMode:
 			{
-				wxString mem = wxString::Format("%08x		", dump_pc);
+				wxString mem = wxString::Format("   %x:	", dump_pc);
 				for(u8 i=0; i < 4; ++i)
 				{
 					mem += wxString::Format("%02x", Memory.Read8(dump_pc + i));
 					if(i < 3) mem += " ";
 				}
 
-				last_opcode = mem + ": " + value + "\n";
+				last_opcode = mem + "	" + value + "\n";
 			}
 			break;
 
 			case InterpreterMode:
 			{
-				wxString mem = wxString::Format("[%08x]  ", dump_pc);
+				wxString mem = wxString::Format("[%x]  ", dump_pc);
 				for(u8 i=0; i < 4; ++i)
 				{
 					mem += wxString::Format("%02x", Memory.Read8(dump_pc + i));
@@ -55,7 +55,7 @@ public:
 	uint dump_pc;
 
 protected:
-	DisAsm(CPUThread& cpu, DisAsmModes mode = NormalMode) : m_mode(mode)
+	DisAsm(PPCThread& cpu, DisAsmModes mode = NormalMode) : m_mode(mode)
 	{
 		if(m_mode != NormalMode) return;
 
@@ -65,6 +65,30 @@ protected:
 
 	virtual u32 DisAsmBranchTarget(const s32 imm)=0;
 
+	void DisAsm_V3(const wxString& op, OP_REG v0, OP_REG v1, OP_REG v2)
+	{
+		Write(wxString::Format("%s v%d,v%d,v%d", op, v0, v1, v2));
+	}
+	void DisAsm_V1_R2(const wxString& op, OP_REG v0, OP_REG r1, OP_REG r2)
+	{
+		Write(wxString::Format("%s v%d,r%d,r%d", op, v0, r1, r2));
+	}
+	void DisAsm_CR1_F2_RC(const wxString& op, OP_REG cr0, OP_REG f0, OP_REG f1, bool rc)
+	{
+		Write(wxString::Format("%s%s cr%d,f%d,f%d", op, rc ? "." : "", cr0/4, f0, f1));
+	}
+	void DisAsm_CR1_F2(const wxString& op, OP_REG cr0, OP_REG f0, OP_REG f1)
+	{
+		DisAsm_CR1_F2_RC(op, cr0, f0, f1, false);
+	}
+	void DisAsm_INT1_R1_RC(const wxString& op, OP_REG i0, OP_REG r0, bool rc)
+	{
+		Write(wxString::Format("%s%s %d,r%d", op, rc ? "." : "", i0, r0));
+	}
+	void DisAsm_INT1_R1(const wxString& op, OP_REG i0, OP_REG r0)
+	{
+		DisAsm_INT1_R1_RC(op, i0, r0, false);
+	}
 	void DisAsm_F4_RC(const wxString& op, OP_REG f0, OP_REG f1, OP_REG f2, OP_REG f3, bool rc)
 	{
 		Write(wxString::Format("%s%s f%d,f%d,f%d,f%d", op, rc ? "." : "", f0, f1, f2, f3));
@@ -85,13 +109,25 @@ protected:
 	{
 		DisAsm_F2_RC(op, f0, f1, false);
 	}
+	void DisAsm_F1_R2(const wxString& op, OP_REG f0, OP_REG r0, OP_REG r1)
+	{
+		Write(wxString::Format("%s f%d,r%d(r%d)", op, f0, r0, r1));
+	}
+	void DisAsm_F1_IMM_R1_RC(const wxString& op, OP_REG f0, OP_sIMM imm0, OP_REG r0, bool rc)
+	{
+		Write(wxString::Format("%s%s f%d,%d(r%d) #%x", op, rc ? "." : "", f0, imm0, r0, imm0));
+	}
+	void DisAsm_F1_IMM_R1(const wxString& op, OP_REG f0, OP_sIMM imm0, OP_REG r0)
+	{
+		DisAsm_F1_IMM_R1_RC(op, f0, imm0, r0, false);
+	}
 	void DisAsm_F1_RC(const wxString& op, OP_REG f0, bool rc)
 	{
-		Write(wxString::Format("%s%s f%d", op, rc ? "." : "", f0));
+		Write(wxString::Format("%s%s r%d", op, rc ? "." : "", f0));
 	}
 	void DisAsm_R1(const wxString& op, OP_REG r0)
 	{
-		Write(wxString::Format("%s r%d", op, r0));
+		DisAsm_F1_RC(op, r0, false);
 	}
 	void DisAsm_R2_OE_RC(const wxString& op, OP_REG r0, OP_REG r1, OP_REG oe, bool rc)
 	{
@@ -133,21 +169,29 @@ protected:
 	{
 		DisAsm_R2_INT2_RC(op, r0, r1, i0, i1, false);
 	}
+	void DisAsm_R2_INT1_RC(const wxString& op, OP_REG r0, OP_REG r1, OP_sIMM i0, bool rc)
+	{
+		Write(wxString::Format("%s%s r%d,r%d,%d", op, rc ? "." : "", r0, r1, i0));
+	}
+	void DisAsm_R2_INT1(const wxString& op, OP_REG r0, OP_REG r1, OP_sIMM i0)
+	{
+		DisAsm_R2_INT1_RC(op, r0, r1, i0, false);
+	}
 	void DisAsm_R2_IMM(const wxString& op, OP_REG r0, OP_REG r1, OP_sIMM imm0)
 	{
-		Write(wxString::Format("%s r%d,r%d,%d  #%x", op, r0, r1, imm0, imm0));
+		Write(wxString::Format("%s r%d,%d(r%d)  #%x", op, r0, imm0, r1, imm0));
 	}
 	void DisAsm_R1_IMM(const wxString& op, OP_REG r0, OP_sIMM imm0)
 	{
 		Write(wxString::Format("%s r%d,%d  #%x", op, r0, imm0, imm0));
 	}
-	void DisAsm_CR_R_IMM(const wxString& op, OP_REG cr0, OP_REG r0, OP_sIMM imm0)
+	void DisAsm_CR1_R1_IMM(const wxString& op, OP_REG cr0, OP_REG r0, OP_sIMM imm0)
 	{
-		Write(wxString::Format("%s cr%d,r%d,%d  #%x", op, cr0, r0, imm0, imm0));
+		Write(wxString::Format("%s cr%d,r%d,%d  #%x", op, cr0/4, r0, imm0, imm0));
 	}
 	void DisAsm_CR1_R2_RC(const wxString& op, OP_REG cr0, OP_REG r0, OP_REG r1, bool rc)
 	{
-		Write(wxString::Format("%s%s cr%d,r%d,r%d", op, rc ? "." : "", cr0, r0, r1 ));
+		Write(wxString::Format("%s%s cr%d,r%d,r%d", op, rc ? "." : "", cr0/4, r0, r1 ));
 	}
 	void DisAsm_CR1_R2(const wxString& op, OP_REG cr0, OP_REG r0, OP_REG r1)
 	{

@@ -220,10 +220,10 @@ bool ELF64Loader::LoadShdr()
 						*/
 
 						is_done =
-							buf[0] == 0x39800000 && //li    r12,0
-							buf[3] == 0xf8410028 && //std   r2,40(r1)
-							buf[4] == 0x800c0000 && //lwz   r0,0(r12)
-							buf[5] == 0x804c0004 && //lwz   r2,4(r12)
+							//buf[0] == 0x39800000 && //li    r12,0
+							//buf[3] == 0xf8410028 && //std   r2,40(r1)
+							//buf[4] == 0x800c0000 && //lwz   r0,0(r12)
+							//buf[5] == 0x804c0004 && //lwz   r2,4(r12)
 							buf[6] == 0x7c0903a6 && //mtctr r0
 							buf[7] == 0x4e800420;	//bctr
 
@@ -231,7 +231,7 @@ bool ELF64Loader::LoadShdr()
 
 					}
 
-					if(is_done) name = ".data.sceFStub";
+					if(is_done) name = ".sceStub.text";
 				}
 
 				if(!is_done) //.text
@@ -239,9 +239,7 @@ bool ELF64Loader::LoadShdr()
 					is_done = true;
 					for(uint sh=0; sh<shdr_arr.GetCount() && is_done; ++sh)
 					{
-						if(sh == i) continue;
-						Elf64_Shdr& _shdr = shdr_arr[sh];
-						is_done = shdr.sh_size > _shdr.sh_size;
+						if(sh != i) is_done = shdr.sh_size > shdr_arr[sh].sh_size;
 					}
 
 					if(is_done) name = ".text";
@@ -268,6 +266,14 @@ bool ELF64Loader::LoadShdr()
 			{
 				Memory.MemFlags.SetFNIDRange(shdr.sh_addr, shdr.sh_size);
 			}
+			else if(!name.CmpNoCase(".sceStub.text"))
+			{
+				Memory.MemFlags.SetStubRange(shdr.sh_addr, shdr.sh_size);
+			}
+			//else if(!name.CmpNoCase(".lib.stub"))
+			//{
+			//	Memory.MemFlags.SetStubRange(shdr.sh_addr, shdr.sh_size);
+			//}
 		}
 
 		shdr.Show();

@@ -3,10 +3,16 @@
 #include "Emu/Memory/Memory.h"
 #include "Ini.h"
 
-#include "Emu/Cell/PPU.h"
-#include "Emu/Cell/SPU.h"
+#include "Emu/Cell/PPCThreadManager.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
 
 #include "Loader/Loader.h"
+#include "Emu/Display/Display.h"
+
+#include "Emu/SysCalls/SysCalls.h"
+
+SysCalls SysCallsManager;
 
 Emulator::Emulator()
 {
@@ -16,53 +22,30 @@ Emulator::Emulator()
 
 void Emulator::SetSelf(const wxString& path)
 {
-	//Loader.SetElf(path);
 	m_path = path;
 	IsSelf = true;
 }
 
 void Emulator::SetElf(const wxString& path)
 {
-	//Loader.SetElf(path);
 	m_path = path;
 	IsSelf = false;
 }
 
-CPUThread& Emulator::AddThread(bool isSPU)
-{
-	CPUThread* cpu; 
-	if(isSPU) cpu = new SPUThread(GetCPU().GetCount());
-	else cpu = new PPUThread(GetCPU().GetCount());
-	GetCPU().Add(cpu);
-	return *cpu;
-}
-
-void Emulator::RemoveThread(const u8 core)
-{
-	ConLog.Warning("Remove Thread %d of %d", core+1, GetCPU().GetCount());
-	if(core >= GetCPU().GetCount()) return;
-	GetCPU().RemoveFAt(core);
-	
-	for(uint i=core; i<GetCPU().GetCount(); ++i)
-	{
-		GetCPU().Get(i).core--;
-	}
-
-	CheckStatus();
-}
-
 void Emulator::CheckStatus()
 {
-	if(GetCPU().GetCount() == 0)
+	if(!GetCPU().GetIDs().HasID())
 	{
 		Stop();
 		return;	
 	}
 
 	bool IsAllPaused = true;
-	for(uint i=0; i<GetCPU().GetCount(); ++i)
+	u32 pos = 0;
+	ID thread;
+	while(GetCPU().GetIDs().GetNext(pos, thread))
 	{
-		if(!GetCPU().Get(i).IsPaused())
+		if(!(*(PPCThread*)thread.m_data).IsPaused())
 		{
 			IsAllPaused = false;
 			break;
@@ -70,20 +53,26 @@ void Emulator::CheckStatus()
 	}
 	if(IsAllPaused)
 	{
+		ConLog.Warning("all paused!");
 		Pause();
 		return;
 	}
 
 	bool IsAllStoped = true;
-	for(uint i=0; i<GetCPU().GetCount(); ++i)
+	pos = 0;
+	while(GetCPU().GetIDs().GetNext(pos, thread))
 	{
-		if(!GetCPU().Get(i).IsStoped())
+		if(!(*(PPCThread*)thread.m_data).IsStoped())
 		{
 			IsAllStoped = false;
 			break;
 		}
 	}
-	if(IsAllStoped) Pause(); //Stop();
+	if(IsAllStoped)
+	{
+		ConLog.Warning("all stoped!");
+		Pause(); //Stop();
+	}
 }
 
 void Emulator::Run()
@@ -114,19 +103,23 @@ void Emulator::Run()
 		return;
 	}
 
-	CPUThread& cpu_thread = AddThread(loader.GetMachine() == MACHINE_SPU);
-	cpu_thread.SetPc(loader.GetEntry());
+	//(new GSFrame_GL(wxGetApp().m_MainFrame));
+	const u32 id = GetCPU().AddThread(loader.GetMachine() == MACHINE_PPC64);
+
+	PPCThread& thread = (*(PPCThread*)GetCPU().GetIDs().GetIDData(id).m_data);
+	thread.SetPc(loader.GetEntry());
+	thread.Run();
 
 	if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
 	if(!m_memory_viewer) m_memory_viewer = new MemoryViewerPanel(NULL);
 
-	m_memory_viewer->SetPC(cpu_thread.PC);
+	m_memory_viewer->SetPC(loader.GetEntry());
 	m_memory_viewer->Show();
 	m_memory_viewer->ShowPC();
 
-	cpu_thread.Run();
-
 	wxGetApp().m_MainFrame->UpdateUI();
+
+	if(Ini.m_DecoderMode.GetValue() != 1) GetCPU().Exec();
 }
 
 void Emulator::Pause()
@@ -145,13 +138,15 @@ void Emulator::Resume()
 
 	m_status = Runned;
 	wxGetApp().m_MainFrame->UpdateUI();
-
+	/*
 	for(uint i=0; i<GetCPU().GetCount(); ++i)
 	{
 		GetCPU().Get(i).SysResume();
 	}
+	*/
 
 	CheckStatus();
+	if(IsRunned()) GetCPU().Exec();
 }
 
 void Emulator::Stop()
@@ -162,12 +157,8 @@ void Emulator::Stop()
 	m_status = Stoped;
 	wxGetApp().m_MainFrame->UpdateUI();
 
-	for(uint i=0; i<GetCPU().GetCount(); ++i)
-	{
-		GetCPU().Get(i).Close();
-	}
-
-	GetCPU().Clear();
+	SysCallsManager.Close();
+	GetCPU().Close();
 
 	Memory.Close();
 	CurGameInfo.Reset();

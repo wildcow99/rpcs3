@@ -17,7 +17,6 @@
 
 #include <wx/wxprec.h>
 
-
 #define uint unsigned int
 
 #define u8  unsigned __int8
@@ -38,28 +37,31 @@ union u128
 		u64 lo;
 	};
 
-	u64 uint64[2];
-	u32 uint32[4];
-	u16 uint16[8];
-	u8  uint8[16];
+	u64 _u64[2];
+	u32 _u32[4];
+	u16 _u16[8];
+	u8  _u8[16];
 
-	operator u64() const { return uint64[0]; }
-	operator u32() const { return uint32[0]; }
-	operator u16() const { return uint16[0]; }
-	operator u8()  const { return uint8[0];  }
+	operator u64() const { return _u64[0]; }
+	operator u32() const { return _u32[0]; }
+	operator u16() const { return _u16[0]; }
+	operator u8()  const { return _u8[0];  }
 
-	static u128 From( u64 src )
+	operator bool() const { return _u64[0] != 0 || _u64[1] != 0; }
+
+	static u128 From64( u64 src )
 	{
 		u128 ret = {src, 0};
 		return ret;
 	}
 
-	static u128 From( u32 src )
+	static u128 From32( u32 src )
 	{
 		u128 ret;
-		ret.uint32[0] = src;
-		ret.uint32[1] = 0;
-		ret.hi = 0;
+		ret._u32[0] = src;
+		ret._u32[1] = 0;
+		ret._u32[2] = 0;
+		ret._u32[3] = 0;
 		return ret;
 	}
 
@@ -73,6 +75,54 @@ union u128
 		return (lo != right.lo) || (hi != right.hi);
 	}
 };
+
+union s128
+{
+	struct
+	{
+		s64 hi;
+		s64 lo;
+	};
+
+	u64 _i64[2];
+	u32 _i32[4];
+	u16 _i16[8];
+	u8  _i8[16];
+
+	operator s64() const { return _i64[0]; }
+	operator s32() const { return _i32[0]; }
+	operator s16() const { return _i16[0]; }
+	operator s8()  const { return _i8[0];  }
+
+	operator bool() const { return _i64[0] != 0 || _i64[1] != 0; }
+
+	static s128 From64( u64 src )
+	{
+		s128 ret = {src, 0};
+		return ret;
+	}
+
+	static s128 From32( u32 src )
+	{
+		s128 ret;
+		ret._i32[0] = src;
+		ret._i32[1] = 0;
+		ret.hi = 0;
+		return ret;
+	}
+
+	bool operator == ( const s128& right ) const
+	{
+		return (lo == right.lo) && (hi == right.hi);
+	}
+
+	bool operator != ( const s128& right ) const
+	{
+		return (lo != right.lo) || (hi != right.hi);
+	}
+};
+
+#include <emmintrin.h>
 
 //TODO: SSE style
 /*

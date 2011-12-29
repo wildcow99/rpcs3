@@ -11,6 +11,7 @@ bool Rpcs3App::OnInit()
 {
 	TheApp = this;
 	SetAppName("rpcs3");
+	wxInitAllImageHandlers();
 
 	Ini.Load();
 
@@ -38,9 +39,10 @@ void Rpcs3App::Exit()
 	wxApp::Exit();
 }
 
-GameInfo CurGameInfo;
-
+/*
 CPUThread& GetCPU(const u8 core)
 {
 	return Emu.GetCPU().Get(core);
-}
+}*/
+
+GameInfo CurGameInfo;

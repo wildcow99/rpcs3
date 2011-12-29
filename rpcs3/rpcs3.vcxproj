@@ -82,20 +82,30 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>pthreadVC2_2.8.0.lib;opengl32.lib;glu32.lib;adv.lib;base.lib;core.lib;aui.lib;SDL.lib;SDL_image.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>pthreadVC2_2.8.0.lib;opengl32.lib;glu32.lib;adv.lib;base.lib;core.lib;aui.lib;gl.lib;odbc32.lib;odbccp32.lib;comctl32.lib;ws2_32.lib;shlwapi.lib;winmm.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;wxtiff.lib;wxjpeg.lib;wxpng.lib;wxzlib.lib;wxregex.lib;wxexpat.lib;wsock32.lib;wininet.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Emu\Cell\CPU.cpp" />
-    <ClCompile Include="Emu\Cell\PPU.cpp" />
-    <ClCompile Include="Emu\Cell\SPU.cpp" />
+    <ClCompile Include="..\Utilites\Crypto\aes_cbc.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\Utilites\Crypto\aes_core.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\PPCThread.cpp" />
+    <ClCompile Include="Emu\Cell\PPCThreadManager.cpp" />
+    <ClCompile Include="Emu\Cell\PPUThread.cpp" />
+    <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\Display\Display.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
+    <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Lwmutex.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Process.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
     <ClCompile Include="Emu\System.cpp" />

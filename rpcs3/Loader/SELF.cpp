@@ -15,6 +15,12 @@ SELFLoader::SELFLoader(const wxString& path)
 
 bool SELFLoader::Load()
 {
+	if(!self_f.IsOpened()) return false;
+
+	self_f.Seek(0);
+	hdr.Load(self_f);
+	if(!hdr.CheckMagic()) return false;
+	
 	//TODO
 	ConLog.Error("Boot SELF not supported yet!");
 

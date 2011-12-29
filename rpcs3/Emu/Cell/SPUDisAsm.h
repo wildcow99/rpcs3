@@ -2,7 +2,7 @@
 
 #include "Emu/Cell/SPUOpcodes.h"
 #include "Emu/Cell/DisAsm.h"
-#include "Emu/Cell/SPU.h"
+#include "Emu/Cell/SPUThread.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
 
@@ -14,15 +14,15 @@ class SPU_DisAsm
 	, public DisAsm
 {
 public:
-	CPUThread& CPU;
+	PPCThread& CPU;
 
 	SPU_DisAsm()
-		: DisAsm(*(CPUThread*)NULL, DumpMode)
-		, CPU(*(CPUThread*)NULL)
+		: DisAsm(*(PPCThread*)NULL, DumpMode)
+		, CPU(*(PPCThread*)NULL)
 	{
 	}
 
-	SPU_DisAsm(CPUThread& cpu, DisAsmModes mode = NormalMode)
+	SPU_DisAsm(PPCThread& cpu, DisAsmModes mode = NormalMode)
 		: DisAsm(cpu, mode)
 		, CPU(cpu)
 	{

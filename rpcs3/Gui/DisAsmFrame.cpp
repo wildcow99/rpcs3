@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "DisAsmFrame.h"
 #include "Emu/Memory/Memory.h"
-#include "Emu/Cell/CPU.h"
+#include "Emu/Cell/PPCThread.h"
 #include "Emu/System.h"
 #include "Gui/DisAsmFrame.h"
 #include "Emu/Cell/PPUDecoder.h"
@@ -9,7 +9,7 @@
 #include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUDisAsm.h"
 
-DisAsmFrame::DisAsmFrame(CPUThread& cpu)
+DisAsmFrame::DisAsmFrame(PPCThread& cpu)
 	: wxFrame(NULL, wxID_ANY, "DisAsm")
 	, CPU(cpu)
 {
@@ -224,15 +224,17 @@ public:
 		arr = _arr;
 
 		*done = false;
-		if(GetCPU(0).IsSPU())
+		ID thread;
+		Emu.GetCPU().GetIDs().GetFirst(thread);
+		if((*(PPCThread*)thread.m_data).IsSPU())
 		{
-			SPU_DisAsm& dis_asm = *new SPU_DisAsm();
+			SPU_DisAsm& dis_asm = *new SPU_DisAsm(*(PPCThread*)NULL, DumpMode);
 			decoder = new SPU_Decoder(dis_asm);
 			disasm = &dis_asm;
 		}
 		else
 		{
-			PPU_DisAsm& dis_asm = *new PPU_DisAsm();
+			PPU_DisAsm& dis_asm = *new PPU_DisAsm(*(PPCThread*)NULL, DumpMode);
 			decoder = new PPU_Decoder(dis_asm);
 			disasm = &dis_asm;
 		}
@@ -243,14 +245,17 @@ public:
 		ConLog.Write("Start dump in thread %d!", (int)id);
 		const u32 max_value = prog_dial->GetMaxValue(id);
 
-		wxFile f(Emu.m_path);
+		//wxFile f(Emu.m_path);
 
 		for(u32 sh=0, vsize=0; sh<shdr_arr->GetCount(); ++sh)
 		{
 			const Elf64_Shdr& c_sh = (*shdr_arr)[sh];
-			const u64 sh_size = c_sh.sh_size / cores / 4;
+			const u64 sh_size = c_sh.sh_size / 4;
+			u64 d_size = sh_size / cores;
+			const u64 s_fix = sh_size % cores;
+			if(id <= s_fix) d_size++;
 
-			for(u64 off = id * 4, size=0; size<sh_size; vsize++, size++)
+			for(u64 off = id * 4, size=0; size<d_size; vsize++, size++)
 			{
 				prog_dial->Update(id, vsize,
 					wxString::Format("%d thread: %d of %d", (int)id + 1, vsize, max_value));
@@ -270,7 +275,7 @@ public:
 
 		ConLog.Write("Finish dump in thread %d!", (int)id);
 
-		f.Close();
+		//f.Close();
 		*done = true;
 
 		Cleanup();
@@ -371,12 +376,12 @@ struct WaitDumperThread : public ThreadBase
 		free(arr);
 
 		//safe_delete(shdr_arr);
-		//safe_delete(l_elf64);
+		safe_delete(l_elf64);
 
 		prog_dial2.Close();
 		fd.Close();
 
-		wxMessageBox("rpcs3 message", "Dumping done.");
+		wxMessageBox("Dumping done.", "rpcs3 message");
 
 		Emu.Stop();
 
@@ -433,10 +438,11 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	u64 max_count = 0;
 	for(uint sh=0; sh<l_elf64->shdr_arr.GetCount(); ++sh)
 	{
-		max_count += l_elf64->shdr_arr[sh].sh_size / cores_count / 4;
+		max_count += l_elf64->shdr_arr[sh].sh_size / 4;
 	}
 
-	for(uint c=0; c<cores_count; ++c) max.Add(max_count);
+	for(uint c=0; c<cores_count; ++c) max.Add(max_count / cores_count);
+	for(uint c=0; c<max_count % cores_count; ++c) max[c]++;
 
 	MTProgressDialog& prog_dial = *new MTProgressDialog(this, wxDefaultSize, "Dumping...", "Loading", max, cores_count);
 
