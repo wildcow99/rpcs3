@@ -4,86 +4,88 @@
 class MemoryFlags
 {
 	wxArrayInt m_memflags;
-	u32 FStub_lo;
-	u32 FStub_hi;
-	u32 FNID_lo;
-	u32 FNID_hi;
-	u32 opd_lo;
-	u32 opd_hi;
+	u64 FStub_lo;
+	u64 FStub_hi;
+	u64 Stub_lo;
+	u64 Stub_hi;
+	u64 FNID_lo;
+	u64 FNID_hi;
+	u64 opd_lo;
+	u64 opd_hi;
 
 public:
-	void Add(const u32 addr)
-	{
-		m_memflags.Add(addr);
-	}
+	void Add(const u32 addr) {m_memflags.Add(addr);}
 
 	void Clear()
 	{
 		m_memflags.Clear();
 		FStub_lo = 0;
 		FStub_hi = 0;
+		Stub_lo = 0;
+		Stub_hi = 0;
 		FNID_lo = 0;
 		FNID_hi = 0;
 		opd_lo = 0;
 		opd_hi = 0;
 	}
 
-	bool IsFStubRange(const u32 addr) const
+	bool IsFStubRange(const u64 addr) const
 	{
 		return addr >= FStub_lo && addr < FStub_hi;
 	}
 
-	bool IsFNIDRange(const u32 addr) const
+	bool IsStubRange(const u64 addr) const
+	{
+		return addr >= Stub_lo && addr < Stub_hi;
+	}
+
+	bool IsFNIDRange(const u64 addr) const
 	{
 		return addr >= FNID_lo && addr < FNID_hi;
 	}
 
-	bool IsOPDRange(const u32 addr) const
+	bool IsOPDRange(const u64 addr) const
 	{
 		return addr >= opd_lo && addr < opd_hi;
 	}
 
-	u32 FindAddr(const u32 addr)
+	u32 FindAddr(const u64 addr)
 	{
-		if(IsFStubRange(addr))
-		{
-			const u32 FNID_addr = FNID_lo + (addr - FStub_lo);
-			if(IsFNIDRange(FNID_addr))
-			{
-				return FNID_addr;
-			}
-		}
-
-		return addr;
+		if(!IsStubRange(addr)) return addr;
+		return FNID_lo + (((addr - Stub_lo) / 0x20) * 4);
 	}
 
-	void SetFStubRange(const u32 from, const u32 size)
+	void SetFStubRange(const u64 from, const u64 size)
 	{
 		FStub_lo = from;
 		FStub_hi = from + size;
 	}
 
-	void SetFNIDRange(const u32 from, const u32 size)
+	void SetStubRange(const u64 from, const u64 size)
+	{
+		Stub_lo = from;
+		Stub_hi = from + size;
+	}
+
+	void SetFNIDRange(const u64 from, const u64 size)
 	{
 		FNID_lo = from;
 		FNID_hi = from + size;
 	}
 
-	void SetOPDRange(const u32 from, const u32 size)
+	void SetOPDRange(const u64 from, const u64 size)
 	{
 		opd_lo = from;
 		opd_hi = from + size;
 	}
 
-	bool IsFlag(const u32 addr, const u32 pc, u64& gpr)
+	bool IsFlag(const u64 addr, const u64 pc, u64& gpr)
 	{
-		for(uint i=0; i<m_memflags.GetCount(); ++i)
+		for(uint i=0; i<GetCount()-1; i+=2)
 		{
-			if(m_memflags[i] == addr)
-			{
-				/*if(IsOPDRange(pc))*/ gpr = m_memflags[i+1];
-				return true;
-			}
+			if(m_memflags[i] != addr) continue;
+			/*if(IsOPDRange(pc))*/ gpr = m_memflags[i+1];
+			return true;
 		}
 
 		return false;
@@ -198,7 +200,7 @@ public:
 
 		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
 		{
-			MemoryBlocks.Get(i).Delete();
+			MemoryBlocks[i].Delete();
 		}
 
 		MemoryBlocks.Clear();

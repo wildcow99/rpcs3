@@ -32,12 +32,12 @@ protected:
 	virtual void Save(wxString key, wxString value);
 	virtual void Save(wxString key, WindowInfo value);
 
-	virtual int Load(wxString key, int def_value);
-	virtual bool Load(wxString key, bool def_value);
-	virtual wxSize Load(wxString key, wxSize def_value);
-	virtual wxPoint Load(wxString key, wxPoint def_value);
-	virtual wxString Load(wxString key, wxString def_value);
-	virtual WindowInfo Load(wxString key, WindowInfo def_value);
+	virtual int Load(wxString key, const int def_value);
+	virtual bool Load(wxString key, const bool def_value);
+	virtual wxSize Load(wxString key, const wxSize def_value);
+	virtual wxPoint Load(wxString key, const wxPoint def_value);
+	virtual wxString Load(wxString key, const wxString& def_value);
+	virtual WindowInfo Load(wxString key, const WindowInfo& def_value);
 };
 
 template<typename T> struct IniEntry : public Ini
@@ -49,10 +49,10 @@ template<typename T> struct IniEntry : public Ini
 	{
 	}
 
-	void Init(const wxString key, const wxString patch)
+	void Init(const wxString& key, const wxString& path)
 	{
 		m_key = key;
-		m_Config->SetPath(patch);
+		m_Config->SetPath(path);
 	}
 
 	void SetValue(const T value)

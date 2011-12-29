@@ -1,5 +1,5 @@
 #pragma once
-#include "Emu/Cell/CPU.h"
+#include "Emu/Cell/PPCThread.h"
 #include "Emu/Cell/PPUDecoder.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/SPUDecoder.h"
@@ -9,7 +9,7 @@ class InterpreterDisAsmFrame : public FrameBase
 {
 	wxListView* m_list;
 	wxPanel& m_main_panel;
-	CPUThread& CPU;
+	PPCThread& CPU;
 	DisAsm* disasm;
 	Decoder* decoder;
 	u32 PC;
@@ -24,7 +24,7 @@ class InterpreterDisAsmFrame : public FrameBase
 	}
 
 public:
-	InterpreterDisAsmFrame(const wxString& title, CPUThread* cpu)
+	InterpreterDisAsmFrame(const wxString& title, PPCThread* cpu)
 		: FrameBase(NULL, wxID_ANY, title, "InterpreterDisAsmFrame", wxSize(500, 700))
 		, m_main_panel(*new wxPanel(this))
 		, CPU(*cpu)
@@ -90,10 +90,10 @@ public:
 		}
 
 		Connect(m_regs->GetId(), wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(InterpreterDisAsmFrame::OnUpdate));
-		Connect( b_show_Val.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( InterpreterDisAsmFrame::Show_Val ));
-		Connect( b_show_PC.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( InterpreterDisAsmFrame::Show_PC ));
-		Connect( b_next_opcode.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( InterpreterDisAsmFrame::DoOpcode ));
-		Connect( wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize) );
+		Connect(b_show_Val.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(InterpreterDisAsmFrame::Show_Val));
+		Connect(b_show_PC.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(InterpreterDisAsmFrame::Show_PC));
+		Connect(b_next_opcode.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(InterpreterDisAsmFrame::DoOpcode));
+		Connect(wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize));
 		wxGetApp().Connect(m_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(InterpreterDisAsmFrame::MouseWheel), (wxObject*)0, this);
 		wxGetApp().Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(InterpreterDisAsmFrame::OnKeyDown), (wxObject*)0, this);
 
@@ -195,7 +195,17 @@ public:
 
 	virtual void DoOpcode(wxCommandEvent& WXUNUSED(event))
 	{
-		CPU.Resume();
+#if 0
+		static bool founded = false;
+		if(!founded)
+		{
+			while(CPU.PC != 0x10200) CPU.Exec();
+			founded = true;
+		}
+		else
+#endif
+		CPU.Exec();
+		DoUpdate();
 	}
 	
 	void OnResize(wxSizeEvent& event)

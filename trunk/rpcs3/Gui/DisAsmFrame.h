@@ -6,7 +6,7 @@ class DisAsmFrame : public wxFrame
 	u32 count;
 
 	wxListView* m_disasm_list;
-	CPUThread& CPU;
+	PPCThread& CPU;
 
 	virtual void OnResize(wxSizeEvent& event);
 
@@ -22,7 +22,7 @@ class DisAsmFrame : public wxFrame
 
 public:
 	bool exit;
-	DisAsmFrame(CPUThread& cpu);
+	DisAsmFrame(PPCThread& cpu);
 	~DisAsmFrame()
 	{
 		exit = true;

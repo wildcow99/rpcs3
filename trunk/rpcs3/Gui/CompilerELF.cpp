@@ -355,7 +355,7 @@ int Compile(wxArrayLong& arr, MASKS mask)
 	case R2:
 		switch(arr[0])
 		{
-		case O_MR: return ToOpcode(G_1f) | SetField(MR, 22, 30) | ToRA(arr[1]) | ToRB(arr[2]);
+		case O_MR: return ToOpcode(G_1f) | SetField(OR, 22, 30) | ToRA(arr[1]) | ToRS(arr[2]) | ToRB(arr[2]);
 		default: break;
 		}
 	break;
@@ -684,7 +684,7 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 		ehdr.e_os_abi = 0x66; //Cell OS LV-2
 		ehdr.e_abi_ver = 0;
 		ehdr.e_type = 2; //EXEC (Executable file)
-		ehdr.e_machine = 0x15; //PowerPC64
+		ehdr.e_machine = MACHINE_PPC64; //PowerPC64
 		ehdr.e_version = 1; //ver 1
 		ehdr.e_entry = entry;
 		ehdr.e_phoff = phoff;
@@ -728,7 +728,7 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 		shdr[0].sh_offset = strtab_offs;
 		shdr[0].sh_link = 0;
 		shdr[0].sh_info = 0;
-		shdr[0].sh_addralign = 0;
+		shdr[0].sh_addralign = 1;
 		shdr[0].sh_entsize = 0;
 
 		name_arr.Add(".text");
@@ -737,7 +737,7 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 		shdr[1].sh_addr = 0;
 		shdr[1].sh_link = 0;
 		shdr[1].sh_info = 0;
-		shdr[1].sh_addralign = 0;
+		shdr[1].sh_addralign = 4;
 		shdr[1].sh_entsize = 0;
 
 		name_arr.Add(".opd");
@@ -746,7 +746,7 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 		shdr[2].sh_addr = 0;
 		shdr[2].sh_link = 0;
 		shdr[2].sh_info = 0;
-		shdr[2].sh_addralign = 0;
+		shdr[2].sh_addralign = 8;
 		shdr[2].sh_entsize = 0;
 		
 		name_arr.Add(".got");
@@ -755,7 +755,7 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 		shdr[3].sh_addr = 0;
 		shdr[3].sh_link = 0;
 		shdr[3].sh_info = 0;
-		shdr[3].sh_addralign = 0;
+		shdr[3].sh_addralign = 8;
 		shdr[3].sh_entsize = 0;
 
 		name_arr.Add(".rodata");
@@ -764,7 +764,7 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 		shdr[4].sh_addr = 0;
 		shdr[4].sh_link = 0;
 		shdr[4].sh_info = 0;
-		shdr[4].sh_addralign = 0;
+		shdr[4].sh_addralign = 8;
 		shdr[4].sh_entsize = 0;
 
 		for(uint i=0; i<name_arr.GetCount(); ++i)

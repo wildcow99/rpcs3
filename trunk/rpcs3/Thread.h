@@ -15,6 +15,11 @@ public:
 		if(is_create) Create();
 	}
 
+	~Semaphore()
+	{
+		Destroy();
+	}
+
 	virtual void Create()
 	{
 		sem_init(&semaphore, 0, 0);
@@ -55,6 +60,56 @@ public:
 	}
 
 	virtual bool IsWait() const { return isWait; }
+};
+
+class Mutex
+{
+	pthread_mutex_t mutex;
+	bool isLocked;
+
+public:
+	Mutex(bool is_create = true)
+	{
+		if(is_create) Create();
+	}
+
+	~Mutex()
+	{
+		Destroy();
+	}
+
+	virtual void Create()
+	{
+		pthread_mutex_init(&mutex, NULL);
+		Lock();
+	}
+
+	virtual void Lock()
+	{
+		if(isLocked) return;
+		isLocked = true;
+		pthread_mutex_lock(&mutex);
+	}
+
+	virtual void TryLock()
+	{
+		pthread_mutex_trylock(&mutex);
+	}
+
+	virtual void Unlock()
+	{
+		if(!isLocked) return;
+		isLocked = false;
+		pthread_mutex_unlock(&mutex);
+	}
+
+	virtual void Destroy()
+	{
+		isLocked = false;
+		pthread_mutex_destroy(&mutex);
+	}
+
+	virtual bool IsLocked() const { return isLocked; }
 };
 
 class ThreadBase
@@ -101,15 +156,21 @@ public:
 		return ret;
 	}
 
-	virtual const bool Exit()
+	virtual const bool Cancel()
 	{
 		if(!isStarted) return false;
 		isStarted = false;
 
-		Detach();
+		return pthread_cancel(thread) == 0;
+	}
 
+	virtual const bool Exit()
+	{
+		if(!isStarted) return false;
+
+		Detach();
+		//Cancel();
 		return pthread_join(thread, NULL) == 0;
-		//return pthread_cancel(thread) == 0;
 	}
 
 	const bool Detach()
@@ -119,12 +180,7 @@ public:
 
 	const bool SetCancelState(bool enable, int* prev_state = NULL)
 	{
-		if(enable)
-		{
-			return pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, prev_state) == 0;
-		}
-
-		return pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, prev_state) == 0;
+		return pthread_setcancelstate(enable ? PTHREAD_CANCEL_ENABLE : PTHREAD_CANCEL_DISABLE, prev_state) == 0;
 	}
 
 	void SetName(wxString name)
@@ -218,6 +274,7 @@ struct ThreadAdv
 class StepThread : public ThreadBase
 {
 	Semaphore m_main_sem;
+	Mutex m_main_mtx;
 	bool exit;
 
 protected:
@@ -251,12 +308,15 @@ private:
 		while(!exit)
 		{
 			m_main_sem.Wait();
+			m_main_mtx.Lock();
 			if(exit) break;
 			ThreadAdv::TestCancel();
 			Step();
 			ThreadAdv::TestCancel();
+			m_main_mtx.Unlock();
 		}
 
+		Detach();
 		ThreadAdv::Exit();
 	}
 

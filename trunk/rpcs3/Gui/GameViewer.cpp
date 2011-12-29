@@ -2,6 +2,7 @@
 #include "GameViewer.h"
 #include "Loader/PSF.h"
 
+static const wxString m_class_name = "GameViewer";
 GameViewer::GameViewer(wxWindow* parent) : wxPanel(parent)
 {
 	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
@@ -11,9 +12,8 @@ GameViewer::GameViewer(wxWindow* parent) : wxPanel(parent)
 
 	SetSizerAndFit( &s_panel );
 
-	m_game_list->InsertColumn(0, "Name");
-	m_game_list->InsertColumn(1, "Serial");
-	m_game_list->InsertColumn(2, "FW");
+	LoadSettings();
+	m_columns.Show(m_game_list);
 
 	m_path = wxGetCwd(); //TODO
 
@@ -24,6 +24,7 @@ GameViewer::GameViewer(wxWindow* parent) : wxPanel(parent)
 
 GameViewer::~GameViewer()
 {
+	SaveSettings();
 	m_game_list->Destroy();
 }
 
@@ -67,18 +68,13 @@ void GameViewer::LoadPSF()
 		psf.m_info.root = m_games[i];
 		m_game_data.Add(new GameInfo(psf.m_info));
 	}
+
+	m_columns.Update(m_game_data);
 }
 
 void GameViewer::ShowData()
 {
-	for(uint i=0; i<m_game_data.GetCount(); ++i)
-	{
-		GameInfo& game = m_game_data[i];
-		const u32 index = m_game_list->GetItemCount();
-		m_game_list->InsertItem(index, game.name);
-		m_game_list->SetItem(index, 1, game.serial);
-		m_game_list->SetItem(index, 2, game.fw);
-	}
+	m_columns.ShowData(m_game_list);
 }
 
 void GameViewer::Refresh()
@@ -86,6 +82,16 @@ void GameViewer::Refresh()
 	LoadGames();
 	LoadPSF();
 	ShowData();
+}
+
+void GameViewer::SaveSettings()
+{
+	m_columns.LoadSave(false, m_class_name, m_game_list);
+}
+
+void GameViewer::LoadSettings()
+{
+	m_columns.LoadSave(true, m_class_name);
 }
 
 void GameViewer::DClick(wxListEvent& event)

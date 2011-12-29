@@ -83,12 +83,7 @@ void MemoryBlock::SetRange(const u32 start, const u32 size)
 
 bool MemoryBlock::IsMyAddress(const u32 addr)
 {
-	if(addr >= GetStartAddr() && addr < GetEndAddr())
-	{
-		return true;
-	}
-
-	return false;
+	return addr >= GetStartAddr() && addr < GetEndAddr();
 }
 
 __forceinline const u8 MemoryBlock::FastRead8(const u32 addr) const
@@ -171,7 +166,7 @@ bool MemoryBlock::Read128(const u32 addr, u128* value)
 {
 	if(!IsMyAddress(addr))
 	{
-		*value = u128::From((u64)0);
+		*value = u128::From32(0);
 		return false;
 	}
 
@@ -395,7 +390,7 @@ u128 MemoryBase::Read128(u32 addr)
 	if(mem.IsNULL())
 	{
 		mem.Read128(addr, NULL);
-		return u128::From((u64)0);
+		return u128::From32(0);
 	}
 	return mem.FastRead128(mem.FixAddr(addr));
 }

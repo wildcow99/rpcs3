@@ -68,6 +68,8 @@ class SELFLoader : public LoaderBase
 {
 	wxFile& self_f;
 
+	SelfHeader hdr;
+
 public:
 	SELFLoader(wxFile& f);
 	SELFLoader(const wxString& path);

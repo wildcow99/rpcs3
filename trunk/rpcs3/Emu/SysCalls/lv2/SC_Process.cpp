@@ -21,46 +21,46 @@ PPU_THREAD_STATUS GetPPUThreadStatus(PPUThread& CPU)
 	return PPU_THREAD_STATUS_UNKNOWN;
 }
 
-int SysCalls::lv2ProcessGetPid()
+int SysCalls::lv2ProcessGetPid(PPUThread& CPU)
 {
 	CPU.GPR[4] = CPU.GetId();
 	return 0;
 }
-int SysCalls::lv2ProcessWaitForChild()
+int SysCalls::lv2ProcessWaitForChild(PPUThread& CPU)
 {
 	return 0;
 }
-int SysCalls::lv2ProcessGetStatus()
+int SysCalls::lv2ProcessGetStatus(PPUThread& CPU)
 {
 	if(!CPU.IsSPU()) CPU.GPR[4] = GetPPUThreadStatus(CPU);
 
 	return 0;
 }
-int SysCalls::lv2ProcessDetachChild()
+int SysCalls::lv2ProcessDetachChild(PPUThread& CPU)
 {
 	return 0;
 }
-int SysCalls::lv2ProcessGetNumberOfObject()
+int SysCalls::lv2ProcessGetNumberOfObject(PPUThread& CPU)
 {
 	CPU.GPR[4] = 1;//???
 	return 0;
 }
-int SysCalls::lv2ProcessGetId()
+int SysCalls::lv2ProcessGetId(PPUThread& CPU)
 {
 	CPU.GPR[4] = CPU.GetId();
 	return 0;
 }
-int SysCalls::lv2ProcessGetPpid()
+int SysCalls::lv2ProcessGetPpid(PPUThread& CPU)
 {
 	CPU.GPR[4] = CPU.GetId();
 	return 0;
 }
-int SysCalls::lv2ProcessKill()
+int SysCalls::lv2ProcessKill(PPUThread& CPU)
 {
 	CPU.Close();
 	return 0;
 }
-int SysCalls::lv2ProcessExit()
+int SysCalls::lv2ProcessExit(PPUThread& CPU)
 {
 	/*
 	switch(CPU.GPR[3])
@@ -80,11 +80,11 @@ int SysCalls::lv2ProcessExit()
 	CPU.Close();
 	return 0;
 }
-int SysCalls::lv2ProcessWaitForChild2()
+int SysCalls::lv2ProcessWaitForChild2(PPUThread& CPU)
 {
 	return 0;
 }
-int SysCalls::lv2ProcessGetSdkVersion()
+int SysCalls::lv2ProcessGetSdkVersion(PPUThread& CPU)
 {
 	CPU.GPR[4] = 0x360001; //TODO
 	return 0;

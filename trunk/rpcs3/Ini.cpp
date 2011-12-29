@@ -178,32 +178,32 @@ void Ini::Save(wxString key, WindowInfo value)
 	m_Config->Write(key, WindowInfoToString(value));
 }
 
-int Ini::Load(wxString key, int def_value)
+int Ini::Load(wxString key, const int def_value)
 {
 	return m_Config->Read(key, def_value);
 }
 
-bool Ini::Load(wxString key, bool def_value)
+bool Ini::Load(wxString key, const bool def_value)
 {
 	return StringToBool(m_Config->Read(key, BoolToString(def_value)));
 }
 
-wxSize Ini::Load(wxString key, wxSize def_value)
+wxSize Ini::Load(wxString key, const wxSize def_value)
 {
 	return StringToSize(m_Config->Read(key, SizeToString(def_value)));
 }
 
-wxPoint Ini::Load(wxString key, wxPoint def_value)
+wxPoint Ini::Load(wxString key, const wxPoint def_value)
 {
 	return StringToPosition(m_Config->Read(key, PositionToString(def_value)));
 }
 
-wxString Ini::Load(wxString key, wxString def_value)
+wxString Ini::Load(wxString key, const wxString& def_value)
 {
 	return m_Config->Read(key, def_value);
 }
 
-WindowInfo Ini::Load(wxString key, WindowInfo def_value)
+WindowInfo Ini::Load(wxString key, const WindowInfo& def_value)
 {
 	return StringToWindowInfo(m_Config->Read(key, WindowInfoToString(def_value)));
 }
