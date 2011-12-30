@@ -23,9 +23,6 @@
     <Filter Include="Loader">
       <UniqueIdentifier>{6c36f15e-07fd-45d6-a81c-1ab43ee1b58b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Crypto">
-      <UniqueIdentifier>{f29f264c-9981-476b-8102-7209da131bde}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -99,12 +96,6 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilites\Crypto\aes_cbc.cpp">
-      <Filter>Crypto</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilites\Crypto\aes_core.cpp">
-      <Filter>Crypto</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\PPCThread.cpp">
       <Filter>Emu\CPU</Filter>

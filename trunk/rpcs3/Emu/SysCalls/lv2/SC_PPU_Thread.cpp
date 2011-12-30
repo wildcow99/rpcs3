@@ -19,7 +19,7 @@ int SysCalls::lv2PPUThreadCreate(PPUThread& CPU)
 	const u32 id = Emu.GetCPU().AddThread(true);
 
 	CPU.GPR[3] = id;
-	PPCThread& new_thread = (*(PPCThread*)Emu.GetCPU().GetIDs().GetIDData(id).m_data);
+	PPCThread& new_thread = *(PPCThread*)Emu.GetCPU().GetIDs().GetIDData(id).m_data;
 	new_thread.SetPc(CPU.GPR[4]);
 	new_thread.SetArg(CPU.GPR[5]);
 	//CPU.GPR[6];

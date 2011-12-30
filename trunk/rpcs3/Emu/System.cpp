@@ -103,7 +103,9 @@ void Emulator::Run()
 		return;
 	}
 
-	//(new GSFrame_GL(wxGetApp().m_MainFrame));
+#ifdef USE_GS_FRAME
+	new GSFrame_GL(wxGetApp().m_MainFrame);
+#endif
 	const u32 id = GetCPU().AddThread(loader.GetMachine() == MACHINE_PPC64);
 
 	PPCThread& thread = (*(PPCThread*)GetCPU().GetIDs().GetIDData(id).m_data);

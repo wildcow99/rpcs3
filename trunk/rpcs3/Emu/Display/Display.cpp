@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Display.h"
 
+#ifdef USE_GS_FRAME
 PFNGLGENBUFFERSARBPROC pglGenBuffersARB = 0;
 PFNGLBINDBUFFERARBPROC pglBindBufferARB = 0;
 PFNGLBUFFERDATAARBPROC pglBufferDataARB = 0;
@@ -352,3 +353,4 @@ GSFrame_GL::GSFrame_GL(wxWindow* parent) : wxFrame(parent, wxID_ANY, "GSFrame[GL
 	SetSize(500,500);
     Show();
 }
+#endif

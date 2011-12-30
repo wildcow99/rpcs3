@@ -20,14 +20,17 @@ PPCThread::PPCThread(bool _isSPU)
 
 PPCThread::~PPCThread()
 {
+	Close();
 }
 
 void PPCThread::Close()
 {
 	Stop();
-	//CPU_IDs.RemoveID(GetId());
-	//Emu.RemoveThread(m_num);
-	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).Close();
+	if(DisAsmFrame)
+	{
+		(*(InterpreterDisAsmFrame*)DisAsmFrame).Close();
+		DisAsmFrame = NULL;
+	}
 }
 
 void PPCThread::Reset()
@@ -93,8 +96,8 @@ void PPCThread::SetId(const u32 id)
 	ID& thread = Emu.GetCPU().GetIDs().GetIDData(m_id);
 	thread.m_name = wxString::Format("%s[%d] Thread", (isSPU ? "SPU" : "PPU"), m_id);
 	thread.m_attr = isSPU ? 2 : 1;
-	if(Ini.m_DecoderMode.GetValue() != 1) return;
 
+	if(Ini.m_DecoderMode.GetValue() != 1) return;
 	DisAsmFrame = new InterpreterDisAsmFrame(thread.m_name, this);
 	(*(InterpreterDisAsmFrame*)DisAsmFrame).Show();
 }

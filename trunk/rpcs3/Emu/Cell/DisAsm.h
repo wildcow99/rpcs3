@@ -123,11 +123,15 @@ protected:
 	}
 	void DisAsm_F1_RC(const wxString& op, OP_REG f0, bool rc)
 	{
-		Write(wxString::Format("%s%s r%d", op, rc ? "." : "", f0));
+		Write(wxString::Format("%s%s f%d", op, rc ? "." : "", f0));
+	}
+	void DisAsm_R1_RC(const wxString& op, OP_REG r0, bool rc)
+	{
+		Write(wxString::Format("%s%s r%d", op, rc ? "." : "", r0));
 	}
 	void DisAsm_R1(const wxString& op, OP_REG r0)
 	{
-		DisAsm_F1_RC(op, r0, false);
+		DisAsm_R1_RC(op, r0, false);
 	}
 	void DisAsm_R2_OE_RC(const wxString& op, OP_REG r0, OP_REG r1, OP_REG oe, bool rc)
 	{
