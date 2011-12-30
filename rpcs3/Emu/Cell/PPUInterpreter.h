@@ -527,13 +527,9 @@ private:
 		virtual void CNTLZW(OP_REG rs, OP_REG ra, bool rc)
 		{
 			const u32 RS = CPU.GPR[rs];
-			for (u32 i=0, mask=0x80000000; i < 32; i++, mask >>= 1)
-			{
-				if(!(RS & mask)) continue;
-
-				CPU.GPR[ra] = i;
-				break;
-			}
+			u8 i=0;
+			for (u32 mask=0x80000000; i < 32; i++, mask >>= 1) if(RS & mask) break;
+			CPU.GPR[ra] = i;
 			if(rc) CPU.UpdateCR0(CPU.GPR[ra]);
 		}
 		virtual void AND(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
@@ -562,13 +558,9 @@ private:
 		virtual void CNTLZD(OP_REG ra, OP_REG rs, bool rc)
 		{
 			const u64 RS = CPU.GPR[rs];
-			for (u64 i=0, mask=0x8000000000000000ULL; i < 64; i++, mask >>= 1)
-			{
-				if(!(RS & mask)) continue;
-
-				CPU.GPR[ra] = i;
-				break;
-			}
+			u8 i=0;
+			for (u64 mask=0x8000000000000000ULL; i < 64; i++, mask >>= 1) if(RS & mask) break;
+			CPU.GPR[ra] = i;
 			if(rc) CPU.UpdateCR0(CPU.GPR[ra]);
 		}
 		virtual void ANDC(OP_REG rs, OP_REG ra, OP_REG rb, bool rc)
@@ -944,14 +936,14 @@ private:
 
 				if(CPU.FPR[fra].d == 0.0)
 				{
-					CPU.FPR[frt].d = 0x7FF8000000000000ULL;
+					CPU.FPR[frt].d = (double)0x7FF8000000000000ULL;
 					CPU.SetFPSCRException(FPSCR_VXZDZ);
 					return;
 				}
 			}
 			else if(CPU.FPR[fra].IsINF() || CPU.FPR[frb].IsINF())
 			{
-				CPU.FPR[frt].d = 0x7FF8000000000000ULL;
+				CPU.FPR[frt].d = (double)0x7FF8000000000000ULL;
 				CPU.SetFPSCRException(FPSCR_VXIDI);
 				return;
 			}

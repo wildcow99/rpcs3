@@ -20,7 +20,7 @@ void PPCThreadManager::Close()
 	u32 pos = 0;
 	while(m_threads_id.GetNext(pos, thread))
 	{
-		(*(PPCThread*)thread.m_data).Stop();
+		(*(PPCThread*)thread.m_data).Close();
 	}
 
 	m_threads_id.Clear();
