@@ -43,14 +43,9 @@ private:
 		this->~PPU_DisAsm();
 	}
 
-	virtual void Step()
-	{
-	}
-
 	virtual u32 DisAsmBranchTarget(const s32 imm)
 	{
-		if(m_mode != NormalMode) return branchTarget(dump_pc, imm);
-		return branchTarget(CPU.PC, imm);
+		return branchTarget(m_mode == NormalMode ? CPU.PC : dump_pc, imm);
 	}
 	
 private:

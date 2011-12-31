@@ -62,7 +62,7 @@ int SysCalls::lv2FsOpen(PPUThread& CPU)
 {
 	const wxString& path = Memory.ReadString(CPU.GPR[3]);
 	const u32 oflags = CPU.GPR[4];
-	GPRtype& fs_file = CPU.GPR[5];
+	const u64 fd_addr = CPU.GPR[5];
 
 	const u32 mode = CPU.GPR[6];
 	const void* arg = Memory.GetMemFromAddr(CPU.GPR[7]);//???
@@ -144,12 +144,15 @@ int SysCalls::lv2FsOpen(PPUThread& CPU)
 		return CELL_UNKNOWN_ERROR;
 	}
 
-	fs_file = SysCalls_IDs.GetNewID(sc_f.GetName(), new wxFile(ppath, o_mode), oflags);
-
-	Memory.Write32(CPU.GPR[1] + 0x70, fs_file);
-	//Memory.Write64(CPU.GPR[1] + 0x78, fs_file);
-
-	return SysCalls_IDs.CheckID(fs_file) ? CELL_OK : CELL_UNKNOWN_ERROR;
+	const u32 fd = SysCalls_IDs.GetNewID(sc_f.GetName(), new wxFile(ppath, o_mode), oflags);
+	if(!SysCalls_IDs.CheckID(fd))
+	{
+		Memory.Write32(fd_addr, -1);
+		return CELL_UNKNOWN_ERROR;
+	}
+	
+	Memory.Write32(fd_addr, fd);
+	return CELL_OK;
 }
 
 int SysCalls::lv2FsRead(PPUThread& CPU)

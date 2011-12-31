@@ -3,6 +3,8 @@
 #include "Gui/MemoryViewer.h"
 #include "Emu/Cell/PPCThreadManager.h"
 #include "Utilites/Array.h"
+#include "Emu/Io/Pad.h"
+#include "Emu/DbgConsole.h"
 
 enum Status
 {
@@ -27,6 +29,8 @@ class Emulator
 	//ArrayF<CPUThread> m_cpu_threads;
 
 	PPCThreadManager m_thread_manager;
+	PadManager* m_pad_manager;
+	DbgConsole* m_dbg_console;
 
 public:
 	wxString m_path;
@@ -34,16 +38,13 @@ public:
 
 	Emulator();
 
+	void Init();
 	virtual void SetSelf(const wxString& path);
 	virtual void SetElf(const wxString& path);
 
-	//CPUThread& AddThread(bool isSPU);
-	//void RemoveThread(const u8 core);
-
-	PPCThreadManager& GetCPU()
-	{
-		return m_thread_manager;
-	}
+	PPCThreadManager&	GetCPU()	{ return m_thread_manager; }
+	PadManager&			GetPads()	{ return *m_pad_manager; }
+	DbgConsole&			GetDbgCon()	{ return *m_dbg_console; }
 
 	void CheckStatus();
 
@@ -51,28 +52,6 @@ public:
 	virtual void Pause();
 	virtual void Resume();
 	virtual void Stop();
-	/*
-	ArrayF<CPUThread>& GetCPU()
-	{
-		return m_cpu_threads;
-	}
-
-	CPUThread& GetPPU(const u8 core)
-	{
-		return m_cpu_threads.Get(core);
-	}
-
-	CPUThread& GetSPU(const u8 core)
-	{
-		if(core >= m_cpu_threads.GetCount())
-		{
-			ConLog.Error("Get SPU error: unknown number! (%d)", core);
-			return m_cpu_threads.Get(0);
-		}
-
-		return m_cpu_threads.Get(core);
-	}
-	*/
 
 	virtual bool IsRunned() const { return m_status == Runned; }
 	virtual bool IsPaused() const { return m_status == Paused; }

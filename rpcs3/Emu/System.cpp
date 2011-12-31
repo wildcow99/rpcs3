@@ -15,9 +15,16 @@
 SysCalls SysCallsManager;
 
 Emulator::Emulator()
+	: m_pad_manager(NULL)
 {
 	m_status = Stoped;
 	m_mode = 0;
+}
+
+void Emulator::Init()
+{
+	if(m_pad_manager) free(m_pad_manager);
+	m_pad_manager = new PadManager();
 }
 
 void Emulator::SetSelf(const wxString& path)
@@ -106,6 +113,7 @@ void Emulator::Run()
 #ifdef USE_GS_FRAME
 	new GSFrame_GL(wxGetApp().m_MainFrame);
 #endif
+
 	const u32 id = GetCPU().AddThread(loader.GetMachine() == MACHINE_PPC64);
 
 	PPCThread& thread = (*(PPCThread*)GetCPU().GetIDs().GetIDData(id).m_data);
@@ -120,6 +128,9 @@ void Emulator::Run()
 	m_memory_viewer->ShowPC();
 
 	wxGetApp().m_MainFrame->UpdateUI();
+
+	m_dbg_console = new DbgConsole();
+	//m_dbg_console->Show();
 
 	if(Ini.m_DecoderMode.GetValue() != 1) GetCPU().Exec();
 }
@@ -140,12 +151,6 @@ void Emulator::Resume()
 
 	m_status = Runned;
 	wxGetApp().m_MainFrame->UpdateUI();
-	/*
-	for(uint i=0; i<GetCPU().GetCount(); ++i)
-	{
-		GetCPU().Get(i).SysResume();
-	}
-	*/
 
 	CheckStatus();
 	if(IsRunned()) GetCPU().Exec();
@@ -164,6 +169,8 @@ void Emulator::Stop()
 
 	Memory.Close();
 	CurGameInfo.Reset();
+
+	m_dbg_console->Close();
 
 	if(m_memory_viewer && !m_memory_viewer->exit) m_memory_viewer->Hide();
 }

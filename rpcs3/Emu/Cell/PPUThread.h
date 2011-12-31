@@ -243,11 +243,10 @@ public:
 	FPRdouble FPR[32]; //Floating Point Register
 	FPSCRhdr FPSCR; //Floating Point Status and Control Register
 	u64 GPR[32]; //General-Purpose Register
-
 	VPR_reg VPR[32];
+	u32 vpcr;
 
-	CRhdr CR;
-	//u32 CR; //Condition Register
+	CRhdr CR; //Condition Register
 	//CR0
 	// 0 : LT - Negative (is negative)
 	// : 0 - Result is not negative
@@ -302,41 +301,10 @@ public:
 	//TBR : Time-Base Registers
 	u64 TB;	//TBR 0x10C - 0x10D
 
-	u64 cycle;
-
 	u32 reserve32;
 	bool has_reserve32;
 
 public:
-	inline bool CheckOverflow(const s64 a, const s64 b)
-	{
-		return
-			a > 0 && b > 0 && (MAX_INT_VALUE - b) < a ||
-			a < 0 && b < 0 && (-MAX_INT_VALUE - b) > a;
-	}
-
-	inline bool CheckUnderflow(const s64 a, const s64 b)
-	{
-		return
-			a > 0 && b < 0 && (MAX_INT_VALUE + b) < a ||
-			a < 0 && b > 0 && (-MAX_INT_VALUE + b) > a;
-	}
-
-	inline bool IsCarryGen(const s64 a, const s64 b)
-	{
-		if(a == 0 || b == 0) return false;
-		
-		s64 c = 0;
-		for(uint i=0; i<32; i++)
-		{
-			const s64 x = (a >> i) & 0x1;
-			const s64 y = (b >> i) & 0x1;
-			c = (x * y) | (x * c) | (y * c);
-		}
-		
-		return c > 0;
-	}
-
 	inline void UpdateCR(const u8 n, const u32 value, const bool set)
 	{
 		switch(n)
@@ -367,25 +335,10 @@ public:
 		}
 	}
 
-	inline void UpdateCR_LT(const u8 n, const bool set)
-	{
-		UpdateCR(n, CR_LT, set);
-	}
-
-	inline void UpdateCR_GT(const u8 n, const bool set)
-	{
-		UpdateCR(n, CR_GT, set);
-	}
-
-	inline void UpdateCR_EQ(const u8 n, const bool set)
-	{
-		UpdateCR(n, CR_EQ, set);
-	}
-
-	inline void UpdateCR_SO(const u8 n, const bool set)
-	{
-		UpdateCR(n, CR_SO, set);
-	}
+	inline void UpdateCR_LT(const u8 n, const bool set) { UpdateCR(n, CR_LT, set); }
+	inline void UpdateCR_GT(const u8 n, const bool set) { UpdateCR(n, CR_GT, set); }
+	inline void UpdateCR_EQ(const u8 n, const bool set) { UpdateCR(n, CR_EQ, set); }
+	inline void UpdateCR_SO(const u8 n, const bool set) { UpdateCR(n, CR_SO, set); }
 
 	inline u8 GetCR(const u8 n) const
 	{
@@ -404,20 +357,9 @@ public:
 		return 0;
 	}
 
-	inline bool IsCR_EQ(const u8 n) const
-	{
-		return (GetCR(n) & CR_EQ) > 0;
-	}
-
-	inline bool IsCR_GT(const u8 n) const
-	{
-		return (GetCR(n) & CR_GT) > 0;
-	}
-
-	inline bool IsCR_LT(const u8 n) const
-	{
-		return (GetCR(n) & CR_LT) > 0;
-	}
+	inline bool IsCR_EQ(const u8 n) const { return (GetCR(n) & CR_EQ) > 0; }
+	inline bool IsCR_GT(const u8 n) const { return (GetCR(n) & CR_GT) > 0; }
+	inline bool IsCR_LT(const u8 n) const { return (GetCR(n) & CR_LT) > 0; }
 
 	template<typename T> void UpdateCRn(const u8 n, const T a, const T b)
 	{
@@ -433,16 +375,11 @@ public:
 		UpdateCRn<s64>(0, val, 0);
 	}
 
-	void UpdateCR1(const double val)
-	{
-		UpdateCRn(1, (val > 0.0f ? 1 : (val < 0.0f ? -1 : 0)), 0);
-	}
-
 	const u8 GetCR_Bit(const u8 bit) const { return 1 << (3 - (bit % 4)); }
 
 	void UpdateCR(const u8 bit, bool set)
 	{
-		UpdateCR(bit, GetCR_Bit(bit), set);
+		UpdateCR(bit/4, GetCR_Bit(bit), set);
 	}
 
 	const u8 IsCR(const u8 bit) const
@@ -478,14 +415,6 @@ public:
 		ret += wxString::Format("CTR = 0x%llx\n", CTR);
 		ret += wxString::Format("XER = 0x%llx\n", XER);
 		return ret;
-	}
-
-	wxString VPRToString(__m128i& VPR) const
-	{
-		return 
-			wxString::Format(
-				"%08x%08x%08x%08x",
-				VPR.m128i_u32[3], VPR.m128i_u32[2], VPR.m128i_u32[1], VPR.m128i_u32[0]);
 	}
 
 public:

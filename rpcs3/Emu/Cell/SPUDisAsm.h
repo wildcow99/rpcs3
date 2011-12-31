@@ -43,10 +43,6 @@ private:
 		this->~SPU_DisAsm();
 	}
 
-	virtual void Step()
-	{
-	}
-
 	virtual u32 DisAsmBranchTarget(const s32 imm)
 	{
 		return 0;

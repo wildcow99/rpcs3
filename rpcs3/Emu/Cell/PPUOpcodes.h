@@ -246,37 +246,11 @@ class PPU_Opcodes
 {
 public:
 	virtual void Exit()=0;
-	virtual void Step()=0;
 
-	static int branchTarget(const u32 pc, const int imm)
+	static u64 branchTarget(const u64 pc, const u64 imm)
 	{
-        return pc + ext_s26(imm);
+		return pc + (imm & ~0x3);
     }
-
-	static int condBranchTarget(const u32 pc, const int imm_s16)
-	{
-        return pc + (imm_s16 & ~0x3);
-    }
-
-	static int ext_s26(const int val)
-	{
-		return val & 0x2000000 ? val | 0xfc000000 : val;
-	}
-
-	static int ext_s24(const int val)
-	{
-		return val & 0x800000 ? val | 0xff000000 : val;
-	}
-
-	static int ext_s16(const int val)
-	{
-		return val & 0x8000 ? val | 0xffff0000 : val;
-	}
-
-	static int ext_s8(const int val)
-	{
-		return val & 0x80 ? val | 0xffffff00 : val;
-	}
 
 	ADD_NULL_OPCODE(NOP);
 	

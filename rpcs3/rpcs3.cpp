@@ -19,6 +19,7 @@ bool Rpcs3App::OnInit()
 	ConLogFrame->Show();
 
 	m_MainFrame = new MainFrame();
+	Emu.Init();
 	m_MainFrame->Show();
 
 	return true;

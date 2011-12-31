@@ -117,8 +117,6 @@ public:
 
 	virtual void Decode(const int code)
 	{
-		m_op.Step();
-
 		if(code == 0)
 		{
 			m_op.NOP();
