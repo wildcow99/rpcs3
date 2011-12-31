@@ -3,10 +3,7 @@
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
-
 #include "rpcs3.h"
-
-#include <wx/generic/progdlgg.h>
 
 #define START_OPCODES_GROUP(x) /*x*/
 #define END_OPCODES_GROUP(x) /*x*/
@@ -27,52 +24,31 @@ void InitRotateMask()
 }
 
 /*
-u32 rotl32(const u32 x, const u8 n)
-{
-	return (x << n) | (x >> (32 - n));
-}
-
-u64 rotl64(const u64 x, const u8 n)
-{
-	return (x << n) | (x >> (64 - n));
-}
-
-u32 rotr32(const u32 x, const u8 n)
-{
-	return (x >> n) | (x << (32 - n));
-}
-
-u64 rotr64(const u64 x, const u8 n)
-{
-	return (x >> n) | (x << (64 - n));
-}
+u32 rotl32(const u32 x, const u8 n) const { return (x << n) | (x >> (32 - n)); }
+u32 rotr32(const u32 x, const u8 n) const { return (x >> n) | (x << (32 - n)); }
+u64 rotl64(const u64 x, const u8 n) const { return (x << n) | (x >> (64 - n)); }
+u64 rotr64(const u64 x, const u8 n) const { return (x >> n) | (x << (64 - n)); }
 */
 
-#define rotl64 _rotl64
 #define rotl32 _rotl
-#define rotr64 _rotr64
 #define rotr32 _rotr
+#define rotl64 _rotl64
+#define rotr64 _rotr64
 
-class PPU_Interpreter
-	: public PPU_Opcodes
-	//, public SysCalls
+class PPU_Interpreter : public PPU_Opcodes
 {
 private:
 	PPUThread& CPU;
 
 public:
-	PPU_Interpreter(PPUThread& cpu)
-		: CPU(cpu)
-		//, SysCalls(cpu)
+	PPU_Interpreter(PPUThread& cpu) : CPU(cpu)
 	{
 		InitRotateMask();
 		TestOpcodes();
 	}
 
 private:
-	virtual void Exit()
-	{
-	}
+	virtual void Exit() {}
 
 	virtual void TestOpcodes()
 	{
@@ -170,33 +146,14 @@ private:
 		VXOR(3, 4, 3);
 		if(CPU.VPR[3] != 0x7B41C5F0) ConLog.Error("Test VXOR is failed! [0x%s]", CPU.VPR[3].ToString());
 
-
 		CPU.VPR[3].Clear();
 		CPU.VPR[4].Clear();
-
-		//0x9A789B
-		//0x41e269
-		//0xc00001
-		/*
-		const u64 val = rotl64(0x789A789B789A789LL, 0x16);
-		ConLog.Warning("0x%llx", val);
-		for(u64 mask=0;;)
-		{
-			if((val & mask) == 0x6c00000)
-			{
-				ConLog.Warning("FOUNDED: mask 0x%x", mask);
-				break;
-			}
-
-			if(++mask == 0) break;
-		}
-		*/
 
 		for(uint n=0; n<63; ++n)
 		{
 			//To shift the contents of a register right by n bits, set SH = 64 - n and MB = n.
 			CPU.GPR[6] = 0x789A789B789A789BLL;
-			RLDICL(3, 6, 64 - n, n, false); //shift right by 4 bits
+			RLDICL(3, 6, 64 - n, n, false);
 			if(CPU.GPR[3] != 0x789A789B789A789BLL>>n) ConLog.Error("Test RLDICL (shift right %d) is failed! [0x%llx]", n, CPU.GPR[3]);
 		}
 
@@ -220,19 +177,6 @@ private:
 		
 		ConLog.Write("Opcodes test done.");
 		tested = true;
-	}
-
-	virtual void Step()
-	{
-		/*
-		static const u64 max_cycle = (PS3_CLK * 1000000ULL) / (1000 * 60);
-
-		if(++CPU.cycle >= max_cycle)
-		{
-			display->Flip();
-			CPU.cycle = 0;
-		}
-		*/
 	}
 
 	virtual void SysCall()
@@ -332,7 +276,7 @@ private:
 	virtual void BC(OP_REG bo, OP_REG bi, OP_sIMM bd, OP_REG aa, OP_REG lk)
 	{
 		if(!CheckCondition(bo, bi)) return;
-		CPU.SetBranch(condBranchTarget(aa ? 0 : CPU.PC, bd));
+		CPU.SetBranch(branchTarget(aa ? 0 : CPU.PC, bd));
 		if(lk) CPU.LR = CPU.PC + 4;
 	}
 	virtual void SC(const s32 sc_code)
@@ -355,7 +299,7 @@ private:
 		virtual void BCLR(OP_REG bo, OP_REG bi, OP_REG bh, OP_REG lk)
 		{
 			if(!CheckCondition(bo, bi)) return;
-			CPU.SetBranch(condBranchTarget(0, CPU.LR));
+			CPU.SetBranch(branchTarget(0, CPU.LR));
 			if(lk) CPU.LR = CPU.PC + 4;
 		}
 		virtual void CRNOR(OP_REG bt, OP_REG ba, OP_REG bb)
@@ -401,16 +345,16 @@ private:
 		virtual void BCCTR(OP_REG bo, OP_REG bi, OP_REG bh, OP_REG lk)
 		{
 			if(!CheckCondition(bo, bi)) return;
-			CPU.SetBranch(condBranchTarget(0, CPU.CTR));
+			CPU.SetBranch(branchTarget(0, CPU.CTR));
 			if(lk) CPU.LR = CPU.PC + 4;
 		}
 		virtual void BCTR()
 		{
-			CPU.SetBranch(condBranchTarget(0, CPU.CTR));
+			CPU.SetBranch(branchTarget(0, CPU.CTR));
 		}
 		virtual void BCTRL()
 		{
-			CPU.SetBranch(condBranchTarget(0, CPU.CTR));
+			CPU.SetBranch(branchTarget(0, CPU.CTR));
 			CPU.LR = CPU.PC + 4;
 		}
 	END_OPCODES_GROUP(G_13);
@@ -478,7 +422,6 @@ private:
 		{
 			const u64 mask = rotate_mask[mb][63-sh];
 			CPU.GPR[ra] = (CPU.GPR[ra] & ~mask) | (rotl64(CPU.GPR[rs], sh) & mask);
-
 			if(rc) CPU.UpdateCR0(CPU.GPR[ra]);
 		}
 	END_OPCODES_GROUP(G_1e);
@@ -601,33 +544,33 @@ private:
 		virtual void MTOCRF(OP_REG fxm, OP_REG rs)
 		{
 			//CHECK ME!
-			for(uint i=0, count=0; i<8; ++i)
+			uint i, count;
+			for(i=0, count=0; i<8; ++i)
 			{
-				if((fxm>>1)&0x1)
-				{
-					if(count++)
-					{
-						CPU.CR.CR = 0;
-						break;
-					}
-
-					//CR[4*i : 4*i+3] = RS[32+4*i : 32+4*i+3];
-					CPU.SetCR(i, (CPU.GPR[rs] >> (4*i)) & 0xf);
-				}
+				if((fxm >> 1) & 0x1) count++;
 			}
+
+			if(count == 1)
+			{
+				//CR[4*i : 4*i+3] = RS[32+4*i : 32+4*i+3];
+				CPU.SetCR(i, (CPU.GPR[rs] >> (4*i)) & 0xf);
+			}
+			//else
+			//	CPU.CR.CR = 0;
 		}
 		virtual void STWCX_(OP_REG rs, OP_REG ra, OP_REG rb)
 		{
 			CPU.SetCR(0, 0);
-			if(CPU.has_reserve32) return;
-
-			if(Memory.Read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) == CPU.reserve32)
+			if(CPU.has_reserve32)
 			{
-				Memory.Write32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], CPU.GPR[rs]);
-				CPU.UpdateCR_EQ(0, true);
+				if(Memory.Read32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb]) == CPU.reserve32)
+				{
+					Memory.Write32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], CPU.GPR[rs]);
+					CPU.UpdateCR_EQ(0, true);
+				}
 			}
 
-			CPU.UpdateCR_EQ(0, CPU.XER.SO);
+			CPU.UpdateCR_SO(0, CPU.XER.SO);
 		}
 		virtual void STWX(OP_REG rs, OP_REG ra, OP_REG rb)
 		{

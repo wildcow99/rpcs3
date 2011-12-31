@@ -30,8 +30,7 @@ int SysCalls::lv2TtyWrite(PPUThread& CPU)
 	ConLog.Warning("lv2TtyWrite: ch: %d, buf addr: %llx, len: %d", ch, buf_addr, len);
 	pwritelen = len;
 	if(!Memory.IsGoodAddr(buf_addr)) return CELL_UNKNOWN_ERROR;
-	if(len > 0) ConLog.Warning("lv2TtyWrite: %s", Memory.ReadString(buf_addr, len));
-	else ConLog.Warning("lv2TtyWrite: %s", Memory.ReadString(buf_addr));
-
+	const wxString& text = len > 0 ? Memory.ReadString(buf_addr, len) : Memory.ReadString(buf_addr);
+	Emu.GetDbgCon().Write(ch, text);
 	return CELL_OK;
 }

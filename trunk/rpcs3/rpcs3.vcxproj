@@ -93,7 +93,9 @@
     <ClCompile Include="Emu\Cell\PPCThreadManager.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
+    <ClCompile Include="Emu\DbgConsole.cpp" />
     <ClCompile Include="Emu\Display\Display.cpp" />
+    <ClCompile Include="Emu\Io\Pad.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />

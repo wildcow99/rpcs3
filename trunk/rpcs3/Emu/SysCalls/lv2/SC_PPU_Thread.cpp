@@ -76,7 +76,9 @@ int SysCalls::lv2PPUThreadGetPriority(PPUThread& CPU)
 
 int SysCalls::lv2PPUThreadGetStackInformation(PPUThread& CPU)
 {
-	ConLog.Warning("TODO: PPU[%d] thread get stack information!", CPU.GetId());
+	ConLog.Warning("PPU[%d] thread get stack information[r3: 0x%llx]", CPU.GetId(), CPU.GPR[3]);
+	Memory.Write32(CPU.GPR[3],   CPU.GetStackAddr());
+	Memory.Write32(CPU.GPR[3]+4, CPU.GetStackSize());
 	return CELL_OK;
 }
 

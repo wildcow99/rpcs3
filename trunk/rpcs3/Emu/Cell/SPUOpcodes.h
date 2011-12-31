@@ -17,7 +17,6 @@ class SPU_Opcodes
 {
 public:
 	virtual void Exit()=0;
-	virtual void Step()=0;
 	
 	ADD_NULL_OPCODE(NOP);
 
