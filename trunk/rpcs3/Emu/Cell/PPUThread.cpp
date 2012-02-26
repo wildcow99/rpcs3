@@ -17,7 +17,7 @@ PPUThread::~PPUThread()
 void PPUThread::DoReset()
 {
 	//reset regs
-	//memset(VPR,	 0, sizeof(VPR));
+	memset(VPR,	 0, sizeof(VPR));
 	memset(FPR,  0, sizeof(FPR));
 	memset(GPR,  0, sizeof(GPR));
 	memset(SPRG, 0, sizeof(SPRG));
@@ -30,14 +30,20 @@ void PPUThread::DoReset()
 	XER.XER	= 0;
 	FPSCR.FPSCR	= 0;
 
-	reserve32 = 0;
-	has_reserve32 = false;
+	cycle = 0;
+
+	reserve = false;
+	reserve_addr = 0;
 }
 
 void PPUThread::_InitStack()
 {
-	GPR[1] = Stack.GetEndAddr();
+	GPR[5] = stack_size + stack_addr - 0x50;
+	GPR[4] = GPR[5] + 0x10;
+	
+	GPR[1] = stack_point;
 	GPR[3] = m_arg;
+	GPR[13] = Emu.GetTLSAddr();
 }
 
 u64 PPUThread::GetFreeStackSize() const
@@ -49,10 +55,14 @@ void PPUThread::DoRun()
 {
 	switch(Ini.m_DecoderMode.GetValue())
 	{
-	case 0: m_dec = new PPU_Decoder(*new PPU_DisAsm(*this)); break;
+	case 0:
+		m_dec = new PPU_Decoder(*new PPU_DisAsm(*this));
+	break;
+
 	case 1:
 	case 2:
-		m_dec = new PPU_Decoder(*new PPU_Interpreter(*this)); break;
+		m_dec = new PPU_Decoder(*new PPU_Interpreter(*this));
+	break;
 	}
 }
 
@@ -75,7 +85,6 @@ void PPUThread::DoStop()
 
 void PPUThread::DoCode(const s32 code)
 {
-	static u8 cycle = 0;
 	if(++cycle > 220)
 	{
 		cycle = 0;

@@ -3,7 +3,7 @@
 enum ErrorCode
 {
 	CELL_OK				= 0x00000000,
-	CELL_EAGAIN			= 0x80010001, //The resource is temporarily unavailable.
+	CELL_EAGAIN			= 0x80010001, //The resource is temporarily unavailable
 	CELL_EINVAL			= 0x80010002, //An invalid argument value is specified
 	CELL_ENOSYS			= 0x80010003, //The feature is not yet implemented
 	CELL_ENOMEM			= 0x80010004, //Memory allocation failure
@@ -16,7 +16,7 @@ enum ErrorCode
 	CELL_ETIMEDOUT		= 0x8001000B, //The operation is timed out
 	CELL_EABORT			= 0x8001000C, //The operation is aborted
 	CELL_EFAULT			= 0x8001000D, //Invalid memory access
-	CELL_ESTAT			= 0x8001000F, //State of the target thread is invalid.
+	CELL_ESTAT			= 0x8001000F, //State of the target thread is invalid
 	CELL_EALIGN			= 0x80010010, //Alignment is invalid.
 	CELL_EKRESOURCE		= 0x80010011, //Shortage of the kernel resources
 	CELL_EISDIR			= 0x80010012, //The file is a directory

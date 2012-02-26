@@ -3,5 +3,5 @@
 class Decoder
 {
 public:
-	virtual void Decode(const int code)=0;
+	virtual void Decode(const u32 code)=0;
 };

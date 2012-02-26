@@ -8,18 +8,15 @@ class LogFrame
 	: public FrameBase
 	, public StepThread
 {
-	Semaphore m_sem_waitdata;
+	wxListView& m_log;
 
 public:
 	LogFrame();
 	~LogFrame();
-	virtual void Post();
 
-	bool runned;
+	bool Close(bool force = false);
 
 private:
-	wxListView& m_log;
-
 	virtual void OnColBeginDrag(wxListEvent& event);
 	virtual void OnResize(wxSizeEvent& event);
 	virtual void Step();
@@ -28,16 +25,12 @@ private:
 class LogWriter
 {
 	wxFile m_logfile;
-
-	wxColour m_bgcolour;
 	wxColour m_txtcolour;
 
 	wxString m_prefix;
 	wxString m_value;
 
-	virtual void Task();
-
-	virtual void WriteToLog(wxString prefix, wxString value, wxString colour/*, wxColour bgcolour = wxColour(L"Black")*/);
+	virtual void WriteToLog(wxString prefix, wxString value, wxString colour);
 
 public:
 	LogWriter();

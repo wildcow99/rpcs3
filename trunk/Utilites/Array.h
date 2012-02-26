@@ -14,16 +14,11 @@ public:
 
 	inline bool RemoveAt(const u64 from, const u64 count = 1)
 	{
-		if(from + count >= m_count) return false;
-		
-		/*
-		for(uint i=from; i<from+count; ++i)
-		{
-			free(m_array[i]);
-		}
-		*/
+		if(!m_count) return false;
+		const u64 to = from + count;
+		if(to > m_count) return false;
 
-		memmove(&m_array[from], &m_array[from+count], (m_count-(from+count)) * sizeof(T));
+		memmove(m_array + from, m_array + to, (m_count-to) * sizeof(T));
 
 		m_count -= count;
 		return true;
@@ -31,22 +26,42 @@ public:
 
 	inline void Add(T* data)
 	{
-		Add(*data);
-	}
-
-	inline void Add(T& data)
-	{
-		if(!m_array)
+		if(!m_count)
 		{
-			m_array = new T[1];
+			m_array = (T*)malloc(sizeof(T));
 		}
 		else
 		{
 			m_array = (T*)realloc(m_array, sizeof(T) * (m_count + 1));
 		}
 
-		m_array[m_count] = data;
+		memmove(m_array + m_count, data, sizeof(T));
 		m_count++;
+	}
+
+	inline void Add(T& data)
+	{
+		Add(&data);
+	}
+
+	inline void AddCpy(const T* data)
+	{
+		if(!m_count)
+		{
+			m_array = (T*)malloc(sizeof(T));
+		}
+		else
+		{
+			m_array = (T*)realloc(m_array, sizeof(T) * (m_count + 1));
+		}
+
+		memcpy(m_array + m_count, data, sizeof(T));
+		m_count++;
+	}
+
+	inline void AddCpy(const T& data)
+	{
+		AddCpy(&data);
 	}
 
 	inline void Clear()
@@ -62,6 +77,8 @@ public:
 	}
 
 	u64 GetCount() const { return m_count; }
+
+	T& operator[](u64 num) const { return m_array[num]; }
 };
 
 template<typename T> class ArrayF
@@ -96,7 +113,9 @@ public:
 		}
 
 		return RemoveFAt(from, count);
+
 	}
+
 	/*
 	inline void SetCount(const u64 count)
 	{
@@ -115,7 +134,7 @@ public:
 
 	inline void Add()
 	{
-		Add(new T());
+	Add(new T());
 	}*/
 
 	inline void Add(T& data)
@@ -159,6 +178,5 @@ public:
 	}
 
 	inline u64 GetCount() const { return m_count; }
-
 	T& operator[](u64 num) const { return *m_array[num]; }
 };

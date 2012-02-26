@@ -109,8 +109,8 @@ struct Elf64_Shdr
 		ConLog.Write("Size: %llx",			sh_size);
 		ConLog.Write("EntSize: %lld",		sh_entsize);
 		ConLog.Write("Flags: %llx",			sh_flags);
-		ConLog.Write("Link: %llx",			sh_link);
-		ConLog.Write("Info: %lld",			sh_info);
+		ConLog.Write("Link: %x",			sh_link);
+		ConLog.Write("Info: %x",			sh_info);
 		ConLog.Write("Address align: %llx",	sh_addralign);
 	}
 };

@@ -20,8 +20,12 @@
 
 class GSFrame_GL : public wxFrame
 {
+	void* data;
+
 public:
 	GSFrame_GL(wxWindow* parent);
+	void DrawString(u32 x, u32 y, u32 z, u64 string_addr);
+	void Flip();
 };
 
 #endif

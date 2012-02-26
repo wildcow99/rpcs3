@@ -76,6 +76,7 @@
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

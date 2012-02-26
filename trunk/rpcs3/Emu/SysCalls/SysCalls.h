@@ -4,6 +4,8 @@
 #include "Utilites/IdManager.h"
 #include "ErrorCodes.h"
 
+#define SYSCALLS_DEBUG
+
 class SysCallBase
 {
 private:
@@ -18,34 +20,42 @@ public:
 
 	void Log(const u32 id, wxString fmt, ...)
 	{
+#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
 		ConLog.Warning(GetName() + wxString::Format("[%d]: ", id) + wxString::FormatV(fmt, list));
 		va_end(list);
+#endif
 	}
 
 	void Log(wxString fmt, ...)
 	{
+#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
 		ConLog.Warning(GetName() + ": " + wxString::FormatV(fmt, list));
 		va_end(list);
+#endif
 	}
 
 	void Warning(const u32 id, wxString fmt, ...)
 	{
+#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
 		ConLog.Warning(GetName() + wxString::Format("[%d] warning: ", id) + wxString::FormatV(fmt, list));
 		va_end(list);
+#endif
 	}
 
 	void Warning(wxString fmt, ...)
 	{
+#ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
 		ConLog.Warning(GetName() + wxString::Format(" warning: ") + wxString::FormatV(fmt, list));
 		va_end(list);
+#endif
 	}
 
 	void Error(const u32 id, wxString fmt, ...)
@@ -73,10 +83,43 @@ static wxString FixPatch(const wxString& patch)
 	return patch;
 }
 
+//process
+extern int sys_process_getpid();
+int sys_game_process_exitspawn(	u64 path_addr, u64 argv_addr, u64 envp_addr,
+								u32 data, u32 data_size, int prio, u64 flags );
+
+//memory
+extern int sys_memory_container_create(u64 cid_addr, u32 yield_size);
+extern int sys_memory_container_destroy(u32 cid);
+extern int sys_memory_allocate(u32 size, u32 flags, u64 alloc_addr_addr);
+extern int sys_memory_get_user_memory_size(u64 mem_info_addr);
+
+//cellFs
+extern int cellFsOpen(const u64 path_addr, const int flags, const u64 fd_addr, const u64 arg_addr, const u64 size);
+extern int cellFsRead(const u32 fd, const u64 buf_addr, const u64 nbytes, const u64 nread_addr);
+extern int cellFsWrite(const u32 fd, const u64 buf_addr, const u64 nbytes, const u64 nwrite_addr);
+extern int cellFsClose(const u32 fd);
+extern int cellFsOpendir(const u64 path_addr, const u64 fd_addr);
+extern int cellFsReaddir(const u32 fd, const u64 dir_addr, const u64 nread_addr);
+extern int cellFsClosedir(const u32 fd);
+extern int cellFsStat(const u64 path_addr, const u64 sb_addr);
+extern int cellFsFstat(const u32 fd, const u64 sb_addr);
+extern int cellFsMkdir(const u64 path_addr, const u32 mode);
+extern int cellFsRename(const u64 from_addr, const u64 to_addr);
+extern int cellFsRmdir(const u64 path_addr);
+extern int cellFsUnlink(const u64 path_addr);
+extern int cellFsLseek(const u32 fd, const s64 offset, const u32 whence, const u64 pos_addr);
+
+#define SC_ARGS_1 CPU.GPR[3]
+#define SC_ARGS_2 SC_ARGS_1,CPU.GPR[4]
+#define SC_ARGS_3 SC_ARGS_2,CPU.GPR[5]
+#define SC_ARGS_4 SC_ARGS_3,CPU.GPR[6]
+#define SC_ARGS_5 SC_ARGS_4,CPU.GPR[7]
+#define SC_ARGS_6 SC_ARGS_5,CPU.GPR[8]
+#define SC_ARGS_7 SC_ARGS_6,CPU.GPR[9]
+
 class SysCalls
 {
-	IdManager SysCalls_IDs;
-
 public:
 	//process
 	int lv2ProcessGetPid(PPUThread& CPU);
@@ -104,6 +147,7 @@ public:
 	int lv2PPUThreadRename(PPUThread& CPU);
 	int lv2PPUThreadRecoverPageFault(PPUThread& CPU);
 	int lv2PPUThreadGetPageFaultContext(PPUThread& CPU);
+	int lv2PPUThreadGetId(PPUThread& CPU);
 
 	//lwmutex
 	int Lv2LwmutexCreate(PPUThread& CPU);
@@ -112,29 +156,9 @@ public:
 	int Lv2LwmutexTrylock(PPUThread& CPU);
 	int Lv2LwmutexUnlock(PPUThread& CPU);
 
-	//memory
-	int lv2MemContinerCreate(PPUThread& CPU);
-	int lv2MemContinerDestroy(PPUThread& CPU);
-	int lv2MemAllocate(PPUThread& CPU);
-	int lv2MemGetUserMemorySize(PPUThread& CPU);
-
 	//tty
 	int lv2TtyRead(PPUThread& CPU);
 	int lv2TtyWrite(PPUThread& CPU);
-
-	//filesystem
-	int lv2FsOpen(PPUThread& CPU);
-	int lv2FsRead(PPUThread& CPU);
-	int lv2FsWrite(PPUThread& CPU);
-	int lv2FsClose(PPUThread& CPU);
-	int lv2FsOpenDir(PPUThread& CPU);
-	int lv2FsReadDir(PPUThread& CPU);
-	int lv2FsCloseDir(PPUThread& CPU);
-	int lv2FsMkdir(PPUThread& CPU);
-	int lv2FsRename(PPUThread& CPU);
-	int lv2FsLSeek64(PPUThread& CPU);
-	int lv2FsRmdir(PPUThread& CPU);
-	int lv2FsUtime(PPUThread& CPU);
 
 public:
 	SysCalls()// : CPU(cpu)
@@ -148,16 +172,16 @@ public:
 
 	void Close()
 	{
-		SysCalls_IDs.Clear();
 	}
 
 	u64 DoSyscall(int code, PPUThread& CPU)
 	{
+		static const u64 timebase_frequency = 79800000;
 		switch(code)
 		{
 			//=== lv2 ===
 			//process
-			case 1: return lv2ProcessGetPid(CPU);
+			case 1: return sys_process_getpid();
 			case 2: return lv2ProcessWaitForChild(CPU);
 			case 4: return lv2ProcessGetStatus(CPU);
 			case 5: return lv2ProcessDetachChild(CPU);
@@ -181,6 +205,7 @@ public:
 			case 56: return lv2PPUThreadRename(CPU);
 			case 57: return lv2PPUThreadRecoverPageFault(CPU);
 			case 58: return lv2PPUThreadGetPageFaultContext(CPU);
+			//case ?: return lv2PPUThreadGetId(CPU);
 			//lwmutex
 			case 95: return Lv2LwmutexCreate(CPU);
 			case 96: return Lv2LwmutexDestroy(CPU);
@@ -188,33 +213,32 @@ public:
 			case 98: return Lv2LwmutexTrylock(CPU);
 			case 99: return Lv2LwmutexUnlock(CPU);
 			//time
-			case 146: return wxDateTime::GetTimeNow(); 	//sys_time_get_system_time
-			case 147: return 79800000; //get timebase frequency
+			case 146: ConLog.Warning("sys_time_get_system_time"); return CPU.TB / (timebase_frequency / 1000000);
+			case 147: ConLog.Warning("get timebase frequency"); return timebase_frequency; //get timebase frequency
 			//memory
-			case 324: return lv2MemContinerCreate(CPU);
-			case 325: return lv2MemContinerDestroy(CPU);
-			case 348: return lv2MemAllocate(CPU);
-			case 352: return lv2MemGetUserMemorySize(CPU);
+			case 324: return sys_memory_container_create(SC_ARGS_2);
+			case 325: return sys_memory_container_destroy(SC_ARGS_1);
+			case 348: return sys_memory_allocate(SC_ARGS_3);
+			case 352: return sys_memory_get_user_memory_size(SC_ARGS_1);
 			//tty
 			case 402: return lv2TtyRead(CPU);
 			case 403: return lv2TtyWrite(CPU);
 			//file system
-			case 801: return lv2FsOpen(CPU);
-			case 802: return lv2FsRead(CPU);
-			case 803: return lv2FsWrite(CPU);
-			case 804: return lv2FsClose(CPU);
-			case 805: return lv2FsOpenDir(CPU);
-			case 806: return lv2FsReadDir(CPU);
-			case 807: return lv2FsCloseDir(CPU);
-			case 811: return lv2FsMkdir(CPU);
-			case 812: return lv2FsRename(CPU);
-			case 813: return lv2FsRmdir(CPU);
-			case 818: return lv2FsLSeek64(CPU);
-			case 815: return lv2FsUtime(CPU);
+			case 801: return cellFsOpen(SC_ARGS_5);
+			case 802: return cellFsRead(SC_ARGS_4);
+			case 803: return cellFsWrite(SC_ARGS_4);
+			case 804: return cellFsClose(SC_ARGS_1);
+			case 805: return cellFsOpendir(SC_ARGS_2);
+			case 806: return cellFsReaddir(SC_ARGS_3);
+			case 807: return cellFsClosedir(SC_ARGS_1);
+			case 811: return cellFsMkdir(SC_ARGS_2);
+			case 812: return cellFsRename(SC_ARGS_2);
+			case 813: return cellFsRmdir(SC_ARGS_1);
+			case 818: return cellFsLseek(SC_ARGS_4);
 			case 988:
 				ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, r5: 0x%llx, pc: 0x%llx",
 					CPU.GPR[3], CPU.GPR[4], CPU.GPR[5], CPU.PC);
-				return 0;
+			return 0;
 		}
 
 		ConLog.Error("Unknown syscall: %d - %08x", code, code);

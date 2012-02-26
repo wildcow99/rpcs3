@@ -5,17 +5,22 @@
 
 PPCThreadManager::PPCThreadManager()
 {
-	Start();
 }
 
 PPCThreadManager::~PPCThreadManager()
 {
-	Exit();
 	Close();
 }
 
 void PPCThreadManager::Close()
 {
+	Exit();
+	while(m_threads.GetCount())
+	{
+		m_threads[0].Close();
+		RemoveThread(m_threads[0].GetId());
+	}
+	/*
 	ID thread;
 	u32 pos = 0;
 	while(m_threads_id.GetNext(pos, thread))
@@ -24,25 +29,33 @@ void PPCThreadManager::Close()
 	}
 
 	m_threads_id.Clear();
+	*/
 }
 
-u32 PPCThreadManager::AddThread(bool isPPU)
+PPCThread& PPCThreadManager::AddThread(bool isPPU)
 {
-	const u32 id =  m_threads_id.GetNewID(
-		isPPU ? "PPU Thread"			: "SPU Thread",
-		isPPU ? (void*)new PPUThread()	: (void*)new SPUThread(),
-		isPPU ? 1						: 2);
+	PPCThread* new_thread = isPPU ? (PPCThread*)new PPUThread() : (PPCThread*)new SPUThread();
 
-	(*(PPCThread*)m_threads_id.GetIDData(id).m_data).SetId(id);
-	return id;
+	const u32 id =
+		Emu.GetIdManager().GetNewID(wxString::Format("%s Thread", isPPU ? "PPU" : "SPU"), new_thread, 0);
+	new_thread->SetId(id);
+
+	m_threads.Add(new_thread);
+
+	return *new_thread;
 }
 
 void PPCThreadManager::RemoveThread(const u32 id)
 {
-	if(!m_threads_id.CheckID(id)) return;
-	ID& thread = m_threads_id.GetIDData(id);
-	(*(PPCThread*)thread.m_data).Stop();
-	m_threads_id.RemoveID(id);
+	if(!Emu.GetIdManager().CheckID(id)) return;
+	for(u32 i=0; i<m_threads.GetCount(); ++i)
+	{
+		if(m_threads[i].GetId() != id) continue;
+		m_threads[i].Stop();
+		m_threads.RemoveAt(i);
+		break;
+	}
+	Emu.GetIdManager().RemoveID(id);
 	Emu.CheckStatus();
 }
 
@@ -56,18 +69,16 @@ void PPCThreadManager::Step()
 	for(;;)
 	{
 		//emulation
-		ID thread;
-		u32 pos = 0;
-		while(m_threads_id.GetNext(pos, thread))
+		for(u32 i=0; i<m_threads.GetCount(); ++i)
 		{
-			(*(PPCThread*)thread.m_data).Exec();
+			m_threads[i].Exec();
 		}
 
 		//check status
 		//Emu.CheckStatus();
 		if(!Emu.IsRunned())
 		{
-			ConLog.Warning("BREAK LOOP! [%d:%d]", Emu.IsPaused(), Emu.IsStoped());
+			//ConLog.Warning("BREAK LOOP! [%d:%d]", Emu.IsPaused(), Emu.IsStoped());
 			break;
 		}
 	}

@@ -7,7 +7,7 @@
 class Semaphore
 {
 	sem_t semaphore;
-	bool isWait;
+	volatile bool isWait;
 
 public:
 	Semaphore(bool is_create = true)
@@ -65,7 +65,7 @@ public:
 class Mutex
 {
 	pthread_mutex_t mutex;
-	bool isLocked;
+	volatile bool isLocked;
 
 public:
 	Mutex(bool is_create = true)
@@ -81,7 +81,7 @@ public:
 	virtual void Create()
 	{
 		pthread_mutex_init(&mutex, NULL);
-		Lock();
+		isLocked = false;
 	}
 
 	virtual void Lock()
@@ -167,9 +167,10 @@ public:
 	virtual const bool Exit()
 	{
 		if(!isStarted) return false;
+		isStarted = false;
 
+		//pthread_cancel(thread);
 		Detach();
-		//Cancel();
 		return pthread_join(thread, NULL) == 0;
 	}
 
@@ -275,7 +276,7 @@ class StepThread : public ThreadBase
 {
 	Semaphore m_main_sem;
 	Mutex m_main_mtx;
-	bool exit;
+	volatile bool exit;
 
 protected:
 	StepThread(const wxString& name = "Unknown StepThread")
@@ -284,12 +285,17 @@ protected:
 	{
 	}
 
+	~StepThread()
+	{
+		Exit();
+	}
+
+public:
 	virtual const bool Exit()
 	{
-		const bool ret = ThreadBase::Exit();
+		if(!IsStarted() || exit) return false;
 		exit = true;
-		if(IsWait()) m_main_sem.Post();
-		return ret;
+		return ThreadBase::Exit();
 	}
 
 	bool IsWait() const
@@ -305,19 +311,17 @@ protected:
 private:
 	virtual void Task()
 	{
-		while(!exit)
+		exit = false;
+
+		for(;;)
 		{
 			m_main_sem.Wait();
+			ThreadAdv::TestCancel();
 			m_main_mtx.Lock();
-			if(exit) break;
-			ThreadAdv::TestCancel();
 			Step();
-			ThreadAdv::TestCancel();
 			m_main_mtx.Unlock();
+			ThreadAdv::TestCancel();
 		}
-
-		Detach();
-		ThreadAdv::Exit();
 	}
 
 	static void _CleanupInThread(void* arg) {((StepThread*)arg)->CleanupInThread();}

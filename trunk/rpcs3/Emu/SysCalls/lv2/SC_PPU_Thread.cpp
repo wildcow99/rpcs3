@@ -14,18 +14,17 @@ int SysCalls::lv2PPUThreadCreate(PPUThread& CPU)
 	ConLog.Write("**** flags: 0x%x", CPU.GPR[8]);
 	ConLog.Write("**** threadname: \"%s\"[0x%x]", Memory.ReadString(CPU.GPR[9]), CPU.GPR[9]);
 
-	if(!Memory.IsGoodAddr(CPU.GPR[4])) return PPU_THREAD_ID_INVALID;
+	if(!Memory.IsGoodAddr(CPU.GPR[4])) return CELL_EFAULT;
 
-	const u32 id = Emu.GetCPU().AddThread(true);
+	PPCThread& new_thread = Emu.GetCPU().AddThread(true);
 
-	CPU.GPR[3] = id;
-	PPCThread& new_thread = *(PPCThread*)Emu.GetCPU().GetIDs().GetIDData(id).m_data;
+	CPU.GPR[3] = new_thread.GetId();
 	new_thread.SetPc(CPU.GPR[4]);
 	new_thread.SetArg(CPU.GPR[5]);
-	//CPU.GPR[6];
+	new_thread.SetPrio(CPU.GPR[6]);
 	new_thread.stack_size = CPU.GPR[7];
 	//CPU.GPR[8];
-	//new_thread.name = Memory.ReadString(CPU.GPR[9]);
+	new_thread.SetName(Memory.ReadString(CPU.GPR[9]));
 	new_thread.Run();
 	return CELL_OK;
 }
@@ -33,8 +32,7 @@ int SysCalls::lv2PPUThreadCreate(PPUThread& CPU)
 int SysCalls::lv2PPUThreadExit(PPUThread& CPU)
 {
 	ConLog.Warning("PPU[%d] thread exit [return code: %lld]", CPU.GetId(), CPU.GPR[3]);
-	CPU.Close();
-	Emu.GetCPU().GetIDs().RemoveID(CPU.GetId());
+	Emu.GetCPU().RemoveThread(CPU.GetId());
 	return CELL_OK;
 }
 
@@ -52,32 +50,49 @@ int SysCalls::lv2PPUThreadJoin(PPUThread& CPU)
 
 int SysCalls::lv2PPUThreadDetach(PPUThread& CPU)
 {
-	ConLog.Warning("TODO: PPU[%d] thread detach!", CPU.GPR[3]);
+	ConLog.Warning("PPU[%d] thread detach", CPU.GPR[3]);
+	if(!Emu.GetIdManager().CheckID(CPU.GPR[3])) return CELL_ESRCH;
+	const ID& id = Emu.GetIdManager().GetIDData(CPU.GPR[3]);
+	if(!id.m_used) return CELL_ESRCH;
+	PPCThread& thread = *(PPCThread*)id.m_data;
+	if(thread.IsJoinable()) return CELL_EINVAL;
+	if(thread.IsJoining()) return CELL_EBUSY;
+	thread.SetJoinable(false);
+	if(!thread.IsRunned()) Emu.GetCPU().RemoveThread(thread.GetId());
 	return CELL_OK;
 }
 
 int SysCalls::lv2PPUThreadGetJoinState(PPUThread& CPU)
 {
-	ConLog.Warning("TODO: PPU[%d] thread detach!", CPU.GetId());
+	ConLog.Warning("PPU[%d] get join state", CPU.GetId());
+	Memory.Write32(CPU.GPR[3], CPU.IsJoinable() ? 1 : 0);
 	return CELL_OK;
 }
 
 int SysCalls::lv2PPUThreadSetPriority(PPUThread& CPU)
 {
-	ConLog.Warning("TODO: PPU[%d] thread set priority!", CPU.GPR[3]);
+	ConLog.Write("PPU[%d] thread set priority", CPU.GPR[3]);
+	if(!Emu.GetIdManager().CheckID(CPU.GPR[3])) return CELL_ESRCH;
+	const ID& id = Emu.GetIdManager().GetIDData(CPU.GPR[3]);
+	if(!id.m_used) return CELL_ESRCH;
+	CPU.SetPrio(CPU.GPR[4]);
 	return CELL_OK;
 }
 
 int SysCalls::lv2PPUThreadGetPriority(PPUThread& CPU)
 {
-	ConLog.Warning("TODO: PPU[%d] thread get priority!", CPU.GPR[3]);
+	ConLog.Write("PPU[%d] thread get priority", CPU.GPR[3]);
+	if(!Emu.GetIdManager().CheckID(CPU.GPR[3])) return CELL_ESRCH;
+	const ID& id = Emu.GetIdManager().GetIDData(CPU.GPR[3]);
+	if(!id.m_used) return CELL_ESRCH;
+	Memory.Write32(CPU.GPR[4], CPU.GetPrio());
 	return CELL_OK;
 }
 
 int SysCalls::lv2PPUThreadGetStackInformation(PPUThread& CPU)
 {
-	ConLog.Warning("PPU[%d] thread get stack information[r3: 0x%llx]", CPU.GetId(), CPU.GPR[3]);
-	Memory.Write32(CPU.GPR[3],   CPU.GetStackAddr());
+	ConLog.Write("PPU[%d] thread get stack information[r3: 0x%llx]", CPU.GetId(), CPU.GPR[3]);
+	Memory.Write32(CPU.GPR[3],   CPU.GetStackAddr() - CPU.GetStackSize());
 	Memory.Write32(CPU.GPR[3]+4, CPU.GetStackSize());
 	return CELL_OK;
 }
@@ -85,7 +100,7 @@ int SysCalls::lv2PPUThreadGetStackInformation(PPUThread& CPU)
 int SysCalls::lv2PPUThreadRename(PPUThread& CPU)
 {
 	ConLog.Write("PPU[%d] thread rename: [%s]", CPU.GPR[3], Memory.ReadString(CPU.GPR[4]));
-	return 0;
+	return CELL_OK;
 }
 
 int SysCalls::lv2PPUThreadRecoverPageFault(PPUThread& CPU)
@@ -97,5 +112,12 @@ int SysCalls::lv2PPUThreadRecoverPageFault(PPUThread& CPU)
 int SysCalls::lv2PPUThreadGetPageFaultContext(PPUThread& CPU)
 {
 	ConLog.Warning("TODO: PPU[%d] thread get page fault context!", CPU.GPR[3]);
+	return CELL_OK;
+}
+
+int SysCalls::lv2PPUThreadGetId(PPUThread& CPU)
+{
+	ConLog.Warning("PPU[%d] thread get id[r3: 0x%llx]", CPU.GetId(), CPU.GPR[3]);
+	Memory.Write64(CPU.GPR[3], CPU.GetId());
 	return CELL_OK;
 }

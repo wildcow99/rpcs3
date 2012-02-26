@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "CompilerELF.h"
-#include "Loader/ELF64.h"
 
 void Write8(wxFile& f, const u8 data)
 {
@@ -26,7 +25,182 @@ enum CompilerIDs
 {
 	id_analyze_code = 0x555,
 	id_compile_code,
+	id_load_elf,
 };
+
+wxFont GetFont(int size)
+{
+	return wxFont(size, wxMODERN, wxNORMAL, wxNORMAL);
+}
+
+enum MASKS
+{
+	MASK_ERROR = -1,
+	MASK_UNK,
+	MASK_NO_ARG,
+	MASK_RST_RA_IMM16,
+	MASK_RA_RST_IMM16,
+	MASK_BF_L_RA_IMM16,
+	MASK_BO_BI_BD_AA_LK,
+	MASK_SYS,
+	MASK_LL_AA_LK,
+	MASK_RA_RS_SH_MB_ME,
+	MASK_RST_RA_D,
+	MASK_RST_RA_DS,
+};
+
+static const struct Instruction
+{
+	MASKS mask;
+	wxString name;
+	u32 op_num;
+	u32 op_g;
+	bool oe;
+	bool rc;
+} m_instructions[] =
+{
+	//G_04 = 0x04,
+	{MASK_NO_ARG,			"nop",		0,		0, 0, 0},
+	{MASK_RST_RA_IMM16,		"mulli",	MULLI,	0, 0, 0},
+	{MASK_RST_RA_IMM16,		"subfic",	SUBFIC,	0, 0, 0},
+	//{0, "dozi", DOZI, 0, 0, 0},
+	{MASK_BF_L_RA_IMM16,	"cmpli",	CMPLI,	0, 0, 0},
+	{MASK_BF_L_RA_IMM16,	"cmpl",		CMPL,	0, 0, 0},
+	{MASK_RST_RA_IMM16,		"addic",	ADDIC,	0, 0, 0},
+	{MASK_RST_RA_IMM16,		"addic.",	ADDIC_,	0, 0, 1},
+	{MASK_RST_RA_IMM16,		"addi",		ADDI,	0, 0, 0},
+	{MASK_RST_RA_IMM16,		"addis",	ADDIS,	0, 0, 0},
+	{MASK_BO_BI_BD_AA_LK,	"bc",		BC,		0, 0, 0},
+	{MASK_SYS,				"sc",		SC,		0, 0, 0},
+	{MASK_LL_AA_LK,			"b",		B,		0, 0, 0},
+	//G_13 = 0x13,
+	{MASK_RA_RS_SH_MB_ME,	"rlwinm",	RLWINM,	0, 0, 0},
+	{MASK_RA_RS_SH_MB_ME,	"rlwinm.",	RLWINM,	0, 0, 1},
+	{MASK_RST_RA_IMM16,		"ori",		ORI,	0, 0, 0},
+	{MASK_RST_RA_IMM16,		"oris",		ORIS,	0, 0, 0},
+	{MASK_RST_RA_IMM16,		"xori",		XORI,	0, 0, 0},
+	{MASK_RST_RA_IMM16,		"xoris",	XORIS,	0, 0, 0},
+	{MASK_RA_RST_IMM16,		"andi.",	ANDI_,	0, 0, 1},
+	{MASK_RA_RST_IMM16,		"andis.",	ANDIS_,	0, 0, 1},
+	//G_1e = 0x1e,
+	//G_1f = 0x1f,
+	{MASK_RST_RA_D,			"lwz",		LWZ,	0, 0, 0},
+	{MASK_RST_RA_DS,		"lwzu",		LWZU,	0, 0, 0},
+	{MASK_RST_RA_D,			"lbz",		LBZ,	0, 0, 0},
+	{MASK_RST_RA_DS,		"lbzu",		LBZU,	0, 0, 0},
+	{MASK_RST_RA_D,			"stw",		STW,	0, 0, 0},
+	{MASK_RST_RA_DS,		"stwu",		STWU,	0, 0, 0},
+	{MASK_RST_RA_D,			"stb",		STB,	0, 0, 0},
+	{MASK_RST_RA_DS,		"stbu",		STBU,	0, 0, 0},
+	{MASK_RST_RA_D,			"lhz",		LHZ,	0, 0, 0},
+	{MASK_RST_RA_DS,		"lhzu",		LHZU,	0, 0, 0},
+	{MASK_RST_RA_D,			"lhz",		LHA,	0, 0, 0},
+	{MASK_RST_RA_DS,		"lhau",		LHAU,	0, 0, 0},
+	{MASK_RST_RA_D,			"sth",		STH,	0, 0, 0},
+	//{0, "lmw", LMW, 0, false, false},
+	//LFS = 0x30,
+	//LFSU = 0x31,
+	//LFD = 0x32,
+	//LFDU = 0x33,
+	//STFS = 0x34,
+	//STFD = 0x36,
+	//LFQ = 0x38,
+	//LFQU = 0x39,
+	//G_3a = 0x3a,
+	//G_3b = 0x3b,
+	//G_3e = 0x3e,
+	//G_3f = 0x3f,
+	{MASK_UNK, "unk", 0, 0},
+}, m_error_instr = {MASK_ERROR, "unk", 0, 0, 0, 0};
+static const u32 instr_count = WXSIZEOF(m_instructions);
+
+Instruction GetInstruction(const wxString& str)
+{
+	for(u32 i=0; i<instr_count; ++i)
+	{
+		if(!!m_instructions[i].name.Cmp(str)) continue;
+		return m_instructions[i];
+	}
+
+	return m_error_instr;
+}
+
+s32 SetField(s32 src, u32 from, u32 to)
+{
+	return (src & ((1 << ((to - from) + 1)) - 1)) << (31 - to);
+}
+
+s32 SetField(s32 src, u32 p)
+{
+	return (src & 0x1) << (31 - p);
+}
+
+u32 ToOpcode(s32 i)	{ return SetField(i, 0, 5); }
+u32 ToRS(s32 i)		{ return SetField(i, 6, 10); }
+u32 ToRT(s32 i)		{ return SetField(i, 6, 10); }
+u32 ToRA(s32 i)		{ return SetField(i, 11, 15); }
+u32 ToRB(s32 i)		{ return SetField(i, 16, 20); }
+u32 ToLL(s32 i)		{ return SetField(i, 6, 31); }
+u32 ToAA(s32 i)		{ return SetField(i, 30); }
+u32 ToLK(s32 i)		{ return SetField(i, 31); }
+u32 ToIMM16(s32 i)	{ return SetField(i, 16, 31); }
+u32 ToD(s32 i)		{ return SetField(i, 16, 31); }
+u32 ToDS(s32 i)
+{
+	if(i < 0) return ToD(i + 1);
+	return ToD(i);
+}
+u32 ToSYS(s32 i)	{ return SetField(i, 6, 31); }
+u32 ToBF(s32 i)		{ return SetField(i, 6, 10); }
+u32 ToBO(s32 i)		{ return SetField(i, 6, 10); }
+u32 ToBI(s32 i)		{ return SetField(i, 11, 15); }
+u32 ToBD(s32 i)		{ return SetField(i, 16, 31); }
+u32 ToMB(s32 i)		{ return SetField(i, 21, 25); }
+u32 ToME(s32 i)		{ return SetField(i, 26, 30); }
+u32 ToSH(s32 i)		{ return SetField(i, 16, 20); }
+u32 ToRC(s32 i)		{ return SetField(i, 31); }
+u32 ToOE(s32 i)		{ return SetField(i, 21); }
+u32 ToL(s32 i)		{ return SetField(i, 10); }
+
+u32 CompileInstruction(Instruction instr, wxArrayLong& arr)
+{
+	u32 code = ToOE(instr.oe) | ToRC(instr.rc);
+	switch(instr.op_g)
+	{
+	case 0:
+	default:
+		code |= ToOpcode(instr.op_num);
+	break;
+	}
+
+	switch(instr.mask)
+	{
+	case MASK_RST_RA_IMM16:
+		return code | ToRS(arr[0]) | ToRA(arr[1]) | ToIMM16(arr[2]);
+	case MASK_RA_RST_IMM16:
+		return code | ToRA(arr[0]) | ToRS(arr[1]) | ToIMM16(arr[2]);
+	case MASK_BF_L_RA_IMM16:
+		return code | ToBF(arr[0]) | ToL(arr[1])  | ToRA(arr[2]) | ToIMM16(arr[3]);
+	case MASK_BO_BI_BD_AA_LK:
+		return code | ToBO(arr[0]) | ToBI(arr[1]) | ToBD(arr[2]) | ToAA(arr[3]) | ToLK(arr[4]);
+	case MASK_SYS: 
+		return code | ToSYS(/*arr[0]*/1);
+	case MASK_LL_AA_LK:
+		return code | ToLL(arr[0]) | ToAA(arr[1]) | ToLK(arr[2]);
+	case MASK_RA_RS_SH_MB_ME:
+		return code | ToRA(arr[0]) | ToRS(arr[1]) | ToSH(arr[2]) | ToMB(arr[3]) | ToME(arr[4]);
+	case MASK_RST_RA_D:
+		return code | ToRS(arr[0]) | ToRA(arr[1]) | ToD(arr[2]);
+	case MASK_RST_RA_DS:
+		return code | ToRS(arr[0]) | ToRA(arr[1]) | ToDS(arr[2]);
+	case MASK_UNK:
+		return arr[0];
+	case MASK_NO_ARG:
+		return code;
+	}
+
+	return 0; //NOP
+}
 
 CompilerELF::CompilerELF(wxWindow* parent) : FrameBase(parent, wxID_ANY, "CompilerELF", wxEmptyString, wxSize(640, 680))
 {
@@ -36,47 +210,53 @@ CompilerELF::CompilerELF(wxWindow* parent) : FrameBase(parent, wxID_ANY, "Compil
 	wxMenu& menu_code(*new wxMenu());
 	menubar.Append(&menu_code, "Code");
 
-	menu_code.Append(id_analyze_code, "Analyze");
+	//menu_code.Append(id_analyze_code, "Analyze");
 	menu_code.Append(id_compile_code, "Compile");
+	menu_code.Append(id_load_elf, "Load ELF");
 
 	SetMenuBar(&menubar);
 
-	asm_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(500, 500),
-		wxTE_LEFT | wxTE_MULTILINE | wxTE_DONTWRAP);
-	hex_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(640, 180),
-		wxTE_LEFT | wxTE_MULTILINE | wxTE_READONLY | wxTE_DONTWRAP);	
+	asm_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+		wxTE_MULTILINE | wxTE_DONTWRAP | wxTE_RICH2);
+	hex_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(155, -1),
+		wxTE_MULTILINE | wxTE_DONTWRAP | wxTE_READONLY | wxTE_RICH2);    
 	err_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, 200),
-		wxTE_LEFT | wxTE_MULTILINE | wxTE_READONLY);
+		wxTE_MULTILINE | wxTE_READONLY);
 
-	hex_list->SetSize(155, -1);
+	const wxSize& client_size = GetClientSize();
 
 	m_aui_mgr.AddPane(asm_list, wxAuiPaneInfo().Name(L"asm_list").CenterPane().PaneBorder(false).CloseButton(false));
 	m_aui_mgr.AddPane(hex_list, wxAuiPaneInfo().Name(L"hex_list").Left().PaneBorder(false).CloseButton(false));
 	m_aui_mgr.AddPane(err_list, wxAuiPaneInfo().Name(L"err_list").Bottom().PaneBorder(false).CloseButton(false));
 	m_aui_mgr.GetPane(L"asm_list").Show();
 	m_aui_mgr.GetPane(L"hex_list").CaptionVisible(false).Show();
-	m_aui_mgr.GetPane(L"err_list").Caption("Output").Show();
+	m_aui_mgr.GetPane(L"err_list").Caption("Errors").Show();
 	m_aui_mgr.Update();
 
 	FrameBase::LoadInfo();
 
-	scroll_timer = new wxTimer(this);
-
+	m_update_scroll_timer = new wxTimer(this);
+	
 	Connect(asm_list->GetId(), wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler(CompilerELF::OnUpdate));
+	Connect(m_update_scroll_timer->GetId(), wxEVT_TIMER, wxTimerEventHandler(CompilerELF::OnUpdateScroll));
 	Connect(id_analyze_code, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::AnalyzeCode));
 	Connect(id_compile_code, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::CompileCode));
+	Connect(id_load_elf,	 wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(CompilerELF::LoadElf));
 
-	Connect(scroll_timer->GetId(), wxEVT_TIMER, wxTimerEventHandler(CompilerELF::OnUpdateScroll));
-
-	scroll_timer->Start(5);
-
+	m_update_scroll_timer->Start(5);
 	a_instr = new wxTextAttr(wxColour(0, 160, 0));
 
-	asm_list->SetFont(GetFont(16));
-	hex_list->SetFont(GetFont(16));
-
-	hex_list->Disable();
-
+	asm_list->SetValue(
+		"start_section_info\n"
+		"\tname \".text\"\n"
+		"\taddr 0x10230\n"
+		"\talign 0x4\n"
+		"\ttype 1\n"
+		"\tflags 6\n"
+		"end_section_info\n"
+		"\n"
+	);
+	/*
 	asm_list->SetValue(
 		"stdu r1,r1,-160\n"
 		"std r26,r1,112\n"
@@ -110,33 +290,20 @@ CompilerELF::CompilerELF(wxWindow* parent) : FrameBase(parent, wxID_ANY, "Compil
 		"mr r3, r0\n"
 		"li r11, 804\n"
 		"sc 2\n"
-	);
+	);*/
 }
 
 CompilerELF::~CompilerELF()
 {
-	scroll_timer->Stop();
+	m_update_scroll_timer->Stop();
 	m_aui_mgr.UnInit();
 }
 
-void CompilerELF::UpdateScroll()
+void CompilerELF::OnUpdate(wxCommandEvent& WXUNUSED(event))
 {
-	const int asm_count = asm_list->GetScrollPos(wxVERTICAL);
-	int hex_count = hex_list->GetScrollPos(wxVERTICAL);
-
-	if(asm_count == hex_count) return;
-
-	if(hex_count > asm_count)
-	{
-		for(; hex_count>asm_count; --hex_count)
-			::SendMessage((HWND)hex_list->GetHWND(), WM_VSCROLL, SB_LINEUP, 0);
-	}
-	else
-	{
-		const int lines_count = hex_list->GetNumberOfLines();
-		for(; hex_count<asm_count && hex_count<lines_count; ++hex_count)
-			::SendMessage((HWND)hex_list->GetHWND(), WM_VSCROLL, SB_LINEDOWN, 0);
-	}
+	DoAnalyzeCode(false);
+	UpdateScroll();
+	//TODO
 }
 
 void CompilerELF::OnUpdateScroll(wxTimerEvent& WXUNUSED(event))
@@ -144,16 +311,18 @@ void CompilerELF::OnUpdateScroll(wxTimerEvent& WXUNUSED(event))
 	UpdateScroll();
 }
 
-void CompilerELF::OnUpdate(wxCommandEvent& WXUNUSED(event))
+void CompilerELF::UpdateScroll()
 {
-	DoAnalyzeCode(false);
-	UpdateScroll();
-	//TODO...
+	return;
+	const int asm_count = asm_list->GetScrollPos(wxVERTICAL);
+	const int hex_count = hex_list->GetScrollPos(wxVERTICAL);
+
+	if(asm_count != hex_count) hex_list->ScrollLines(asm_count - hex_count);
 }
 
-void CompilerELF::WriteError(const wxString& error, const uint line)
+void CompilerELF::WriteError(const u32 line, const wxString& error)
 {
-	err_list->WriteText(wxString::Format("line %d: %s\n", line, error));
+	err_list->WriteText(wxString::Format("line %d: %s\n", line + 1, error));
 }
 
 bool Cmp(const wxString& s1, const wxString& s2, u64& from, u64& to)
@@ -200,80 +369,6 @@ int StringToReg(wxString str)
 	return -1;
 }
 
-enum MASKS
-{
-	MASK_ERROR,
-	R2_IMM16,
-	R1_IMM16,
-	IMM16,
-	LL_AA_LK,
-	R2_DS,
-	R2,
-};
-
-enum OPCODES
-{
-	O_STH,	O_ADDI, O_LI, O_SC, O_B,
-	O_BL,	O_MR,
-
-	O_LD, O_LDU,
-	O_STD, O_STDU,
-};
-
-MASKS OpcodeToMask(int opcode)
-{
-	switch(opcode)
-	{
-	case O_STH:
-		return R2_DS;
-
-	case O_LD: case O_LDU:
-	case O_STD: case O_STDU:
-	case O_ADDI:
-		return R2_IMM16;
-
-	case O_LI:
-		return R1_IMM16;
-
-	case O_SC:
-		return IMM16;
-
-	case O_MR:
-		return R2;
-
-	case O_BL:
-	case O_B:
-		return LL_AA_LK;
-
-	default: break;
-	}
-
-	return MASK_ERROR;
-}
-
-int StringToOpcode(const wxString& str)
-{
-	if(!str.Cmp("sth"))		return O_STH;
-	if(!str.Cmp("sc"))		return O_SC;
-	if(!str.Cmp("mr"))		return O_MR;
-	if(!str.Cmp("addi"))	return O_ADDI;
-	if(!str.Cmp("li"))		return O_LI;
-
-	//b
-		if(!str.Cmp("b"))	return O_B;
-		if(!str.Cmp("bl"))	return O_BL;
-	//
-
-	if(!str.Cmp("ld"))		return O_LD;
-	if(!str.Cmp("ldu"))		return O_LDU;
-	if(!str.Cmp("std"))		return O_STD;
-	if(!str.Cmp("stdu"))	return O_STDU;
-
-	if(!str.Cmp("T2M"))		return -2;
-
-	return -1;
-}
-
 bool StringToImm(wxString str, s64* imm)
 {
 	if(str.IsEmpty()) return false;
@@ -293,94 +388,7 @@ bool StringToImm(wxString str, s64* imm)
 	return true;
 }
 
-s32 SetField(s32 src, u32 from, u32 to)
-{
-	return (src & ((1 << ((to - from) + 1)) - 1)) << (31 - to);
-}
-
-s32 SetField(s32 src, u32 p)
-{
-	return (src & 0x1) << (31 - p);
-}
-
-//s32 ToOpcode(u32 i)	const { return i << 26; }
-s32 ToOpcode(s32 i)	{ return SetField(i, 0, 5); }
-s32 ToRS(s32 i)		{ return SetField(i, 6, 10); }
-s32 ToRT(s32 i)		{ return SetField(i, 6, 10); }
-s32 ToRA(s32 i)		{ return SetField(i, 11, 15); }
-s32 ToRB(s32 i)		{ return SetField(i, 16, 20); }
-s32 ToLL(s32 i)		{ return SetField(i, 6, 31); }
-s32 ToAA(s32 i)		{ return SetField(i, 30); }
-s32 ToLK(s32 i)		{ return SetField(i, 31); }
-s32 ToIMM16(s32 i)	{ return SetField(i, 16, 31); }
-s32 ToD(s32 i)		{ return SetField(i, 16, 31); }
-s32 ToDS(s32 i)
-{
-	if(i < 0) return ToD(i + 1);
-	return ToD(i);
-}
-
-int Compile(wxArrayLong& arr, MASKS mask)
-{
-	switch(mask)
-	{
-	case R2_IMM16:
-		switch(arr[0]) //opcode
-		{
-		case O_ADDI: return ToOpcode(ADDI)  | ToRT(arr[1]) | ToRA(arr[2]) | ToIMM16(arr[3]);
-		case O_LD: return ToOpcode(G_3a)  | SetField(0, 30, 31) | ToRT(arr[1]) | ToRA(arr[2]) | ToDS(arr[3]);
-		case O_LDU: return ToOpcode(G_3a) | SetField(1, 30, 31) | ToRT(arr[1]) | ToRA(arr[2]) | ToDS(arr[3]);
-		case O_STD: return ToOpcode(G_3e)  | SetField(0, 30, 31) | ToRT(arr[1]) | ToRA(arr[2]) | ToDS(arr[3]);
-		case O_STDU: return ToOpcode(G_3e) | SetField(1, 30, 31) | ToRT(arr[1]) | ToRA(arr[2]) | ToDS(arr[3]);
-		//case O_MULLI: return ToOpcode(MULLI) | ToRS(arr[1]) | ToRT(arr[2]) | ToIMM16(arr[3]);
-		}
-	break;
-
-	case R1_IMM16:
-		switch(arr[0]) //opcode
-		{
-		case O_LI: return ToOpcode(ADDI) | ToRT(arr[1]) | ToRA(0) | ToIMM16(arr[2]);
-		default: break;
-		}
-	break;
-
-	case IMM16:
-		switch(arr[0]) //opcode
-		{
-		case O_SC: return ToOpcode(SC) | ToIMM16(arr[1]);
-		default: break;
-		}
-	break;
-
-	case R2:
-		switch(arr[0])
-		{
-		case O_MR: return ToOpcode(G_1f) | SetField(OR, 22, 30) | ToRA(arr[1]) | ToRS(arr[2]) | ToRB(arr[2]);
-		default: break;
-		}
-	break;
-		
-	case LL_AA_LK:
-		switch(arr[0]) //opcode
-		{
-		case O_B: return ToOpcode(B) | ToLL(arr[1]) | ToAA(0) | ToLK(0);
-		case O_BL: return ToOpcode(B) | ToLL(arr[1]) | ToAA(0) | ToLK(1);
-		}
-	break;
-
-	case R2_DS:
-		switch(arr[0]) //opcode
-		{
-		case O_STH:  return ToOpcode(STH) | ToRS(arr[1]) | ToRA(arr[2]) | ToD(arr[3]);
-		default: break;
-		}
-	}
-
-	return 0; //NOP
-}
-
-
-bool IsSkipChar(const wxString& str)	{return !str.Cmp(" ") || !str.Cmp("	");}
+bool IsSkipChar(const wxString& str)	{return !str.Cmp("\t") || !str.Cmp(" ");}
 bool IsNewLine(const wxString& str)		{return !str.Cmp("\n");}
 bool IsBreakChar2(const wxString& str)	{return IsNewLine(str) || !str.Cmp(",") || !str.Cmp("#");}
 bool IsBreakChar(const wxString& str)	{return IsSkipChar(str) || IsBreakChar2(str);}
@@ -389,18 +397,18 @@ bool IsSkipRange(const wxString& str, const wxString& buf, const u64 p, const u6
 	return IsSkipChar(str) && buf.IsEmpty() && p != len - 1;
 }
 
-bool CompilerELF::SearchReg(u64& p, const wxString& str, const u64 line, wxArrayLong& arr)
+bool CompilerELF::SearchReg(u64& p, const wxString& line_text, const u32 line_num, const u32 line_len, wxArrayLong& arr)
 {
 	wxString buf = wxEmptyString;
 
-	for(p++; p<str.Length(); p++)
+	for(p++; p<line_len; p++)
 	{
-		const wxString& cur_str = str(p, 1);
-		if(IsSkipRange(cur_str, buf, p, str.Length())) continue;
+		const wxString& cur_str = line_text(p, 1);
+		if(IsSkipRange(cur_str, buf, p, line_len)) continue;
 
-		if(p == str.Length() - 1 || IsBreakChar(cur_str))
+		if(p == line_len - 1 || IsBreakChar(cur_str))
 		{
-			if(p == str.Length()-1 && !IsSkipChar(cur_str)) buf += cur_str;
+			if(p == line_len-1 && !IsSkipChar(cur_str)) buf += cur_str;
 
 			const int reg = StringToReg(buf);
 			if(reg == -1) break;
@@ -412,93 +420,29 @@ bool CompilerELF::SearchReg(u64& p, const wxString& str, const u64 line, wxArray
 		buf += cur_str;
 	}
 
-	WriteError(wxString::Format("Unknown register '%s'", buf), line);
+	WriteError(line_num, wxString::Format("Unknown register '%s'", buf));
 	return false;
 }
 
-enum ImmType
-{
-	IMM_NUM,
-	IMM_TEXT,
-};
-/*
-bool GetImm(u64& p, const wxString& str, const u64 line, wxArrayLong& arr, ImmType type)
-{
-	wxString buf = wxEmptyString;
-	for(; p<str.Length(); p++)
-	{
-		const wxString& cur_str = str(p, 1);
-		switch(type)
-		{
-		case IMM_TEXT:
-			if(cur_str.Cmp("\""))
-			{
-				arr.Add(*(s64*)buf(1, buf.Length()).c_str());
-				return true;
-			}
-			if(p == str.Length() - 1) goto _ERROR_;
-		break;
-
-		case IMM_NUM:
-			if(IsSkipRange(cur_str, buf, p, str.Length())) continue;
-
-			if(p == str.Length() - 1 || IsBreakChar(cur_str))
-			{
-				if(p == str.Length() - 1) buf += cur_str;
-				s64 imm;
-				bool is16 = !!buf(0, 2).Cmp("0x");
-				sscanf(buf, (is16 ? "0x%x" : "%d"), &imm);
-
-				if(imm == 0 && (buf.Length() > 1 || (buf.Length() == 1 && !!buf.Cmp("0"))))
-				{
-					goto _ERROR_;
-				}
-				arr.Add(imm);
-
-				return true;
-			}
-		break;
-		};
-
-		buf += cur_str;
-	}
-
-_ERROR_:
-	WriteError(wxString::Format("Unknown immediate '%s'", buf), line+1);
-	return false;
-}
-
-bool SearchImm(u64& p, const wxString& str, const u64 line, wxArrayLong& arr)
-{
-	ImmType type = IMM_NUM;
-	if(!str(p, 1).Cmp("\""))
-	{
-		p++;
-		type = IMM_TEXT;
-	}
-
-	return GetImm(p, str, line, arr, type);
-}
-*/
-bool CompilerELF::SearchImm(u64& p, const wxString& str, const u64 line, wxArrayLong& arr)
+bool CompilerELF::SearchImm(u64& p, const wxString& line_text, const u32 line_num, const u32 line_len, wxArrayLong& arr)
 {
 	wxString buf = wxEmptyString;
 
-	for(p++; p<str.Length(); p++)
+	for(p++; p<line_len; p++)
 	{
-		const wxString& cur_str = str(p, 1);
+		const wxString& cur_str = line_text(p, 1);
 			
 		s64 imm;
 		if(!buf(0, 1).Cmp("\""))
 		{
 			if(!cur_str.Cmp("\""))
 			{
-				for(p++; p<str.Length(); p++)
+				for(p++; p<line_len; p++)
 				{
-					if(!str(p, 1).Cmp("#")) break;
+					if(!line_text(p, 1).Cmp("#")) break;
 					if(!IsSkipChar(cur_str))
 					{
-						WriteError(wxString::Format("Unknown symbol '%s'", buf), line);
+						WriteError(line_num, wxString::Format("Unknown symbol '%s'", buf));
 						return false;
 					}
 				}
@@ -510,10 +454,10 @@ bool CompilerELF::SearchImm(u64& p, const wxString& str, const u64 line, wxArray
 		}
 		else
 		{
-			if(IsSkipChar(cur_str) && p != str.Length() - 1) continue;
-			if(p == str.Length() - 1 || !cur_str.Cmp(",") || !cur_str.Cmp("#"))
+			if(IsSkipChar(cur_str) && p != line_len - 1) continue;
+			if(p == line_len - 1 || !cur_str.Cmp(",") || !cur_str.Cmp("#"))
 			{
-				if(p == str.Length()-1 && !IsSkipChar(cur_str)) buf += cur_str;
+				if(p == line_len-1 && !IsSkipChar(cur_str)) buf += cur_str;
 					
 				if(StringToImm(buf, &imm))
 				{
@@ -527,28 +471,28 @@ bool CompilerELF::SearchImm(u64& p, const wxString& str, const u64 line, wxArray
 		buf += cur_str;
 	}
 		
-	WriteError(wxString::Format("Unknown immediate '%s'", buf), line);
+	WriteError(line_num, wxString::Format("Unknown immediate '%s'", buf));
 	return false;
 }
 
-bool CompilerELF::SearchText(u64& p, const wxString& str, const u64 line, wxString& dst)
+bool CompilerELF::SearchText(u64& p, const wxString& line_text, const u32 line_num, const u32 line_len, wxString& dst)
 {
 	wxString buf = wxEmptyString;
 
-	for(p++; p<str.Length(); ++p)
+	for(p++; p<line_len; ++p)
 	{
-		const wxString& cur_str = str(p, 1);
+		const wxString& cur_str = line_text(p, 1);
 
 		if(!buf(0, 1).Cmp("\""))
 		{
 			if(!cur_str.Cmp("\""))
 			{
-				for(p++; p<str.Length(); p++)
+				for(p++; p<line_len; p++)
 				{
-					if(!str(p, 1).Cmp("#")) break;
+					if(!line_text(p, 1).Cmp("#")) break;
 					if(!IsSkipChar(cur_str))
 					{
-						WriteError(wxString::Format("Unknown symbol '%s'", buf), line);
+						WriteError(line_num, wxString::Format("Unknown symbol '%s'", buf));
 						return false;
 					}
 				}
@@ -559,13 +503,13 @@ bool CompilerELF::SearchText(u64& p, const wxString& str, const u64 line, wxStri
 		}
 		else
 		{
-			if(IsSkipChar(cur_str) && p != str.Length() - 1) continue;
+			if(IsSkipChar(cur_str) && p != line_len - 1) continue;
 		}
 
 		buf += cur_str;
 	}
 
-	WriteError(wxString::Format("Text is not found! (%s)", buf), line);
+	WriteError(line_num, wxString::Format("Text is not found! (%s)", buf));
 	return false;
 }
 
@@ -625,278 +569,602 @@ void WriteShdrName(wxFile& f, const wxString& name, u32 sh_offset, u32& name_off
 	name_offs += name.Length() + 0x2;
 }
 
-void CompilerELF::DoAnalyzeCode(bool compile)
+void CompilerELF::LoadElf(wxCommandEvent& event)
 {
-	wxFile f;
+	wxFileDialog ctrl(this, L"Select ELF", wxEmptyString, wxEmptyString,
+		"Elf Files (*.elf, *.bin)|*.elf;*.bin|"
+		"All Files (*.*)|*.*",
+		wxFD_OPEN | wxFD_FILE_MUST_EXIST);
 
-	static const u32 ehdr_size = sizeof(Elf64_Ehdr);
-	static const u32 phdr_size = sizeof(Elf64_Phdr);
-	static const u32 shdr_size = sizeof(Elf64_Shdr);
+	if(ctrl.ShowModal() == wxID_CANCEL) return;
+	LoadElf(ctrl.GetPath());
+}
 
-	static const u32 phdr_count = 4;
-	static const u32 shdr_count = phdr_count + 1;
-	static const u32 phdr_rcount = phdr_count;
-	static const u32 shdr_rcount = shdr_count + 1;
+#include "Emu/Cell/PPUDisAsm.h"
+#include "Emu/Cell/PPUDecoder.h"
 
-	static const u32 phoff = ehdr_size + 0x2;
-	static const u32 shoff = phoff + (phdr_size * phdr_rcount) + 0x2;
-	static const u32 entry = 0x10200;
-
-	static const u32 string_addr = entry + 0x30000;
-	static const s32 strtab_offs = shoff + (shdr_size * shdr_rcount) + 0x2;
-
-	wxArrayString name_arr;
-	wxArrayString rodata_arr;
-	wxArrayInt rodata_offs;
-	wxArrayInt hex_arr;
-
-	Elf64_Ehdr ehdr;
-	Elf64_Phdr* phdr = NULL;
-	Elf64_Shdr* shdr = NULL;
-
-	u32 prog_offset;
-	u32 p_names_size;
-	u32 cur_string_addr;
-
-	u32 text_phdr_num;
-	u32 opd_phdr_num;
-	u32 got_phdr_num;
-	u32 rodata_phdr_num;
-
-	if(compile)
+void CompilerELF::LoadElf(const wxString& path)
+{
+	if(!wxFile::Access(path, wxFile::read))
 	{
-		hex_arr.Clear();
-		name_arr.Clear();
-		rodata_arr.Clear();
-		rodata_offs.Clear();
-		prog_offset = 0;
-		p_names_size = 0;
-		cur_string_addr = string_addr;
-
-		phdr = new Elf64_Phdr[phdr_count];
-		shdr = new Elf64_Shdr[shdr_count];
-
-		//TODO
-		ehdr.e_magic = 0x7F454C46;
-		ehdr.e_class = 2; //ELF64
-		ehdr.e_data = 2;
-		ehdr.e_curver = 1; //ver 1
-		ehdr.e_os_abi = 0x66; //Cell OS LV-2
-		ehdr.e_abi_ver = 0;
-		ehdr.e_type = 2; //EXEC (Executable file)
-		ehdr.e_machine = MACHINE_PPC64; //PowerPC64
-		ehdr.e_version = 1; //ver 1
-		ehdr.e_entry = entry;
-		ehdr.e_phoff = phoff;
-		ehdr.e_shoff = shoff;
-		ehdr.e_flags = 0x0;
-		ehdr.e_ehsize = ehdr_size;
-		ehdr.e_phentsize = phdr_size;
-		ehdr.e_phnum = phdr_rcount;
-		ehdr.e_shentsize = shdr_size;
-		ehdr.e_shnum = shdr_rcount;
-		ehdr.e_shstrndx = 1;
-
-		u32 phdr_num = 0;
-
-		text_phdr_num = phdr_num++;
-		phdr[text_phdr_num].p_type = 0x1;
-		phdr[text_phdr_num].p_flags = 0x4;
-		phdr[text_phdr_num].p_align = 0x10000;
-
-		opd_phdr_num = phdr_num++;
-		phdr[opd_phdr_num].p_type = 0x1;
-		phdr[opd_phdr_num].p_flags = 0x4;
-		phdr[opd_phdr_num].p_paddr = entry;
-		phdr[opd_phdr_num].p_align = 0x10000;
-		
-		got_phdr_num = phdr_num++;
-		phdr[got_phdr_num].p_type = 0x1;
-		phdr[got_phdr_num].p_flags = 0x4;
-		phdr[got_phdr_num].p_align = 0x10000;
-
-		rodata_phdr_num = phdr_num++;
-		phdr[rodata_phdr_num].p_type = 0x1;
-		phdr[rodata_phdr_num].p_flags = 0x4;
-		phdr[rodata_phdr_num].p_paddr = string_addr;
-		phdr[rodata_phdr_num].p_align = 0x10000;
-
-		name_arr.Add(".strtab");
-		shdr[0].sh_type = SHT_STRTAB;
-		shdr[0].sh_flags = 0;
-		shdr[0].sh_addr = 0;
-		shdr[0].sh_offset = strtab_offs;
-		shdr[0].sh_link = 0;
-		shdr[0].sh_info = 0;
-		shdr[0].sh_addralign = 1;
-		shdr[0].sh_entsize = 0;
-
-		name_arr.Add(".text");
-		shdr[1].sh_type = SHT_PROGBITS;
-		shdr[1].sh_flags = SHF_ALLOC | SHF_EXECINSTR;
-		shdr[1].sh_addr = 0;
-		shdr[1].sh_link = 0;
-		shdr[1].sh_info = 0;
-		shdr[1].sh_addralign = 4;
-		shdr[1].sh_entsize = 0;
-
-		name_arr.Add(".opd");
-		shdr[2].sh_type = SHT_PROGBITS;
-		shdr[2].sh_flags = SHF_ALLOC | SHF_WRITE;
-		shdr[2].sh_addr = 0;
-		shdr[2].sh_link = 0;
-		shdr[2].sh_info = 0;
-		shdr[2].sh_addralign = 8;
-		shdr[2].sh_entsize = 0;
-		
-		name_arr.Add(".got");
-		shdr[3].sh_type = SHT_PROGBITS;
-		shdr[3].sh_flags = SHF_ALLOC | SHF_WRITE;
-		shdr[3].sh_addr = 0;
-		shdr[3].sh_link = 0;
-		shdr[3].sh_info = 0;
-		shdr[3].sh_addralign = 8;
-		shdr[3].sh_entsize = 0;
-
-		name_arr.Add(".rodata");
-		shdr[4].sh_type = SHT_PROGBITS;
-		shdr[4].sh_flags = SHF_ALLOC;
-		shdr[4].sh_addr = 0;
-		shdr[4].sh_link = 0;
-		shdr[4].sh_info = 0;
-		shdr[4].sh_addralign = 8;
-		shdr[4].sh_entsize = 0;
-
-		for(uint i=0; i<name_arr.GetCount(); ++i)
-		{
-			p_names_size += name_arr[i].Length() * 2 + 0x2;
-		}
-
-		prog_offset = strtab_offs + p_names_size;
+		ConLog.Error("Error opening '%s'", path);
+		return;
 	}
 
-	const uint lines_count = (uint)asm_list->GetNumberOfLines();
-	u64 errors_count = 0;
+	Memory.Init();
 
-	hex_list->Clear();
-	err_list->Clear();
-
-	for(uint line=0, virt_line = 0; line<lines_count; ++line)
+	wxFile f(path);
+	ELF64Loader l(f);
+	if(!l.Load())
 	{
-		if(line > 0) hex_list->WriteText("\n");
-		if(compile && errors_count > 0) break;
-		wxString buf = wxEmptyString;
-		wxString str = asm_list->GetLineText(line);
+		ConLog.Error("Error loading '%s'", path);
+		Memory.Close();
+		l.Close();
+		return;
+	}
 
-		for(u64 p=0; p<str.Length(); ++p)
+	Memory.Close();
+	
+	Sleep(10);
+	asm_list->SetLabel(wxEmptyString);
+	asm_list->Freeze();
+	PPU_DisAsm disasm(*(PPCThread*)0, CompilerElfMode);
+	PPU_Decoder dec(disasm);
+
+	asm_list->WriteText("start_elf_info\n");
+	asm_list->WriteText(wxString::Format("\tentry 0x%x\n", l.ehdr.e_entry));
+	asm_list->WriteText(wxString::Format("\tshoff 0x%x\n", l.ehdr.e_shoff));
+	asm_list->WriteText(wxString::Format("\tcurver 0x%x\n", l.ehdr.e_curver));
+	asm_list->WriteText(wxString::Format("\tversion 0x%x\n", l.ehdr.e_version));
+	asm_list->WriteText(wxString::Format("\tflags 0x%x\n", l.ehdr.e_flags));
+	asm_list->WriteText("end_elf_info\n");
+	asm_list->WriteText("\n");
+
+	Sleep(5);
+
+	for(u32 p=0; p<l.phdr_arr.GetCount(); ++p)
+	{
+		asm_list->WriteText("start_program_info\n");
+
+		if(l.phdr_arr[p].p_vaddr != l.phdr_arr[p].p_paddr)
 		{
-			const wxString cur_str = str(p, 1);
+			asm_list->WriteText(wxString::Format("\tvaddr 0x%llx\n", l.phdr_arr[p].p_vaddr));
+			asm_list->WriteText(wxString::Format("\tpaddr 0x%llx\n", l.phdr_arr[p].p_paddr));
+		}
+		else
+		{
+			asm_list->WriteText(wxString::Format("\taddr 0x%llx\n", l.phdr_arr[p].p_vaddr));
+		}
 
-			if(!cur_str.Cmp("#") && p < str.Length() - 1) continue;
+		if(l.phdr_arr[p].p_filesz != l.phdr_arr[p].p_memsz) 
+			asm_list->WriteText(wxString::Format("\tmemsz 0x%llx\n", l.phdr_arr[p].p_memsz));
 
-			if(IsSkipChar(cur_str) || p == str.Length() - 1)
+		asm_list->WriteText(wxString::Format("\ttype 0x%x\n", l.phdr_arr[p].p_type));
+		asm_list->WriteText(wxString::Format("\tflags 0x%x\n", l.phdr_arr[p].p_flags));
+		asm_list->WriteText(wxString::Format("\talign 0x%llx\n", l.phdr_arr[p].p_align));
+		asm_list->WriteText("end_program_info\n");
+		asm_list->WriteText("\n");
+
+		if(!l.phdr_arr[p].p_offset) continue;
+		if(!l.phdr_arr[p].p_vaddr) continue;
+		f.Seek(l.phdr_arr[p].p_offset);
+		for(u32 o=0; o<l.phdr_arr[p].p_filesz;)
+		{
+			if(l.phdr_arr[p].p_align < 4)
 			{
-				if(!IsSkipChar(cur_str) && p == str.Length() - 1)
+				switch(l.phdr_arr[p].p_align)
 				{
-					buf += cur_str;
-				}
-
-				const int opcode = StringToOpcode(buf);
-				if(opcode == -1)
-				{
-					WriteError(wxString::Format("Unknown opcode '%s'", buf), line);
-					errors_count++;
-					continue;
-				}
-
-				wxArrayLong arr;
-				arr.Clear();
-				
-				if(opcode == -2)
-				{
-					if(!SearchReg(p, str, line, arr))
+					case 1:
 					{
-						errors_count++;
-						break;
+						const char c = Read8(f);
+						if(c) asm_list->WriteText(wxString::Format("unk \"%c\"\n", c));
+						else asm_list->WriteText(wxString::Format("unk 0x%02x\n", c));
 					}
+					break;
 
-					if(!SearchReg(p, str, line, arr))
-					{
-						errors_count++;
-						break;
-					}
+					case 2:
+						asm_list->WriteText(wxString::Format("unk 0x%04x\n", Read16(f)));
+					break;
 
-					wxString text = wxEmptyString;
-					if(!SearchText(p, str, line, text))
-					{
-						errors_count++;
-						break;
-					}
-
-					if(compile)
-					{
-						rodata_arr.Add(text);
-						rodata_offs.Add(cur_string_addr);
-
-						//r0 = addr
-						hex_arr.Add(ToOpcode(ADDI) | ToRT(arr[0]) | ToRA(0) | ToIMM16((u16)cur_string_addr));
-						hex_arr.Add(ToOpcode(ORIS) | ToRT(arr[0]) | ToRA(arr[0]) | ToIMM16(cur_string_addr >> 16));
-						//if((r1) > 0) r1 = len
-						if(arr[1])
-							hex_arr.Add(ToOpcode(ADDI) | ToRT(arr[1]) | ToRA(0) | ToIMM16(text.Length()));
-
-						cur_string_addr += text.Length() + 0x4;
-					}
-
+					default:
+						ConLog.Error("Bad program align! program: %d, align: %lld", p, l.phdr_arr[p].p_align);
 					break;
 				}
 
-				const MASKS mask = OpcodeToMask(opcode);
-				if(mask == MASK_ERROR)
+				o += l.phdr_arr[p].p_align;
+				continue;
+			}
+
+			const u32 code = Read32(f);
+			dec.Decode(code);
+			wxString opcode = wxEmptyString;
+			for(u32 i=0; i<disasm.last_opcode.Length(); ++i)
+			{
+				const wxString& s = disasm.last_opcode[i];
+				if(s == "\n" || s == " " || s == "#") break;
+				opcode += s;
+			}
+			Instruction instr = GetInstruction(opcode);
+			if(instr.mask == MASK_ERROR)
+			{
+				asm_list->WriteText(wxString::Format("unk 0x%x\n", code));
+			}
+			else
+			{
+				hex_list->SetInsertionPointEnd();
+				for(u32 j=0; j<disasm.last_opcode.Len(); ++j) *asm_list << disasm.last_opcode[j];
+			}
+
+			o += 4;
+		}
+
+		asm_list->WriteText("\n");
+	}
+
+	Sleep(5);
+
+	for(u32 i=0; i<l.shdr_arr.GetCount(); ++i)
+	{
+		if(l.shdr_name_arr.GetCount() <= i)
+		{
+			ConLog.Error("Error loading section names");
+			asm_list->SetLabel(wxEmptyString);
+			l.Close();
+			asm_list->Thaw();
+			return;
+		}
+
+		if(!l.shdr_name_arr[i].Length()) continue;
+		if(i == l.ehdr.e_shstrndx) continue;
+
+		bool data_in_program = false;
+		for(u32 p=0; p<l.phdr_arr.GetCount(); ++p)
+		{
+			if(!l.phdr_arr[p].p_offset) continue;
+			if(!l.phdr_arr[p].p_vaddr) continue;
+
+			if(!(l.phdr_arr[p].p_vaddr <= l.shdr_arr[i].sh_addr &&
+				l.phdr_arr[p].p_vaddr + l.phdr_arr[p].p_filesz >= l.shdr_arr[i].sh_addr + l.shdr_arr[i].sh_size)) continue;
+			data_in_program = true;
+			break;
+		}
+
+		asm_list->WriteText("start_section_info\n");
+		asm_list->WriteText(wxString::Format("\tname \"%s\"\n", l.shdr_name_arr[i]));
+		asm_list->WriteText(wxString::Format("\taddr 0x%llx\n", l.shdr_arr[i].sh_addr));
+		if(data_in_program) asm_list->WriteText(wxString::Format("\tsize 0x%llx\n", l.shdr_arr[i].sh_size));
+		asm_list->WriteText(wxString::Format("\talign %lld\n", l.shdr_arr[i].sh_addralign));
+		asm_list->WriteText(wxString::Format("\ttype %d\n", l.shdr_arr[i].sh_type));
+		asm_list->WriteText(wxString::Format("\tflags %lld\n", l.shdr_arr[i].sh_flags));
+		asm_list->WriteText("end_section_info\n");
+		asm_list->WriteText("\n");
+
+		if(data_in_program) continue;
+		f.Seek(l.shdr_arr[i].sh_offset);
+
+		for(u32 o = 0; o<l.shdr_arr[i].sh_size;)
+		{
+			if(l.shdr_arr[i].sh_addralign < 4)
+			{
+				switch(l.shdr_arr[i].sh_addralign)
 				{
-					WriteError(wxString::Format("Unknown opcode '%s' mask", buf), line);
-					errors_count++;
+					case 1:
+					{
+						const char c = Read8(f);
+						if(c) asm_list->WriteText(wxString::Format("unk \"%c\"\n", c));
+						else asm_list->WriteText(wxString::Format("unk 0x%02x\n", c));
+					}
+					break;
+
+					case 2:
+						asm_list->WriteText(wxString::Format("unk 0x%04x\n", Read16(f)));
+					break;
+
+					default:
+						ConLog.Error("Bad section align! section: \"%s\"[%d], align: %lld", l.shdr_name_arr[i], i, l.shdr_arr[i].sh_addralign);
 					break;
 				}
 
-				arr.Add(opcode);
-
-				switch(mask)
+				o += l.shdr_arr[i].sh_addralign;
+			}
+			else
+			{
+				const u32 code = Read32(f);
+				dec.Decode(code);
+				wxString opcode = wxEmptyString;
+				for(u32 i=0; i<disasm.last_opcode.Length(); ++i)
 				{
-				case R2:
-				case R2_DS:
-				case R2_IMM16:
-					if(!SearchReg(p, str, line, arr))
+					const wxString& s = disasm.last_opcode[i];
+					if(s == "\n" || s == " " || s == "#") break;
+					opcode += s;
+				}
+				Instruction instr = GetInstruction(opcode);
+				if(instr.mask == MASK_ERROR)
+				{
+					asm_list->WriteText(wxString::Format("unk 0x%x\n", code));
+				}
+				else
+					asm_list->WriteText(disasm.last_opcode);
+
+				o += 4;
+			}
+		}
+
+		asm_list->WriteText("\n");
+	}
+
+	asm_list->Thaw();
+	l.Close();
+}
+
+enum
+{
+	LNTYPE_NULL,
+	LNTYPE_COMMIT,
+	LNTYPE_INSTR,
+	LNTYPE_SECTION,
+	LNTYPE_PROGRAM,
+	LNTYPE_ELF,
+};
+
+
+bool CmpLine(const wxString& line_text, const wxString& text)
+{
+	const u32 line_len = line_text.Length();
+	wxString buf = wxEmptyString;
+
+	for(u64 p=0; p<line_len; ++p)
+	{
+		const wxString& cur_str = line_text(p, 1);
+
+		const bool skip = cur_str == " " || cur_str == "\t";
+		const bool end_ln = p == line_len - 1;
+		const bool stop = cur_str == "#" || end_ln;
+
+		if(!buf.IsEmpty())
+		{
+			if(skip || stop)
+			{
+				if(end_ln) buf += cur_str;
+				return buf == text;
+			}
+		}
+
+		if(skip) continue;
+		if(stop)
+		{
+			if(end_ln) buf += cur_str;
+			return buf == text;
+		}
+
+		buf += cur_str;
+	}
+
+	return false;
+}
+
+u32 SearchLineType(const wxString& line_text)
+{
+	const u32 line_len = line_text.Length();
+
+	for(u64 p=0; p<line_len; ++p)
+	{
+		const wxString& cur_str = line_text(p, 1);
+		if(cur_str == " " || cur_str == "\t") continue;
+		if(cur_str == "#") return LNTYPE_COMMIT;
+		if(CmpLine(line_text(p, line_len), "start_section_info")) return LNTYPE_SECTION;
+		if(CmpLine(line_text(p, line_len), "start_program_info")) return LNTYPE_PROGRAM;
+		if(CmpLine(line_text(p, line_len), "start_elf_info")) return LNTYPE_ELF;
+		return LNTYPE_INSTR;
+	}
+
+	return LNTYPE_NULL;
+}
+
+void WriteLine(wxTextCtrl* hex_list, int line, const wxString& text)
+{
+	if(hex_list->GetNumberOfLines() <= line)
+	{
+		while(hex_list->GetNumberOfLines() <= line)
+		{
+			hex_list->SetInsertionPointEnd();
+			hex_list->WriteText("\n");
+		}
+
+		hex_list->SetInsertionPointEnd();
+		hex_list->WriteText(text);
+		return;
+	}
+
+	const wxString& label = hex_list->GetLabel();
+	u32 cl=0;
+	for(u32 p=0; p<label.Length(); ++p)
+	{
+		if(cl != line)
+		{
+			if(label[p] == '\n') cl++;
+			continue;
+		}
+
+		u32 pend;
+		for(pend = p + 1; pend<label.Length(); ++pend)
+		{
+			if(label[pend] == '\n') break;
+		}
+
+		if(pend - 1 != p)
+		{
+			pend = pend == label.Length() ? pend : pend - 1;
+			if(!!label(p, pend - p).Cmp(text) && text.Length()) return;
+			hex_list->Remove(p, pend);
+		}
+
+		hex_list->SetInsertionPoint(p);
+		hex_list->WriteText(text);
+		return;
+	}
+	hex_list->SetInsertionPointEnd();
+	hex_list->WriteText(text);
+}
+
+void SetLineCount(wxTextCtrl* hex_list, int count)
+{
+	const wxString& label = hex_list->GetLabel();
+
+	if(hex_list->GetNumberOfLines() <= count) return;
+
+	int cl = hex_list->GetNumberOfLines();
+	for(u32 p=label.Length() - 1; p; --p)
+	{
+		if(cl != count)
+		{
+			if(label[p] == '\n') cl--;
+			continue;
+		}
+
+		hex_list->Remove(p + 1, label.Length());
+		return;
+	}
+}
+
+int CompilerELF::CompileLine_Instr(wxString line_text, const u32 line_num, const u32 line_len, bool& has_error)
+{
+	wxString buf = wxEmptyString;
+	has_error = false;
+
+	for(u64 p=0; p<line_len; ++p)
+	{
+		const wxString cur_str = line_text(p, 1);
+
+		const bool skip = !cur_str.Cmp(" ") || !cur_str.Cmp("\t");
+		const bool commit = !cur_str.Cmp("#");
+		const bool end_line = p == line_len - 1;
+		const bool buf_has_data = buf.Length() > 0;
+
+		const bool break_search = commit || end_line;
+		const bool skip_search = skip;
+		if(break_search && !buf_has_data) break;
+		if(skip_search && !buf_has_data) continue;
+
+		if(skip_search || break_search)
+		{
+			if(!IsSkipChar(cur_str) && p == line_len - 1) buf += cur_str;
+
+			const wxString& opcode = buf;
+			wxArrayLong arr;
+			arr.Clear();
+
+			Instruction instr = GetInstruction(opcode);
+#define SEARCH_ERROR \
+	{ \
+		has_error = true; \
+		break; \
+	} \
+
+#define SEARCH_REG if(!SearchReg(p, line_text, line_num, line_len, arr)) SEARCH_ERROR
+#define SEARCH_IMM if(!SearchImm(p, line_text, line_num, line_len, arr)) SEARCH_ERROR
+
+			switch(instr.mask)
+			{
+			case MASK_NO_ARG:
+			break;
+
+			case MASK_UNK:
+				SEARCH_IMM;
+			break;
+
+			case MASK_RST_RA_D:
+			case MASK_RST_RA_DS:
+			case MASK_RST_RA_IMM16:
+			case MASK_RA_RST_IMM16:
+				SEARCH_REG;
+				SEARCH_REG;
+				SEARCH_IMM;
+			break;
+
+			case MASK_BF_L_RA_IMM16:
+				SEARCH_IMM;
+				SEARCH_IMM;
+				SEARCH_REG;
+				SEARCH_IMM;
+			break;
+
+			case MASK_BO_BI_BD_AA_LK:
+				SEARCH_IMM;
+				SEARCH_IMM;
+				SEARCH_IMM;
+				SEARCH_IMM;
+				SEARCH_IMM;
+			break;
+
+			case MASK_SYS:
+				//SEARCH_IMM;
+			break;
+
+			case MASK_LL_AA_LK:
+				SEARCH_IMM;
+				SEARCH_IMM;
+				SEARCH_IMM;
+			break;
+
+			case MASK_RA_RS_SH_MB_ME:
+				SEARCH_REG;
+				SEARCH_REG;
+				SEARCH_IMM;
+				SEARCH_IMM;
+				SEARCH_IMM;
+			break;
+
+			case MASK_ERROR:
+			default:
+				WriteError(line_num, wxString::Format("Unknown opcode '%s'", opcode));
+				has_error = true;
+			break;
+			}
+
+			if(has_error) return -1;
+			return CompileInstruction(instr, arr);
+		}
+
+		buf += cur_str;
+	}
+
+	WriteError(line_num, wxString::Format("Unknown opcode '%s'", line_text));
+	has_error = true;
+	return -1;
+}
+
+void CompilerELF::CompileLine_Section(Array<SectionInfo>& sections_info, u64& errors_count, u32& addr, u32& current_section, u32& line_num, const u32 lines_count)
+{
+	bool end_search = false;
+	SectionInfo info;
+	memset(&info.shdr, 0, sizeof(info.shdr));
+	info.shdr.sh_addr = 0x10200;
+	info.shdr.sh_addralign = 4;
+	for(line_num++; line_num<lines_count && !end_search; ++line_num)
+	{
+		WriteLine(hex_list, line_num, wxEmptyString);
+		wxString buf = wxEmptyString;
+		const wxString& line_text = asm_list->GetLineText(line_num);
+		const u32 line_len = line_text.length();
+		for(u64 p=0; p<line_len; ++p)
+		{
+			const wxString& cur_str = line_text(p, 1);
+			const bool skip = cur_str == " " || cur_str == "\t";
+			const bool commit = cur_str == "#";
+			const bool end_ln = p == line_len - 1;
+			const bool is_buf_empty = buf.Length() == 0;
+			if(is_buf_empty)
+			{
+				if(skip) continue;
+				if(commit || end_ln) break;
+			}
+			else if(skip || commit || end_ln)
+			{
+				if(end_ln) buf += cur_str;
+						
+				if(!buf.Cmp("end_section_info"))
+				{
+					addr = info.shdr.sh_addr;
+					current_section = sections_info.GetCount();
+					sections_info.AddCpy(info);
+					end_search = true;
+				}
+				else if(!buf.Cmp("name"))
+				{
+					SearchText(p, line_text, line_num, line_len, info.name);
+				}
+				else if(!buf.Cmp("addr"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
 					{
 						errors_count++;
 						break;
 					}
-				case R1_IMM16:
-					if(!SearchReg(p, str, line, arr))
+
+					info.shdr.sh_addr = imm[0];
+				}
+				else if(!buf.Cmp("size"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
 					{
 						errors_count++;
 						break;
 					}
-				if(mask == R2) break;
 
-				case LL_AA_LK:
-				case IMM16:
-					if(!SearchImm(p, str, line, arr))
+					info.shdr.sh_size = imm[0];
+				}
+				else if(!buf.Cmp("offset"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
 					{
 						errors_count++;
 						break;
 					}
-				break;
-				};
 
-				if(errors_count > 0) break;
+					info.shdr.sh_offset = imm[0];
+				}
+				else if(!buf.Cmp("align"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
 
-				const s32 compiled = Compile(arr, mask);
-				hex_list->WriteText(wxString::Format("%08x", compiled));
+					info.shdr.sh_addralign = imm[0];
+				}
+				else if(!buf.Cmp("flags"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
 
-				if(compile) hex_arr.Add(compiled);
+					info.shdr.sh_flags = imm[0];
+				}
+				else if(!buf.Cmp("type"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
 
-				virt_line++;
+					info.shdr.sh_type = imm[0];
+				}
+				else if(!buf.Cmp("info"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+
+					info.shdr.sh_info = imm[0];
+				}
+				else
+				{
+					WriteError(line_num, wxString::Format("Unknown section info command '%s'", buf));
+					errors_count++;
+					end_search = true;
+				}
+
 				break;
 			}
 
@@ -904,102 +1172,486 @@ void CompilerELF::DoAnalyzeCode(bool compile)
 		}
 	}
 
-	if(compile)
+	if(end_search) line_num--;
+}
+
+void CompilerELF::CompileLine_Program(Array<ProgramInfo>& programs_info, u64& errors_count, u32& addr, u32& current_program, u32& line_num, const u32 lines_count)
+{
+	bool end_search = false;
+	ProgramInfo info;
+	memset(&info.phdr, 0, sizeof(info.phdr));
+	info.phdr.p_type = 0x00000001;
+	info.phdr.p_vaddr = info.phdr.p_paddr = 0x10200;
+
+	for(line_num++; line_num<lines_count && !end_search; ++line_num)
 	{
-		if(errors_count == 0)
+		WriteLine(hex_list, line_num, wxEmptyString);
+		wxString buf = wxEmptyString;
+		const wxString& line_text = asm_list->GetLineText(line_num);
+		const u32 line_len = line_text.length();
+		for(u64 p=0; p<line_len; ++p)
 		{
-			f.Open("compiled.elf", wxFile::write);
-			f.Seek(0);
-			WriteEhdr(f, ehdr);
-
-			//Exit
-			hex_arr.Add(0x38600006);
-			hex_arr.Add(0x39600016);
-			hex_arr.Add(0x44000002);
-			//
-
-			phdr[0].p_filesz = hex_arr.GetCount() * 4;
-			phdr[0].p_paddr = entry - phdr[0].p_filesz - 0x4;
-
-			phdr[opd_phdr_num].p_filesz = sizeof(u64);
-
-			phdr[got_phdr_num].p_filesz = rodata_arr.GetCount() * 4;
-			phdr[got_phdr_num].p_paddr =
-				phdr[got_phdr_num-1].p_paddr +
-				phdr[got_phdr_num-1].p_filesz +
-				0x4;
-
-			phdr[rodata_phdr_num].p_filesz = cur_string_addr - phdr[rodata_phdr_num].p_paddr;
-
-			for(uint i=0, p_offset = phoff; i<phdr_count; ++i, p_offset += phdr_size)
+			const wxString& cur_str = line_text(p, 1);
+			const bool skip = cur_str == " " || cur_str == "\t";
+			const bool commit = cur_str == "#";
+			const bool end_ln = p == line_len - 1;
+			const bool is_buf_empty = buf.Length() == 0;
+			if(is_buf_empty)
 			{
-				phdr[i].p_offset = prog_offset;
-				phdr[i].p_memsz = phdr[i].p_filesz;
-				phdr[i].p_vaddr = phdr[i].p_paddr;
-				f.Seek(p_offset);
-				WritePhdr(f, phdr[i]);
-				prog_offset += phdr[i].p_filesz + 0x4;
+				if(skip) continue;
+				if(commit || end_ln) break;
 			}
-
-			for(uint i=0, name_offs = 0xb, sh_offset = shoff + shdr_size; i<shdr_count; ++i, sh_offset += shdr_size)
+			else if(skip || commit || end_ln)
 			{
-				if(ehdr.e_shstrndx-1 == i)
+				if(end_ln) buf += cur_str;
+						
+				if(!buf.Cmp("end_program_info"))
 				{
-					shdr[i].sh_size = p_names_size;
+					addr = info.phdr.p_vaddr;
+					current_program = programs_info.GetCount();
+					programs_info.AddCpy(info);
+					end_search = true;
+				}
+				else if(!buf.Cmp("align"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					info.phdr.p_align = imm[0];
+				}
+				else if(!buf.Cmp("filesz"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					info.phdr.p_filesz = imm[0];
+				}
+				else if(!buf.Cmp("memsz"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					info.phdr.p_memsz = imm[0];
+				}
+				else if(!buf.Cmp("vaddr"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					info.phdr.p_vaddr = imm[0];
+				}
+				else if(!buf.Cmp("paddr"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					info.phdr.p_paddr = imm[0];
+				}
+				else if(!buf.Cmp("addr"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					info.phdr.p_vaddr = info.phdr.p_paddr = imm[0];
+				}
+				else if(!buf.Cmp("type"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					info.phdr.p_type = imm[0];
+				}
+				else if(!buf.Cmp("flags"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					info.phdr.p_flags = imm[0];
 				}
 				else
 				{
-					shdr[i].sh_size = phdr[i-1].p_filesz;
-					shdr[i].sh_offset = phdr[i-1].p_offset;
-					shdr[i].sh_addr = phdr[i-1].p_paddr;
+					WriteError(line_num, wxString::Format("Unknown program info command '%s'", buf));
+					errors_count++;
+					end_search = true;
 				}
 
-				shdr[i].sh_name = name_offs;
-
-				f.Seek(sh_offset);
-				WriteShdr(f, shdr[i]);
-
-				WriteShdrName(f, name_arr[i], strtab_offs, name_offs);
+				break;
 			}
 
-			f.Seek(phdr[text_phdr_num].p_offset);
+			buf += cur_str;
+		}
+	}
 
-			for(uint i=0; i<hex_arr.GetCount(); ++i)
+	if(end_search) line_num--;
+}
+
+void CompilerELF::CompileLine_Elf(Elf64_Ehdr& elf_info, u64& errors_count, u32& line_num, const u32 lines_count)
+{
+	bool end_search = false;
+
+	for(line_num++; line_num<lines_count && !end_search; ++line_num)
+	{
+		WriteLine(hex_list, line_num, wxEmptyString);
+		wxString buf = wxEmptyString;
+		const wxString& line_text = asm_list->GetLineText(line_num);
+		const u32 line_len = line_text.length();
+		for(u64 p=0; p<line_len; ++p)
+		{
+			const wxString& cur_str = line_text(p, 1);
+			const bool skip = cur_str == " " || cur_str == "\t";
+			const bool commit = cur_str == "#";
+			const bool end_ln = p == line_len - 1;
+			const bool is_buf_empty = buf.Length() == 0;
+			if(is_buf_empty)
 			{
-				Write32(f, hex_arr[i]);
+				if(skip) continue;
+				if(commit || end_ln) break;
 			}
-				
-			f.Seek(phdr[opd_phdr_num].p_offset);
-			Write32(f, phdr[0].p_paddr);
-			Write32(f, 0x00010000);
-
-			wxArrayInt got_list;
-
-			for(uint i=0; i<rodata_arr.GetCount(); ++i)
+			else if(skip || commit || end_ln)
 			{
-				got_list.Add(rodata_offs[i]);
-				f.Seek(phdr[rodata_phdr_num].p_offset + (rodata_offs[i] - phdr[rodata_phdr_num].p_paddr));
-				f.Write(rodata_arr[i]);
-				Write32(f, 0x00000000);
+				if(end_ln) buf += cur_str;
+						
+				if(!buf.Cmp("end_elf_info"))
+				{
+					end_search = true;
+				}
+				else if(!buf.Cmp("abi_ver"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					elf_info.e_abi_ver = imm[0];
+				}
+				else if(!buf.Cmp("curver"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					elf_info.e_curver = imm[0];
+				}
+				else if(!buf.Cmp("version"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					elf_info.e_version = imm[0];
+				}
+				else if(!buf.Cmp("entry"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					elf_info.e_entry = imm[0];
+				}
+				else if(!buf.Cmp("flags"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					elf_info.e_flags = imm[0];
+				}
+				else if(!buf.Cmp("shoff"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					elf_info.e_shoff = imm[0];
+				}
+				else
+				{
+					WriteError(line_num, wxString::Format("Unknown elf info command '%s'", buf));
+					errors_count++;
+					end_search = true;
+				}
+
+				break;
 			}
 
-			f.Seek(phdr[got_phdr_num].p_offset);
-			for(uint i=0; i<got_list.GetCount(); ++i)
+			buf += cur_str;
+		}
+	}
+
+	if(end_search) line_num--;
+}
+
+#include <Utilites/MTProgressDialog.h>
+
+void CompilerELF::DoAnalyzeCode(bool compile)
+{
+	if(!compile) return;
+	const uint lines_count = (uint)asm_list->GetNumberOfLines();
+	u64 errors_count = 0;
+
+	//hex_list->Clear();
+	err_list->Clear();
+	hex_list->Freeze();
+
+	Array<SectionInfo> sections_info;
+	Array<ProgramInfo> programs_info;
+	Elf64_Ehdr elf_info;
+	sections_info.Clear();
+	programs_info.Clear();
+	memset(&elf_info, 0, sizeof(Elf64_Ehdr));
+	u32 current_section = 0;
+	u32 current_program = 0;
+	bool store_in_program = true;
+
+	elf_info.e_magic = 0x7F454C46;
+	elf_info.e_curver = 0x1;
+	elf_info.e_version = 0x1;
+	elf_info.e_class = 0x1;
+	elf_info.e_magic = 0x7F454C46;
+	elf_info.e_class = 2; //ELF64
+	elf_info.e_data = 2;
+	elf_info.e_curver = 1; //ver 1
+	elf_info.e_os_abi = 0x66; //Cell OS LV-2
+	elf_info.e_abi_ver = 0;
+	elf_info.e_type = 2; //EXEC (Executable file)
+	elf_info.e_machine = MACHINE_PPC64; //PowerPC64
+	elf_info.e_version = 1; //ver 1
+	elf_info.e_entry = 0x10200;
+	elf_info.e_phoff = sizeof(Elf64_Ehdr);
+	elf_info.e_shoff = 0;
+	elf_info.e_flags = 0x0;
+	elf_info.e_ehsize = sizeof(Elf64_Ehdr);
+	elf_info.e_phentsize = sizeof(Elf64_Phdr);
+	elf_info.e_shentsize = sizeof(Elf64_Shdr);
+	elf_info.e_shstrndx = 1;
+
+	MTProgressDialog* progress_dial = 
+		new MTProgressDialog(this, wxDefaultSize, "Analyze code...", "Loading...", wxArrayLong(), 1);
+
+	progress_dial->SetMaxFor(0, lines_count);
+
+	for(u32 l=0, addr=0; l<lines_count; ++l)
+	{
+		WriteLine(hex_list, l, wxEmptyString);
+		//if(line > 0) hex_list->WriteText("\n");
+		if(compile && errors_count > 0) break;
+		wxString buf = wxEmptyString;
+		wxString line_text = asm_list->GetLineText(l);
+		progress_dial->Update(0, l, wxString::Format("Line %d of %d", l + 1, lines_count));
+		const u32 type = SearchLineType(line_text);
+		switch(type)
+		{
+			case LNTYPE_NULL: case LNTYPE_COMMIT: continue;
+			case LNTYPE_INSTR:
 			{
-				Write32(f, got_list[i]);
+				bool has_error;
+				const u32 compiled_code = CompileLine_Instr(line_text, l, line_text.Length(), has_error);
+
+				if(has_error) errors_count++;
+				if(errors_count) continue;
+
+				if(!store_in_program && current_section >= sections_info.GetCount())
+				{
+					WriteError(l, "Section info not found");
+					errors_count++;
+					continue;
+				}
+				else if(store_in_program && current_program >= programs_info.GetCount())
+				{
+					WriteError(l, "Program info not found");
+					errors_count++;
+					continue;
+				}
+
+				WriteLine(hex_list, l, wxString::Format("%x: [%08x]", addr, compiled_code));
+
+				if(compile)
+				{
+					Array<u32>& code = !store_in_program ? sections_info[current_section].code : programs_info[current_program].code;
+					const u32 align = !store_in_program ? sections_info[current_section].shdr.sh_addralign : programs_info[current_program].phdr.p_align;
+					code.AddCpy(compiled_code);
+					addr += min<int>(align, 4);
+				}
 			}
+			break;
 
-			got_list.Clear();
+			case LNTYPE_SECTION:
+				CompileLine_Section(sections_info, errors_count, addr, current_section, l, lines_count);
+				store_in_program = false;
+			break;
 
-			wxMessageBox("Compile done.", "Compile message");
+			case LNTYPE_PROGRAM:
+				CompileLine_Program(programs_info, errors_count, addr, current_program, l, lines_count);
+				store_in_program = true;
+			break;
+
+			case LNTYPE_ELF:
+				CompileLine_Elf(elf_info, errors_count, l, lines_count);
+			continue;
+		}
+	}
+
+	SetLineCount(hex_list, lines_count);
+	hex_list->Thaw();
+	progress_dial->Close();
+	if(!compile) return;
+
+	wxFile f("compiled.elf", wxFile::write);
+
+	{
+		SectionInfo shstrtab;
+		shstrtab.name = ".shstrtab";
+		shstrtab.shdr.sh_type = 3;
+		shstrtab.shdr.sh_addralign = 1;
+		sections_info.AddCpy(shstrtab);
+	}
+
+	elf_info.e_phnum = programs_info.GetCount();
+	elf_info.e_shnum = sections_info.GetCount();
+	elf_info.e_shstrndx = sections_info.GetCount() - 1;
+	WriteEhdr(f, elf_info);
+
+	u32 hdr_offset = elf_info.e_phoff + sizeof(Elf64_Phdr) * elf_info.e_phnum;
+
+	f.Seek(elf_info.e_phoff);
+	for(u32 i=0; i<programs_info.GetCount(); ++i)
+	{
+		programs_info[i].phdr.p_filesz = programs_info[i].code.GetCount() * min<int>(programs_info[i].phdr.p_align, 4);
+		programs_info[i].phdr.p_offset = hdr_offset;
+		hdr_offset += programs_info[i].phdr.p_filesz;
+		WritePhdr(f, programs_info[i].phdr);
+	}
+
+	f.Seek(elf_info.e_shoff);
+	u32 str_len = 0;
+	for(u32 i=0; i<sections_info.GetCount(); ++i)
+	{
+		sections_info[i].shdr.sh_name = str_len;
+		str_len += sections_info[i].name.Len() + 1;
+
+		if(i == elf_info.e_shstrndx)
+		{
+			sections_info[i].shdr.sh_size = str_len;
+			sections_info[i].shdr.sh_offset = hdr_offset;
+			hdr_offset += str_len;
+		}
+		else
+		{
+			if(sections_info[i].code.GetCount())
+			{
+				sections_info[i].shdr.sh_size = sections_info[i].code.GetCount() * min<int>(sections_info[i].shdr.sh_addralign, 4);
+				sections_info[i].shdr.sh_offset = hdr_offset;
+				hdr_offset += sections_info[i].shdr.sh_size;
+			}
+			else
+			{
+				sections_info[i].shdr.sh_offset = 0;
+				for(u32 p=0; p<programs_info.GetCount(); ++p)
+				{
+					if(!programs_info[p].phdr.p_offset) continue;
+					if(!programs_info[p].phdr.p_vaddr) continue;
+
+					if(!(programs_info[p].phdr.p_vaddr <= sections_info[i].shdr.sh_addr &&
+						programs_info[p].phdr.p_vaddr + programs_info[p].phdr.p_filesz >= sections_info[i].shdr.sh_addr + sections_info[i].shdr.sh_size))
+						continue;
+
+					sections_info[i].shdr.sh_offset = 
+						programs_info[p].phdr.p_offset + (sections_info[i].shdr.sh_addr - programs_info[p].phdr.p_vaddr);
+					break;
+				}
+
+				if(!sections_info[i].shdr.sh_offset) sections_info[i].shdr.sh_offset = hdr_offset;
+			}
 		}
 
-		hex_arr.Clear();
-		name_arr.Clear();
-
-		safe_delete(phdr);
-		safe_delete(shdr);
-
-		f.Close();
+		WriteShdr(f, sections_info[i].shdr);
 	}
+
+	f.Seek(sections_info[elf_info.e_shstrndx].shdr.sh_offset);
+	for(u32 i=0; i<sections_info.GetCount(); ++i)
+	{
+		f.Write(sections_info[i].name);
+		f.Seek(f.Tell() + 1);
+	}
+
+	for(u32 i=0; i<sections_info.GetCount(); ++i)
+	{
+		f.Seek(sections_info[i].shdr.sh_offset);
+		for(u32 c=0; c<sections_info[i].code.GetCount();)
+		{
+			switch(min<int>(sections_info[i].shdr.sh_addralign, 4))
+			{
+			case 1: Write8 (f, sections_info[i].code[c]); c += 1; break;
+			case 2: Write16(f, sections_info[i].code[c]); c += 2; break;
+			case 4: Write32(f, sections_info[i].code[c]); c += 4; break;
+			}
+		}
+	}
+
+	for(u32 i=0; i<programs_info.GetCount(); ++i)
+	{
+		f.Seek(programs_info[i].phdr.p_offset);
+		for(u32 c=0; c<programs_info[i].code.GetCount();)
+		{
+			switch(min<int>(programs_info[i].phdr.p_align, 4))
+			{
+			case 1: Write8 (f, programs_info[i].code[c]); c += 1; break;
+			case 2: Write16(f, programs_info[i].code[c]); c += 2; break;
+			case 4: Write32(f, programs_info[i].code[c]); c += 4; break;
+			}
+		}
+	}
+
+	f.Close();
+
+	wxMessageBox("elf saved.");
 }

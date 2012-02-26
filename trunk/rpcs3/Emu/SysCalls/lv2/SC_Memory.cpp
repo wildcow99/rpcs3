@@ -63,7 +63,7 @@ public:
 
 MemContiners continers;
 */
-
+/*
 int SysCalls::lv2MemContinerCreate(PPUThread& CPU)
 {
 	u64& continer = CPU.GPR[3];
@@ -80,9 +80,9 @@ int SysCalls::lv2MemContinerDestroy(PPUThread& CPU)
 	ConLog.Warning("lv2MemContinerDestroy[container: 0x%x]", container);
 	//continers.DeleteContiner(container);
 	return 0;
-}
-
-static const u32 max_user_mem = 100 * (1024 ^ 3); //100mb
+}*/
+/*
+static const u32 max_user_mem = 0x0d500000; //100mb
 u32 free_user_mem = max_user_mem;
 static u64 addr_user_mem = 0;
 
@@ -92,36 +92,112 @@ struct MemoryInfo
 	u32 aviable_user_mem;
 };
 
-int SysCalls::lv2MemAllocate(PPUThread& CPU)
+enum
 {
-	//size_t size, uint64_t flags, sys_addr_t * alloc_addr;
+	SYS_MEMORY_PAGE_SIZE_1M = 0x400,
+	SYS_MEMORY_PAGE_SIZE_64K = 0x200,
+};
 
-	const u64 size = CPU.GPR[3]; //size
-	const u64 flags = CPU.GPR[4]; //flags
-	u64& alloc_addr = CPU.GPR[5]; //alloc_addr
+int SysCalls::sys_memory_allocate(u32 size, u64 flags, u64 alloc_addr)
+{
+	//int sys_memory_allocate(size_t size, uint64_t flags, sys_addr_t * alloc_addr); 
+
+	const u64 size = CPU.GPR[3];
+	const u64 flags = CPU.GPR[4];
+	const u64 alloc_addr = CPU.GPR[5];
 
 	ConLog.Write("lv2MemAllocate: size: 0x%llx, flags: 0x%llx, alloc_addr: 0x%llx", size, flags, alloc_addr);
 
-	if(free_user_mem < size)
+	//u32 addr = 0;
+	switch(flags)
 	{
-		ConLog.Error("Not enough free user memory!");
-		return -1;
+	case SYS_MEMORY_PAGE_SIZE_1M:
+		if(size & 0xfffff) return CELL_EALIGN;
+		//addr = Memory.Alloc(size, 0x100000);
+	break;
+
+	case SYS_MEMORY_PAGE_SIZE_64K:
+		if(size & 0xffff) return CELL_EALIGN;
+		//addr = Memory.Alloc(size, 0x10000);
+	break;
+
+	default: return CELL_EINVAL;
 	}
-	if(addr_user_mem == 0) addr_user_mem = Memory.MainRam.GetEndAddr(); //FIXME!
-	addr_user_mem -= size;
-	free_user_mem -= size;
-	alloc_addr = addr_user_mem;
-	return 0;
+
+	u32 num = Memory.MemoryBlocks.GetCount();
+	Memory.MemoryBlocks.Add(new MemoryBlock());
+	Memory.MemoryBlocks[num].SetRange(Memory.MemoryBlocks[num - 1].GetEndAddr(), size);
+
+	Memory.Write32(alloc_addr, Memory.MemoryBlocks[num].GetStartAddr());
+	ConLog.Write("Test...");
+	Memory.Write32(Memory.MemoryBlocks[num].GetStartAddr(), 0xfff);
+	if(Memory.Read32(Memory.MemoryBlocks[num].GetStartAddr()) != 0xfff)
+	{
+		ConLog.Write("Test faild");
+	}
+	else
+	{
+		ConLog.Write("Test OK");
+		Memory.Write32(Memory.MemoryBlocks[num].GetStartAddr(), 0x0);
+	}
+
+	return CELL_OK;
 }
 
-int SysCalls::lv2MemGetUserMemorySize(PPUThread& CPU)
+int SysCalls::sys_memory_get_user_memory_size(PPUThread& CPU)
 {
-	ConLog.Write("lv2MemGetUserMemorySize: r3=0x%llx, r4=0x%llx", CPU.GPR[3], CPU.GPR[4]);
-	MemoryInfo mem_info;
-	mem_info.aviable_user_mem = max_user_mem; 
-	mem_info.free_user_mem = free_user_mem;
-	memcpy(Memory.GetMemFromAddr(CPU.GPR[3]), &mem_info, sizeof(mem_info));
+	ConLog.Write("lv2MemGetUserMemorySize: r3=0x%llx", CPU.GPR[3]);
+	//int sys_memory_get_user_memory_size(sys_memory_info_t * mem_info); 
+	MemoryInfo& memoryinfo = *(MemoryInfo*)Memory.GetMemFromAddr(CPU.GPR[3]);
+	memoryinfo.aviable_user_mem = Memory.Reverse32(free_user_mem);
+	memoryinfo.free_user_mem = Memory.Reverse32(free_user_mem);
+	return CELL_OK;
+}*/
 
-	CPU.GPR[4] = CPU.GPR[3];
-	return 0;
+enum
+{
+	SYS_MEMORY_PAGE_SIZE_1M = 0x400,
+	SYS_MEMORY_PAGE_SIZE_64K = 0x200,
+};
+
+int sys_memory_container_create(u64 cid_addr, u32 yield_size)
+{
+	return CELL_OK;
+}
+
+int sys_memory_container_destroy(u32 cid)
+{
+	return CELL_OK;
+}
+
+int sys_memory_allocate(u32 size, u32 flags, u64 alloc_addr_addr)
+{
+	u32 addr;
+	switch(flags)
+	{
+	case SYS_MEMORY_PAGE_SIZE_1M:
+		if(size & 0xfffff) return CELL_EALIGN;
+		addr = Memory.Alloc(size, 0x100000);
+	break;
+
+	case SYS_MEMORY_PAGE_SIZE_64K:
+		if(size & 0xffff) return CELL_EALIGN;
+		addr = Memory.Alloc(size, 0x10000);
+	break;
+
+	default: return CELL_EINVAL;
+	}
+
+	if(!addr) return CELL_ENOMEM;
+	ConLog.Warning("Memory allocated! [addr: 0x%x, size: 0x%x]", addr, size);
+	Memory.Write32(alloc_addr_addr, addr);
+
+	return CELL_OK;
+}
+
+int sys_memory_get_user_memory_size(u64 mem_info_addr)
+{
+	Memory.Write32(mem_info_addr, Memory.GetUserMemTotalSize());
+	Memory.Write32(mem_info_addr+4, Memory.GetUserMemAvailSize());
+	return CELL_OK;
 }

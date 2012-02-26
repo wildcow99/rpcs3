@@ -40,7 +40,7 @@ const wxString Ehdr_DataToString(const u8 data);
 const wxString Ehdr_TypeToString(const u16 type);
 const wxString Ehdr_OS_ABIToString(const u8 os_abi);
 const wxString Ehdr_MachineToString(const u16 machine);
-const wxString Phdr_FlagsToString(const u32 flags);
+const wxString Phdr_FlagsToString(u32 flags);
 const wxString Phdr_TypeToString(const u32 type);
 
 class LoaderBase

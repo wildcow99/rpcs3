@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Pad.h"
 #include "Emu/SysCalls/ErrorCodes.h"
+#include <wx/joystick.h>
 
 static const u32 CELL_PAD_MAX_PORT_NUM = 7;
 
@@ -98,6 +99,10 @@ enum ButtonDataOffset
 	CELL_PAD_BTN_OFFSET_SENSOR_G		= 23,
 };
 
+BEGIN_EVENT_TABLE(PadManager, wxWindow)
+EVT_JOYSTICK_EVENTS(PadManager::JoyKeyDown)
+END_EVENT_TABLE()
+
 PadManager::PadManager()
 {
 	Close();
@@ -132,6 +137,16 @@ void PadManager::Close()
 	m_max_connect = 0;
 	m_now_connect = 0;
 	m_system_info = 0;
+}
+
+void PadManager::JoyKeyDown(wxJoystickEvent& event)
+{
+	wxPoint pos = event.GetPosition();
+	wxJoystick j(event.GetJoystick());
+
+	ConLog.Write("pos[x: 0x%x, y: 0x%x]", pos.x, pos.y);
+	ConLog.Write("product ID: 0x%x", j.GetProductId());
+	ConLog.Write("product name: %s", j.GetProductName());
 }
 
 void PadManager::KeyDown(wxKeyEvent& event)
