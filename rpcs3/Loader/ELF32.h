@@ -75,12 +75,43 @@ struct Elf32_Ehdr
 
 struct Elf32_Shdr
 {
+	u32 sh_name; 
+	u32 sh_type;
+	u32 sh_flags;
+	u32 sh_addr;
+	u32 sh_offset;
+	u32 sh_size;
+	u32 sh_link;
+	u32 sh_info;
+	u32 sh_addralign;
+	u32 sh_entsize;
+
 	void Load(wxFile& f)
 	{
+		sh_name			= Read32(f);
+		sh_type			= Read32(f);
+		sh_flags		= Read32(f);
+		sh_addr			= Read32(f);
+		sh_offset		= Read32(f);
+		sh_size			= Read32(f);
+		sh_link			= Read32(f);
+		sh_info			= Read32(f);
+		sh_addralign	= Read32(f);
+		sh_entsize		= Read32(f);
 	}
 
 	void Show()
 	{
+		ConLog.Write("Name offset: %x",		sh_name);
+		ConLog.Write("Type: %d",			sh_type);
+		ConLog.Write("Addr: %x",			sh_addr);
+		ConLog.Write("Offset: %x",			sh_offset);
+		ConLog.Write("Size: %x",			sh_size);
+		ConLog.Write("EntSize: %d",			sh_entsize);
+		ConLog.Write("Flags: %x",			sh_flags);
+		ConLog.Write("Link: %x",			sh_link);
+		ConLog.Write("Info: %d",			sh_info);
+		ConLog.Write("Address align: %x",	sh_addralign);
 	}
 };
 

@@ -27,8 +27,8 @@ void MemoryBlock::Init()
 void MemoryBlock::InitMemory()
 {
 	safe_delete(mem);
-	mem = new u8[range_size];
-	memset(mem, 0, sizeof(mem));
+	mem = new u8[range_size + 1];
+	memset(mem, 0, range_size + 1);
 }
 
 void MemoryBlock::Delete()
@@ -75,7 +75,7 @@ u8* MemoryBlock::GetMemFromAddr(const u32 addr)
 void MemoryBlock::SetRange(const u32 start, const u32 size)
 {
 	range_start = start;
-	range_size = size + 1;
+	range_size = size;
 	range_end = start + size;
 
 	InitMemory();
@@ -261,6 +261,7 @@ bool NullMemoryBlock::Read16(const u32 addr, u16* WXUNUSED(value))
 bool NullMemoryBlock::Read32(const u32 addr, u32* WXUNUSED(value))
 {
 	ConLog.Error("Read32 from null block: [%08x]", addr);
+	//ConLog.Error("pc: 0x%x", (*(PPCThread*)Emu.GetCPU().GetIDs().GetIDData(1).m_data).PC);
 	Emu.Pause();
 	return false;
 }

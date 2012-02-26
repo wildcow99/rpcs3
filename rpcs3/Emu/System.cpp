@@ -8,23 +8,26 @@
 #include "Emu/Cell/SPUThread.h"
 
 #include "Loader/Loader.h"
-#include "Emu/Display/Display.h"
 
 #include "Emu/SysCalls/SysCalls.h"
 
 SysCalls SysCallsManager;
 
 Emulator::Emulator()
-	: m_pad_manager(NULL)
+	: m_status(Stoped)
+	, m_mode(DisAsm)
+	, m_dbg_console(NULL)
+	, tls_addr(0)
+	, tls_filesz(0)
+	, tls_memsz(0)
 {
-	m_status = Stoped;
-	m_mode = 0;
 }
 
 void Emulator::Init()
 {
-	if(m_pad_manager) free(m_pad_manager);
 	m_pad_manager = new PadManager();
+	//if(m_memory_viewer) m_memory_viewer->Close();
+	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
 
 void Emulator::SetSelf(const wxString& path)
@@ -41,22 +44,19 @@ void Emulator::SetElf(const wxString& path)
 
 void Emulator::CheckStatus()
 {
-	if(!GetCPU().GetIDs().HasID())
+	ArrayF<PPCThread>& threads = GetCPU().GetThreads();
+	if(!threads.GetCount())
 	{
 		Stop();
 		return;	
 	}
 
 	bool IsAllPaused = true;
-	u32 pos = 0;
-	ID thread;
-	while(GetCPU().GetIDs().GetNext(pos, thread))
+	for(u32 i=0; i<threads.GetCount(); ++i)
 	{
-		if(!(*(PPCThread*)thread.m_data).IsPaused())
-		{
-			IsAllPaused = false;
-			break;
-		}
+		if(threads[i].IsPaused()) continue;
+		IsAllPaused = false;
+		break;
 	}
 	if(IsAllPaused)
 	{
@@ -66,14 +66,11 @@ void Emulator::CheckStatus()
 	}
 
 	bool IsAllStoped = true;
-	pos = 0;
-	while(GetCPU().GetIDs().GetNext(pos, thread))
+	for(u32 i=0; i<threads.GetCount(); ++i)
 	{
-		if(!(*(PPCThread*)thread.m_data).IsStoped())
-		{
-			IsAllStoped = false;
-			break;
-		}
+		if(threads[i].IsStoped()) continue;
+		IsAllStoped = false;
+		break;
 	}
 	if(IsAllStoped)
 	{
@@ -100,6 +97,7 @@ void Emulator::Run()
 	if(!loader.Load())
 	{
 		Memory.Close();
+		Stop();
 		return;
 	}
 	
@@ -107,32 +105,34 @@ void Emulator::Run()
 	{
 		ConLog.Error("Unknown machine type");
 		Memory.Close();
+		Stop();
 		return;
 	}
 
 #ifdef USE_GS_FRAME
-	new GSFrame_GL(wxGetApp().m_MainFrame);
+	m_gs_frame = new GSFrame_GL(wxGetApp().m_MainFrame);
 #endif
 
-	const u32 id = GetCPU().AddThread(loader.GetMachine() == MACHINE_PPC64);
+	PPCThread& thread = GetCPU().AddThread(loader.GetMachine() == MACHINE_PPC64);
 
-	PPCThread& thread = (*(PPCThread*)GetCPU().GetIDs().GetIDData(id).m_data);
 	thread.SetPc(loader.GetEntry());
 	thread.Run();
 
-	if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
-	if(!m_memory_viewer) m_memory_viewer = new MemoryViewerPanel(NULL);
+	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
 
-	m_memory_viewer->SetPC(loader.GetEntry());
-	m_memory_viewer->Show();
-	m_memory_viewer->ShowPC();
+	//m_memory_viewer->SetPC(loader.GetEntry());
+	//m_memory_viewer->Show();
+	//m_memory_viewer->ShowPC();
 
 	wxGetApp().m_MainFrame->UpdateUI();
 
-	m_dbg_console = new DbgConsole();
-	//m_dbg_console->Show();
+	if(!m_dbg_console) m_dbg_console = new DbgConsole();
 
-	if(Ini.m_DecoderMode.GetValue() != 1) GetCPU().Exec();
+	if(Ini.m_DecoderMode.GetValue() != 1)
+	{
+		GetCPU().Start();
+		GetCPU().Exec();
+	}
 }
 
 void Emulator::Pause()
@@ -164,15 +164,21 @@ void Emulator::Stop()
 	m_status = Stoped;
 	wxGetApp().m_MainFrame->UpdateUI();
 
-	SysCallsManager.Close();
 	GetCPU().Close();
+	SysCallsManager.Close();
 
 	Memory.Close();
 	CurGameInfo.Reset();
+	GetIdManager().Clear();
+	GetPadManager().cellPadEnd();
 
-	m_dbg_console->Close();
+#ifdef USE_GS_FRAME
+	if(m_gs_frame && m_gs_frame->IsShown()) m_gs_frame->Close();
+	safe_delete(m_gs_frame);
+#endif
 
-	if(m_memory_viewer && !m_memory_viewer->exit) m_memory_viewer->Hide();
+	if(m_dbg_console){GetDbgCon().Close();m_dbg_console = NULL;}
+	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
 }
 
 Emulator Emu;

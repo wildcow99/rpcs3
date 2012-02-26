@@ -15,6 +15,9 @@ enum Lv2FsOflag
 	LV2_O_MSELF		= 010000,
 };
 
+#define CELL_FS_TYPE_UNKNOWN   0
+
+
 enum Lv2FsSeek
 {
 	LV2_SEEK_SET,
@@ -56,27 +59,32 @@ struct Lv2FsDirent
 	char d_name[LV2_MAX_FS_FILE_NAME_LENGTH + 1];
 };
 
-SysCallBase sc_f("FSFile");
-SysCallBase sc_d("FSDir");
-int SysCalls::lv2FsOpen(PPUThread& CPU)
+enum FsDirentType
 {
-	const wxString& path = Memory.ReadString(CPU.GPR[3]);
-	const u32 oflags = CPU.GPR[4];
-	const u64 fd_addr = CPU.GPR[5];
+	CELL_FS_TYPE_DIRECTORY	= 1,
+	CELL_FS_TYPE_REGULAR	= 2,
+	CELL_FS_TYPE_SYMLINK	= 3,
+};
 
-	const u32 mode = CPU.GPR[6];
-	const void* arg = Memory.GetMemFromAddr(CPU.GPR[7]);//???
-	const u32 argcount = CPU.GPR[8];
+SysCallBase sc_log("cellFs");
 
-	sc_f.Log("lv2FsOpen[patch: %s, flags: 0x%llx, mode: %lld, arg addr: 0x%llx, argcount: %d]",
-		path, oflags, mode, CPU.GPR[7], argcount);
+wxString ReadString(const u64 addr)
+{
+	return wxGetCwd() + Memory.ReadString(addr);
+}
+
+int cellFsOpen(const u64 path_addr, const int flags, const u64 fd_addr, const u64 arg_addr, const u64 size)
+{
+	const wxString& path = Memory.ReadString(path_addr);
+	sc_log.Log("cellFsOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%llx, size: 0x%llx)",
+		path, flags, fd_addr, arg_addr, size);
 
 	const wxString& ppath = wxGetCwd() + path;
 
 	wxFile::OpenMode o_mode;
 
-	s32 _oflags = oflags;
-	if(oflags & LV2_O_CREAT)
+	s32 _oflags = flags;
+	if(flags & LV2_O_CREAT)
 	{
 		_oflags &= ~LV2_O_CREAT;
 		//create path
@@ -102,26 +110,21 @@ int SysCalls::lv2FsOpen(PPUThread& CPU)
 		}
 	}
 
-	if(oflags & LV2_O_RDONLY)
+	if(flags & LV2_O_RDONLY)
 	{
 		_oflags &= ~LV2_O_RDONLY;
 		o_mode = wxFile::read;
 	}
-	else if(oflags & LV2_O_RDWR)
+	else if(flags & LV2_O_RDWR)
 	{
 		_oflags &= ~LV2_O_RDWR;
 		o_mode = wxFile::read_write;
 	}
-	else if(oflags & LV2_O_WRONLY)
+	else if(flags & LV2_O_WRONLY)
 	{
 		_oflags &= ~LV2_O_WRONLY;
 
-		if(oflags & LV2_O_EXCL)
-		{
-			_oflags &= ~LV2_O_EXCL;
-			o_mode = wxFile::write_excl;
-		}
-		else if(oflags & LV2_O_APPEND)
+		if(flags & LV2_O_APPEND)
 		{
 			_oflags &= ~LV2_O_APPEND;
 			o_mode = wxFile::write_append;
@@ -134,218 +137,118 @@ int SysCalls::lv2FsOpen(PPUThread& CPU)
 
 	if(_oflags != 0)
 	{
-		sc_f.Error("'%s' has unknown flags! flags: 0x%08x", path, oflags);
-		return CELL_UNKNOWN_ERROR;
+		sc_log.Error("'%s' has unknown flags! flags: 0x%08x", path, flags);
+		return CELL_EINVAL;
 	}
 
-	if(o_mode == wxFile::read && !wxFile::Access(ppath, wxFile::read))
-	{
-		sc_f.Error("%s not found! flags: 0x%08x", ppath, oflags);
-		return CELL_UNKNOWN_ERROR;
-	}
+	if(o_mode == wxFile::read && !wxFile::Access(ppath, o_mode)) return CELL_ENOENT;
 
-	const u32 fd = SysCalls_IDs.GetNewID(sc_f.GetName(), new wxFile(ppath, o_mode), oflags);
-	if(!SysCalls_IDs.CheckID(fd))
-	{
-		Memory.Write32(fd_addr, -1);
-		return CELL_UNKNOWN_ERROR;
-	}
-	
-	Memory.Write32(fd_addr, fd);
+	Memory.Write32(fd_addr, 
+		Emu.GetIdManager().GetNewID(sc_log.GetName(), new wxFile(ppath, o_mode), flags));
+
 	return CELL_OK;
 }
 
-int SysCalls::lv2FsRead(PPUThread& CPU)
+int cellFsRead(const u32 fd, const u64 buf_addr, const u64 nbytes, const u64 nread_addr)
 {
-	const u32 fs_file = CPU.GPR[3];
-	void* buf = Memory.GetMemFromAddr(CPU.GPR[4]);
-	const u64 size = CPU.GPR[5];
-	GPRtype& read = CPU.GPR[6];
-
-	sc_f.Log("lv2FsRead[id: %d, buf addr: 0x%llx, size: %lld]",
-		fs_file, CPU.GPR[4], size);
-
-	if(size == 0) return CELL_OK;
-
-	if(!SysCalls_IDs.CheckID(fs_file))
-	{
-		sc_f.Error("id [%d] is not found!", fs_file);
-		read = 0;
-		return CELL_EBADF;
-	}
-
-	wxFile& file = *(wxFile*)SysCalls_IDs.GetIDData(fs_file).m_data;
-	read = file.Read(buf, size);
-
-	return read == size ? CELL_OK : CELL_UNKNOWN_ERROR;
+	sc_log.Log("cellFsRead(fd: %d, buf_addr: 0x%llx, nbytes: 0x%llx, nread_addr: 0x%llx)",
+		fd, buf_addr, nbytes, nread_addr);
+	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
+	wxFile& file = *(wxFile*)Emu.GetIdManager().GetIDData(fd).m_data;
+	Memory.Write64(nread_addr, file.Read(Memory.GetMemFromAddr(buf_addr), nbytes));
+	return CELL_OK;
 }
 
-int SysCalls::lv2FsWrite(PPUThread& CPU)
+int cellFsWrite(const u32 fd, const u64 buf_addr, const u64 nbytes, const u64 nwrite_addr)
 {
-	const u32 fs_file = CPU.GPR[3];
-	const void* buf = Memory.GetMemFromAddr(CPU.GPR[4]);
-	const u64 size = CPU.GPR[5];
-	GPRtype& written = CPU.GPR[6];
-
-	sc_f.Log("lv2FsWrite[id: %d, buf addr: 0x%llx, size: %lld]",
-		fs_file, CPU.GPR[4], size);
-
-	if(!SysCalls_IDs.CheckID(fs_file))
-	{
-		sc_f.Error("id [%d] is not found!", fs_file);
-		written = 0;
-		return CELL_EBADF;
-	}
-
-	wxFile& file = *(wxFile*)SysCalls_IDs.GetIDData(fs_file).m_data;
-	/*
-	if(size == 0)
-	{
-		for(u32 i=0; ; i++)
-		{
-			const u8 b = ((u8*)buf)[i];
-
-			if(b == 0)
-			{
-				written = i;
-				return CELL_OK;
-			}
-
-			file.Write(&b, 1);
-		}
-	}
-	*/
-	written = file.Write(buf, size);
-	return written == size ? CELL_OK : CELL_UNKNOWN_ERROR;
+	sc_log.Log("cellFsWrite(fd: %d, buf_addr: 0x%llx, nbytes: 0x%llx, nwrite_addr: 0x%llx)",
+		fd, buf_addr, nbytes, nwrite_addr);
+	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
+	wxFile& file = *(wxFile*)Emu.GetIdManager().GetIDData(fd).m_data;
+	Memory.Write64(nwrite_addr, file.Write(Memory.GetMemFromAddr(buf_addr), nbytes));
+	return CELL_OK;
 }
 
-int SysCalls::lv2FsClose(PPUThread& CPU)
+int cellFsClose(const u32 fd)
 {
-	const u32 fs_file = CPU.GPR[3];
-
-	sc_f.Log("lv2FsClose[id: %d]", fs_file);
-
-	if(!SysCalls_IDs.CheckID(fs_file))
-	{
-		sc_f.Error("id [%d] is not found!", fs_file);
-		return CELL_EBADF;
-	}
-
-	wxFile& file = *(wxFile*)SysCalls_IDs.GetIDData(fs_file).m_data;
+	sc_log.Log("cellFsClose(fd: %d)", fd);
+	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
+	wxFile& file = *(wxFile*)Emu.GetIdManager().GetIDData(fd).m_data;
 	file.Close();
-	SysCalls_IDs.RemoveID(fs_file);
-	
+	Emu.GetIdManager().RemoveID(fd);
 	return CELL_OK;
 }
 
-int SysCalls::lv2FsOpenDir(PPUThread& CPU)
+int cellFsOpendir(const u64 path_addr, const u64 fd_addr)
 {
-	const wxString& path = Memory.ReadString(CPU.GPR[3]);
-	GPRtype& fs_file = CPU.GPR[4];
-
-	if(!wxDirExists(path))
-	{
-		sc_d.Error("%s not found!", path);
-		return CELL_ENOENT;
-	}
-
-	fs_file = SysCalls_IDs.GetNewID(sc_f.GetName(), new wxDir(path));
-
-	return SysCalls_IDs.CheckID(fs_file) ? CELL_OK : CELL_UNKNOWN_ERROR;
-}
-
-int SysCalls::lv2FsReadDir(PPUThread& CPU)
-{
-	s64 fs_file = CPU.GPR[3];
-	Lv2FsDirent* fs_dirent = (Lv2FsDirent*)Memory.GetMemFromAddr(CPU.GPR[4]);
-	GPRtype& read = CPU.GPR[5];
-
-	if(!SysCalls_IDs.CheckID(fs_file))
-	{
-		sc_d.Error("id [%d] is not found!", fs_file);
-		fs_dirent = NULL;
-		return CELL_EBADF;
-	}
-
-	wxArrayString files;
-
-	wxDir& dir = *(wxDir*)SysCalls_IDs.GetIDData(fs_file).m_data;
-	read = wxDir::GetAllFiles(dir.GetName(), &files);
-
-	fs_dirent = new Lv2FsDirent[files.GetCount()];
-
-	for(uint i=0; i<files.GetCount(); ++i)
-	{
-		fs_dirent[i].d_namlen = files[i].Length() <= LV2_MAX_FS_FILE_NAME_LENGTH ? files[i].Length() : LV2_MAX_FS_FILE_NAME_LENGTH;
-
-		for(uint a=0; a<fs_dirent[i].d_namlen; ++a)
-		{
-			fs_dirent[i].d_name[a] = files[i][a];
-		}
-
-		fs_dirent[i].d_type = 1;//???
-	}
-
-	files.Clear();
-
+	const wxString& path = ReadString(path_addr);
+	sc_log.Error("cellFsOpendir(path: %s, fd_addr: 0x%llx)", path, fd_addr);
 	return CELL_OK;
 }
 
-int SysCalls::lv2FsCloseDir(PPUThread& CPU)
+int cellFsReaddir(const u32 fd, const u64 dir_addr, const u64 nread_addr)
 {
-	s64 fs_file = CPU.GPR[3];
-
-	if(!SysCalls_IDs.CheckID(fs_file))
-	{
-		sc_d.Error("id [%d] is not found!", fs_file);
-		return CELL_EBADF;
-	}
-
-	SysCalls_IDs.RemoveID(fs_file);
+	sc_log.Error("cellFsReaddir(fd: %d, dir_addr: 0x%llx, nread_addr: 0x%llx)", fd, dir_addr, nread_addr);
 	return CELL_OK;
 }
 
-int SysCalls::lv2FsMkdir(PPUThread& CPU)
+int cellFsClosedir(const u32 fd)
 {
-	const wxString& path = Memory.ReadString(CPU.GPR[3]);
-	const u32 mode = CPU.GPR[4];//???
-	sc_f.Log("lv2FsMkdir[path: %s, mode: 0x%x]", path, mode);
-
-	if(path.IsEmpty()) return CELL_ENOENT;
-
-	if(wxDirExists(path))
-	{
-		ConLog.Write("lv2FsMkdir error: path[%s] is exists", path);
-		return CELL_EEXIST;
-	}
-
-	return wxMkdir(path) ? CELL_OK : CELL_UNKNOWN_ERROR;
+	sc_log.Error("cellFsClosedir(fd: %d)", fd);
+	return CELL_OK;
 }
 
-int SysCalls::lv2FsRename(PPUThread& CPU)
+int cellFsStat(const u64 path_addr, const u64 sb_addr)
 {
-	sc_f.Log("lv2FsRename[r3: 0x%llx, r4: 0x%llx, r5: 0x%llx]", CPU.GPR[3], CPU.GPR[4], CPU.GPR[5]);
-	const wxString& path = Memory.ReadString(CPU.GPR[3]);
-	const wxString& newpath = Memory.ReadString(CPU.GPR[4]);
-
-	sc_f.Log("lv2FsRename[path: %s, newpath: %s]", path, newpath);
-
-	if(path.IsEmpty() || !wxFile::Access(path, wxFile::read))
-	{
-		sc_f.Error("%s not found", path);
-		return CELL_ENOENT;
-	}
-
-	return wxRenameFile(path, newpath) ? CELL_OK : CELL_UNKNOWN_ERROR;
+	const wxString& path = ReadString(path_addr);
+	sc_log.Error("cellFsFstat(path: %s, sb_addr: 0x%llx)", path, sb_addr);
+	return CELL_OK;
 }
 
-int SysCalls::lv2FsLSeek64(PPUThread& CPU)
+int cellFsFstat(const u32 fd, const u64 sb_addr)
 {
-	const u32 fs_file = CPU.GPR[3];
-	const s64 offset = CPU.GPR[4];
-	const s32 whence = CPU.GPR[5];
-	GPRtype& position = CPU.GPR[6];
+	sc_log.Error("cellFsFstat(fd: %d, sb_addr: 0x%llx)", fd, sb_addr);
+	return CELL_OK;
+}
 
+int cellFsMkdir(const u64 path_addr, const u32 mode)
+{
+	const wxString& path = ReadString(path_addr);
+	sc_log.Log("cellFsMkdir(path: %s, mode: 0x%x)", path, mode);
+	if(wxDirExists(path)) return CELL_EEXIST;
+	if(!wxMkdir(path)) return CELL_EBUSY;
+	return CELL_OK;
+}
+
+int cellFsRename(const u64 from_addr, const u64 to_addr)
+{
+	const wxString& from = ReadString(from_addr);
+	const wxString& to = ReadString(to_addr);
+	sc_log.Log("cellFsRename(from: %s, to: %s)", from, to);
+	if(!wxFileExists(from)) return CELL_ENOENT;
+	if(wxFileExists(to)) return CELL_EEXIST;
+	if(!wxRenameFile(from, to)) return CELL_EBUSY;
+	return CELL_OK;
+}
+
+int cellFsRmdir(const u64 path_addr)
+{
+	const wxString& path = ReadString(path_addr);
+	sc_log.Log("cellFsRmdir(path: %s)", path);
+	if(!wxDirExists(path)) return CELL_ENOENT;
+	if(!wxRmdir(path)) return CELL_EBUSY;
+	return CELL_OK;
+}
+
+int cellFsUnlink(const u64 path_addr)
+{
+	const wxString& path = ReadString(path_addr);
+	sc_log.Error("cellFsUnlink(path: %s)", path);
+	return CELL_OK;
+}
+
+int cellFsLseek(const u32 fd, const s64 offset, const u32 whence, const u64 pos_addr)
+{
 	wxSeekMode seek_mode;
 	switch(whence)
 	{
@@ -353,45 +256,11 @@ int SysCalls::lv2FsLSeek64(PPUThread& CPU)
 	case LV2_SEEK_CUR: seek_mode = wxFromCurrent; break;
 	case LV2_SEEK_END: seek_mode = wxFromEnd; break;
 	default:
-		sc_f.Error(fs_file, "Unknown seek whence! (%d)", whence);
-	return CELL_UNKNOWN_ERROR;
+		sc_log.Error(fd, "Unknown seek whence! (%d)", whence);
+	return CELL_EINVAL;
 	}
-	wxFile& file = *(wxFile*)SysCalls_IDs.GetIDData(fs_file).m_data;
-	position = file.Seek(offset, seek_mode);
-
-	return position == offset ? CELL_OK : CELL_UNKNOWN_ERROR;
-}
-
-int SysCalls::lv2FsRmdir(PPUThread& CPU)
-{
-	const wxString& path = Memory.ReadString(CPU.GPR[3]);
-
-	sc_f.Log("lv2FsRmdir[path: %s]", path);
-
-	if(!wxDirExists(path))
-	{
-		sc_f.Error("%s not found", path);
-		return CELL_ENOENT;
-	}
-
-	return wxFileName::Rmdir(path) ? CELL_OK : CELL_UNKNOWN_ERROR;
-}
-
-int SysCalls::lv2FsUtime(PPUThread& CPU)
-{
-	const wxString& path = Memory.ReadString(CPU.GPR[3]);
-	Lv2FsUtimbuf& times = *(Lv2FsUtimbuf*)&CPU.GPR[4];
-
-	if(!wxFileExists(path))
-	{
-		sc_f.Error("%s not found", path);
-		return CELL_ENOENT;
-	}
-
-	wxDateTime actime, modtime;
-    wxFileName(path).GetTimes(&actime, &modtime, NULL);
-
-	times.modtime = modtime.GetTicks();
-	times.actime = actime.GetTicks();
+	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
+	wxFile& file = *(wxFile*)Emu.GetIdManager().GetIDData(fd).m_data;
+	Memory.Write64(pos_addr, file.Seek(offset, seek_mode));
 	return CELL_OK;
 }

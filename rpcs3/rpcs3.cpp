@@ -30,12 +30,7 @@ void Rpcs3App::Exit()
 	Ini.Save();
 	Emu.Stop();
 
-	if(ConLogFrame && ConLogFrame->runned) ConLogFrame->~LogFrame();
-
-	if(m_MainFrame && m_MainFrame->IsShown())
-	{
-		m_MainFrame->~MainFrame();
-	}
+	if(ConLogFrame && ConLogFrame->IsShown()) ConLogFrame->Close();
 
 	wxApp::Exit();
 }

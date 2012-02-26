@@ -2,10 +2,6 @@
 #include "PPCThread.h"
 #include "Utilites/IdManager.h"
 #include "Gui/InterpreterDisAsm.h"
-#include "PPUThread.h"
-#include "SPUThread.h"
-
-IdManager CPU_IDs;
 
 PPCThread::PPCThread(bool _isSPU)
 	: isSPU(_isSPU)
@@ -15,6 +11,7 @@ PPCThread::PPCThread(bool _isSPU)
 	, stack_num(0)
 	, stack_size(0)
 	, stack_addr(0)
+	, m_prio(0)
 {
 }
 
@@ -26,11 +23,7 @@ PPCThread::~PPCThread()
 void PPCThread::Close()
 {
 	Stop();
-	if(DisAsmFrame)
-	{
-		(*(InterpreterDisAsmFrame*)DisAsmFrame).Close();
-		DisAsmFrame = NULL;
-	}
+	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).Hide();
 }
 
 void PPCThread::Reset()
@@ -54,9 +47,19 @@ void PPCThread::InitStack()
 
 	stack_num = Memory.MemoryBlocks.GetCount();
 	stack_addr = Memory.MemoryBlocks.Get(stack_num - 1).GetEndAddr();
+
+	static const u32 first_stack_addr = 0xd0001000;
+	if(stack_addr < first_stack_addr) stack_addr = first_stack_addr;
 	if(stack_size == 0) stack_size = 0x10000;
 	Stack.SetRange(stack_addr, stack_size);
 	Memory.MemoryBlocks.Add(Stack);
+
+	stack_point = stack_addr;
+	stack_point += stack_size - 0x10;
+	stack_point &= -0x10;
+	Memory.Write64(stack_point, 0);
+	stack_point -= 0x60;
+	Memory.Write64(stack_point, stack_point + 0x60);
 
 	if(wxFileExists("stack.dat"))
 	{
@@ -75,16 +78,11 @@ void PPCThread::CloseStack()
 
 	Stack.Delete();
 	Memory.MemoryBlocks.RemoveFAt(stack_num);
-
-	IdManager& cpus = Emu.GetCPU().GetIDs();
-	ID thread;
-	u32 pos = 0;
-	while(cpus.GetNext(pos, thread))
+	ArrayF<PPCThread>& threads = Emu.GetCPU().GetThreads();
+	for(u32 i=0; i<threads.GetCount(); ++i)
 	{
-		u32& num = (*(PPCThread*)thread.m_data).stack_num;
-		if(num > stack_num) num--;
+		if(threads[i].stack_num > stack_num) threads[i].stack_num--;
 	}
-
 	stack_addr = 0;
 	stack_size = 0;
 	stack_num = 0;
@@ -93,13 +91,18 @@ void PPCThread::CloseStack()
 void PPCThread::SetId(const u32 id)
 {
 	m_id = id;
-	ID& thread = Emu.GetCPU().GetIDs().GetIDData(m_id);
-	thread.m_name = wxString::Format("%s[%d] Thread", (isSPU ? "SPU" : "PPU"), m_id);
-	thread.m_attr = isSPU ? 2 : 1;
+	ID& thread = Emu.GetIdManager().GetIDData(m_id);
+	thread.m_name = GetName();
 
 	if(Ini.m_DecoderMode.GetValue() != 1) return;
-	DisAsmFrame = new InterpreterDisAsmFrame(thread.m_name, this);
+	DisAsmFrame = new InterpreterDisAsmFrame(GetFName(), this);
 	(*(InterpreterDisAsmFrame*)DisAsmFrame).Show();
+}
+
+void PPCThread::SetName(const wxString& name)
+{
+	m_name = name;
+	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).SetTitle(GetFName());
 }
 
 void PPCThread::NextBranchPc()
@@ -207,31 +210,3 @@ void PPCThread::Exec()
 	DoCode(Memory.Read32(PC));
 	NextPc();
 }
-
-/*
-void PPCThread::Step()
-{
-	if(Ini.m_DecoderMode.GetValue() == 1)
-	{
-		DoCode(Memory.Read32(PC));
-		NextPc();
-		if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).DoUpdate();
-	}
-	else
-	{
-		m_status = Runned;
-
-		while(IsRunned() && Emu.IsRunned())
-		{
-			DoCode(Memory.Read32(PC));
-			NextPc();
-		}
-
-		if(!IsOk())
-		{
-			ConLog.Error("PPCThread[%d] stoped with error! Error code: %x", m_id, GetError());
-			SetError(0);
-		}
-	}
-}
-*/

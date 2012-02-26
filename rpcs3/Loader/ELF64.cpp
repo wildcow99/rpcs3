@@ -92,21 +92,28 @@ bool ELF64Loader::LoadPhdr()
 		phdr.Load(elf64_f);
 		phdr.Show();
 
-		if(phdr.p_type == 0x00000001) //LOAD
+		if (phdr.p_vaddr != phdr.p_paddr)
 		{
-			if (phdr.p_vaddr != phdr.p_paddr)
+			ConLog.Warning
+			( 
+				"ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
+				phdr.p_paddr, phdr.p_vaddr
+			);
+		}
+
+
+		switch(phdr.p_type)
+		{
+			case 0x00000001: //LOAD
 			{
-				ConLog.Warning
-				( 
-					"ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
-					phdr.p_paddr, phdr.p_vaddr
-				);
+				elf64_f.Seek(phdr.p_offset);
+				elf64_f.Read(Memory.GetMemFromAddr(phdr.p_paddr), phdr.p_filesz);
 			}
+			break;
 
-			elf64_f.Seek(phdr.p_offset);
-
-			MemoryBlock& mem = Memory.GetMemByAddr(phdr.p_paddr);
-			elf64_f.Read(mem.GetMemFromAddr(mem.FixAddr(phdr.p_paddr)), phdr.p_filesz);
+			case 0x00000007: //TLS
+				Emu.SetTLSData(phdr.p_paddr, phdr.p_filesz, phdr.p_memsz);
+			break;
 		}
 
 		ConLog.SkipLn();
@@ -133,6 +140,7 @@ bool ELF64Loader::LoadShdr()
 	Elf64_Shdr* symtab	= NULL;
 	Elf64_Shdr* opd		= NULL;
 	Elf64_Shdr* got		= NULL;
+	Elf64_Shdr* sys_proc_param = NULL;
 
 	for(uint i=0; i<ehdr.e_shnum; ++i)
 	{
@@ -269,6 +277,41 @@ bool ELF64Loader::LoadShdr()
 			else if(!name.CmpNoCase(".sceStub.text"))
 			{
 				Memory.MemFlags.SetStubRange(shdr.sh_addr, shdr.sh_size);
+			}
+			else if(!name.CmpNoCase(".sys_proc_param"))
+			{
+				ConLog.Warning("section .sys_proc_param founded!");
+				sys_proc_param = &shdr;
+				struct sys_process_param
+				{
+					u32 size;
+					u32 magic;
+					u32 version;
+					u32 sdk_version;
+					s32 primary_prio;
+					u32 primary_stacksize;
+					u32 malloc_pagesize;
+					u32 ppc_seg;
+					u32 crash_dump_param_addr;
+				} &proc_param = *(sys_process_param*)Memory.GetMemFromAddr(shdr.sh_addr);
+
+				if(Memory.Reverse32(proc_param.size) != sizeof(sys_process_param))
+				{
+					ConLog.Warning("Bad proc param size! [0x%x : 0x%x]", proc_param.size, sizeof(sys_process_param));
+				}
+				if(Memory.Reverse32(proc_param.magic) != 0x13bcc5f6)
+				{
+					ConLog.Error("Bad magic! [0x%x]", Memory.Reverse32(proc_param.magic));
+				}
+				else
+				{
+					ConLog.Write("*** sdk version: 0x%x", Memory.Reverse32(proc_param.sdk_version));
+					ConLog.Write("*** primary prio: %d", Memory.Reverse32(proc_param.primary_prio));
+					ConLog.Write("*** primary stacksize: 0x%x", Memory.Reverse32(proc_param.primary_stacksize));
+					ConLog.Write("*** malloc pagesize: 0x%x", Memory.Reverse32(proc_param.malloc_pagesize));
+					ConLog.Write("*** ppc seg: 0x%x", Memory.Reverse32(proc_param.ppc_seg));
+					ConLog.Write("*** crash dump param addr: 0x%x", Memory.Reverse32(proc_param.crash_dump_param_addr));
+				}
 			}
 			//else if(!name.CmpNoCase(".lib.stub"))
 			//{

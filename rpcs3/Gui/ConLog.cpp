@@ -8,14 +8,30 @@
 LogWriter ConLog;
 LogFrame* ConLogFrame;
 
+static const uint max_item_count = 500;
+
 struct LogData
 {
-	wxArrayString prefix;
-	wxArrayString text;
-	wxArrayString colour;
+	wxString m_prefix;
+	wxString m_text;
+	wxString m_colour;
+
+	LogData(const wxString& prefix, const wxString& text, const wxString& colour)
+		: m_prefix(prefix)
+		, m_text(text)
+		, m_colour(colour)
+	{
+	}
+
+	~LogData()
+	{
+		m_prefix.Clear();
+		m_text.Clear();
+		m_colour.Clear();
+	}
 };
 
-LogData ConLogData;
+Array<LogData> ConLogData;
 
 LogWriter::LogWriter()
 {
@@ -25,39 +41,16 @@ LogWriter::LogWriter()
 	}
 }
 
-void LogWriter::Task()
-{
-	/*
-	const int cur_item_count = m_log.GetItemCount();
-	static const uint max_item_count = 1000;
-
-	if(cur_item_count > max_item_count)
-	{
-		for(uint i=0; i<cur_item_count-max_item_count; ++i) m_log.DeleteItem(0);
-	}
-
-	const int cur_item = m_log.GetItemCount();
-
-	m_log.InsertItem(cur_item, m_prefix);
-	m_log.SetItem(cur_item, 1, m_value);
-
-	m_log.SetItemTextColour(cur_item, m_txtcolour);
-	//log.SetItemBackgroundColour(cur_item, m_bgcolour);
-
-	if(m_log.GetFocusedItem() == cur_item - 1) m_log.Focus(cur_item);
-	*/
-}
-
 void LogWriter::WriteToLog(wxString prefix, wxString value, wxString colour/*, wxColour bgcolour*/)
 {
 	if(m_logfile.IsOpened())
 		m_logfile.Write((prefix.IsEmpty() ? wxEmptyString : "[" + prefix + "]: ") + value + "\n");
 
-	ConLogData.colour.Add(colour);
-	ConLogData.prefix.Add(prefix);
-	ConLogData.text.Add(value);
+	if(ConLogFrame->IsExit()) return;
+	if(ConLogData.GetCount() > max_item_count) ConLogData.RemoveAt(0, ConLogData.GetCount()-max_item_count);
 
-	//ConLogFrame->Post();
+	ConLogData.Add(new LogData(prefix, value, colour));
+	ConLogFrame->DoStep();
 }
 
 wxString FormatV(const wxString fmt, va_list args)
@@ -119,11 +112,11 @@ void LogWriter::SkipLn()
 }
 
 LogFrame::LogFrame() 
-	: FrameBase(NULL, wxID_ANY, "Log Console", wxEmptyString, wxSize(600, 450))
+	: FrameBase(NULL, wxID_ANY, "Log Console", wxEmptyString, wxSize(600, 450),
+		wxDefaultPosition, wxDEFAULT_FRAME_STYLE & ~wxCLOSE_BOX)
 	, StepThread()
 	, m_log(*new wxListView(this))
 {
-	runned = true;
 	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
 
 	s_panel.Add(&m_log);
@@ -146,106 +139,47 @@ LogFrame::LogFrame()
 
 LogFrame::~LogFrame()
 {
-	StepThread::Exit();
-	runned = false;
 }
 
-void LogFrame::Post()
+bool LogFrame::Close(bool force)
 {
-	if(!runned) m_sem_waitdata.Post();
+	StepThread::Exit();
+	ConLogData.Clear();
+
+	return FrameBase::Close(force);
 }
 
 void LogFrame::Step()
 {
-	for(;;)
+	if(ConLogData.GetCount() == 0) return;
+	
+	while(ConLogData.GetCount())
 	{
-
-		static const uint max_item_count = 500;
-
-		while
-		(
-			ConLogData.colour.GetCount() == 0 &&
-			ConLogData.prefix.GetCount() == 0 &&
-			ConLogData.text.  GetCount() == 0 && runned
-		)
-		{
-			ThreadAdv::Sleep(200);
-		}
-
-
 		StepThread::SetCancelState(false);
+		if(ConLogData.GetCount() > max_item_count)
 		{
-			for(;;)
-			{
-				while 
-				(
-					(ConLogData.colour.GetCount() == 0 ||
-					ConLogData.prefix.GetCount() == 0 ||
-					ConLogData.text.GetCount()   == 0) && runned
-				) ThreadAdv::Sleep(50);
-
-				if(!runned) break;
-
-				while
-				(
-					ConLogData.colour.GetCount() > max_item_count &&
-					ConLogData.prefix.GetCount() > max_item_count &&
-					ConLogData.text.GetCount() > max_item_count
-				)
-				{
-					u64 count = ConLogData.colour.GetCount();
-					if(count > ConLogData.prefix.GetCount()) count = ConLogData.prefix.GetCount();
-					if(count > ConLogData.text.GetCount()) count = ConLogData.text.GetCount();
-
-					ConLogData.colour.RemoveAt(0, count - max_item_count);
-					ConLogData.prefix.RemoveAt(0, count - max_item_count);
-					ConLogData.text  .RemoveAt(0, count - max_item_count);
-				}
-
-				const wxColour colour = wxColour(ConLogData.colour[0]);
-				const wxString prefix = ConLogData.prefix[0];
-				const wxString text = ConLogData.text[0];
-
-				ConLogData.colour.RemoveAt(0);
-				ConLogData.prefix.RemoveAt(0);
-				ConLogData.text.RemoveAt(0);
-
-				const int cur_item_count = m_log.GetItemCount();
-
-				if(cur_item_count > max_item_count)
-				{
-					for(uint i=0; i<cur_item_count-max_item_count; ++i) m_log.DeleteItem(0);
-				}
-
-				const int cur_item = m_log.GetItemCount();
-
-				m_log.InsertItem(cur_item, prefix);
-				m_log.SetItem(cur_item, 1, text);
-
-				m_log.SetItemTextColour(cur_item, colour);
-				//log.SetItemBackgroundColour(cur_item, m_bgcolour);
-
-				//if(m_log.GetScrollPos(wxVERTICAL) >= cur_item)
-					::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_PAGEDOWN, 0);
-
-				if
-				(
-					(ConLogData.colour.GetCount() == 0 &&
-					ConLogData.prefix.GetCount() == 0 &&
-					ConLogData.text.GetCount()   == 0) || !runned
-				) break;
-			}
+			ConLogData.RemoveAt(0, ConLogData.GetCount() - max_item_count);
 		}
+
+		const wxColour colour = wxColour(ConLogData[0].m_colour);
+		const wxString prefix = ConLogData[0].m_prefix;
+		const wxString text = ConLogData[0].m_text;
+		ConLogData.RemoveAt(0);
+
+		int cur_item = m_log.GetItemCount();
+		if(cur_item > max_item_count)
+		{
+			for(uint i=0; i<cur_item-max_item_count; ++i) m_log.DeleteItem(0);
+			cur_item = m_log.GetItemCount();
+		}
+
+		m_log.InsertItem(cur_item, prefix);
+		m_log.SetItem(cur_item, 1, text);
+		m_log.SetItemTextColour(cur_item, colour);
+		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_PAGEDOWN, 0);
 		StepThread::SetCancelState(true);
-
-		if(!runned)
-		{
-			ThreadAdv::Exit();
-			ThreadAdv::Sleep(200);
-		}
 	}
-
-	ThreadAdv::Sleep(1);
+	Sleep(1);
 }
 
 void LogFrame::OnColBeginDrag(wxListEvent& event)

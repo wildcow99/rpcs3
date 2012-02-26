@@ -76,16 +76,48 @@ const wxString Ehdr_MachineToString(const u16 machine)
 	return wxString::Format("Unknown (%x)", machine);
 }
 
-const wxString Phdr_FlagsToString(const u32 flags)
+static const wxString GetFlagsString(u32 flags)
 {
-	switch(flags)
-	{
-	case 0x4: return "R";
-	case 0x5: return "R E";
-	case 0x7: return "RWE";
-	};
+	enum {R = 0x1, W = 0x2, E = 0x4};
 
-	return wxString::Format("Unknown (%x)", flags);
+	wxString result = wxEmptyString;
+
+	result += flags & R ? "R" : "-";
+	result += flags & W ? "W" : "-";
+	result += flags & E ? "E" : "-";
+
+	return result;
+}
+
+const wxString Phdr_FlagsToString(u32 flags)
+{
+	enum {ppu_R = 0x1, ppu_W = 0x2, ppu_E = 0x4};
+	enum {spu_E = 0x1, spu_W = 0x2, spu_R = 0x4};
+	enum {rsx_R = 0x1, rsx_W = 0x2, rsx_E = 0x4};
+
+#define FLAGS_TO_STRING(f) \
+	wxString(f & ##f##_R ? "R" : "-") + \
+	wxString(f & ##f##_W ? "W" : "-") + \
+	wxString(f & ##f##_E ? "E" : "-")
+
+	const u8 ppu = flags & 0xf;
+	const u8 spu = (flags >> 0x14) & 0xf;
+	const u8 rsx = (flags >> 0x18) & 0xf;
+
+	wxString ret = wxEmptyString;
+	ret += wxString::Format("[0x%x] ", flags);
+
+	flags &= ~ppu;
+	flags &= ~spu << 0x14;
+	flags &= ~rsx << 0x18;
+
+	if(flags != 0) return wxString::Format("Unknown %s PPU[%x] SPU[%x] RSX[%x]", ret, ppu, spu, rsx);
+
+	ret += "PPU[" + FLAGS_TO_STRING(ppu) + "] ";
+	ret += "SPU[" + FLAGS_TO_STRING(spu) + "] ";
+	ret += "RSX[" + FLAGS_TO_STRING(rsx) + "]";
+
+	return ret;
 }
 
 const wxString Phdr_TypeToString(const u32 type)

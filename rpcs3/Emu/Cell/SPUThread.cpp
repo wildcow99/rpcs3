@@ -17,27 +17,33 @@ SPUThread::~SPUThread()
 void SPUThread::DoReset()
 {
 	//reset regs
-	memset(GPR,  0, sizeof(GPR));
+	for(u32 i=0; i<128; ++i) GPR[i].Reset();
+
+	LSA = 0;
 }
 
 void SPUThread::_InitStack()
 {
-	GPR[1] = Stack.GetEndAddr();
+	GPR[1]._u64[0] = stack_point;
 }
 
 u64 SPUThread::GetFreeStackSize() const
 {
-	return (GetStackAddr() + GetStackSize()) - GPR[1];
+	return (GetStackAddr() + GetStackSize()) - GPR[1]._u64[0];
 }
 
 void SPUThread::DoRun()
 {
 	switch(Ini.m_DecoderMode.GetValue())
 	{
-	case 0: m_dec = new SPU_Decoder(*new SPU_DisAsm(*this)); break;
+	case 0:
+		m_dec = new SPU_Decoder(*new SPU_DisAsm(*this));
+	break;
+
 	case 1:
 	case 2:
-		m_dec = new SPU_Decoder(*new SPU_Interpreter(*this)); break;
+		m_dec = new SPU_Decoder(*new SPU_Interpreter(*this));
+	break;
 	}
 }
 

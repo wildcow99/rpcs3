@@ -55,6 +55,8 @@ public:
 	void KeyUp(wxKeyEvent& event);
 	void SetKey(u32 code, bool set);
 
+	void JoyKeyDown(wxJoystickEvent& event);
+
 	int cellPadInit(u32 max_connect);
 	int cellPadEnd();
 	int cellPadClearBuf(u32 port_no);
@@ -63,4 +65,6 @@ public:
 	int cellPadSetActDirect(u32 port_no, u64 param_addr);
 	int cellPadGetInfo2(u64 info_addr);
 	int cellPadSetPortSetting(u32 port_no, u32 port_setting);
+
+	DECLARE_EVENT_TABLE();
 };

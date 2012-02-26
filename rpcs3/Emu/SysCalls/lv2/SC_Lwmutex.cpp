@@ -44,7 +44,7 @@ int SysCalls::Lv2LwmutexCreate(PPUThread& CPU)
 	lwmutex_attr& lmtx_attr = *(lwmutex_attr*)Memory.GetMemFromAddr(lwmutex_attr_addr);
 
 	lmtx.lock_var.info.owner = CPU.GetId();
-	lmtx.attribute = SysCalls_IDs.GetNewID(wxString::Format("Lwmutex[%s]", lmtx_attr.name), NULL, lwmutex_addr);
+	lmtx.attribute = Emu.GetIdManager().GetNewID(wxString::Format("Lwmutex[%s]", lmtx_attr.name), NULL, lwmutex_addr);
 
 	ConLog.Write("r3:");
 	ConLog.Write("*** lock_var[owner: 0x%x, waiter: 0x%x]", lmtx.lock_var.info.owner, lmtx.lock_var.info.waiter);
@@ -65,7 +65,7 @@ int SysCalls::Lv2LwmutexDestroy(PPUThread& CPU)
 	ConLog.Write("Lv2LwmutexDestroy[r3: 0x%llx]", lwmutex_addr);
 
 	lwmutex& lmtx = *(lwmutex*)Memory.GetMemFromAddr(lwmutex_addr);
-	SysCalls_IDs.RemoveID(lmtx.attribute);
+	Emu.GetIdManager().RemoveID(lmtx.attribute);
 	memset(Memory.GetMemFromAddr(lwmutex_addr), 0, sizeof(lwmutex));
 	return 0;
 }
@@ -77,8 +77,8 @@ int SysCalls::Lv2LwmutexLock(PPUThread& CPU)
 	const u64 timeout = CPU.GPR[4];
 	ConLog.Write("Lv2LwmutexLock[r3: 0x%llx, r4: 0x%llx]", lwmutex_addr, timeout);
 
-	lwmutex& lmtx = *(lwmutex*)Memory.GetMemFromAddr(lwmutex_addr);
-	lmtx.lock_var.info.waiter = CPU.GetId();
+	//lwmutex& lmtx = *(lwmutex*)Memory.GetMemFromAddr(lwmutex_addr);
+	//lmtx.lock_var.info.waiter = CPU.GetId();
 
 	return 0;//CELL_ESRCH;
 }
@@ -96,5 +96,5 @@ int SysCalls::Lv2LwmutexUnlock(PPUThread& CPU)
 	//int sys_lwmutex_unlock(sys_lwmutex_t *lwmutex)
 	const u64 lwmutex_addr = CPU.GPR[3];
 	ConLog.Write("Lv2LwmutexUnlock[r3: 0x%llx]", lwmutex_addr);
-	return 0;//CELL_EPERM;
+	return 0;
 }

@@ -101,104 +101,13 @@ void DisAsmFrame::Resume()
 }
 
 #include "Thread.h"
-
-class MTProgressDialog : public wxDialog
-{
-	wxGauge** m_gauge;
-	wxStaticText** m_msg;
-
-	wxArrayLong m_maximum;
-	u8 m_cores;
-
-	static const uint layout = 16;
-	static const uint maxdial = 65536;
-	wxArrayInt m_lastupdate;
-
-public:
-	MTProgressDialog(wxWindow* parent, const wxSize& size, const wxString& title,
-			const wxString& msg, const wxArrayLong& maximum, const u8 cores)
-		: wxDialog(parent, wxID_ANY, title, wxDefaultPosition)
-		, m_maximum(maximum)
-		, m_cores(cores)
-	{
-		wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
-
-		m_gauge = new wxGauge*[m_cores];
-		m_msg = new wxStaticText*[m_cores];
-
-		m_lastupdate.SetCount(cores);
-
-		for(uint i=0; i<m_cores; ++i)
-		{
-			m_lastupdate[i] = -1;
-
-			m_msg[i] = new wxStaticText(this, wxID_ANY, msg);
-			sizer->Add(m_msg[i], 0, wxLEFT | wxTOP, layout);
-
-			m_gauge[i] = new wxGauge(this, wxID_ANY, maxdial,
-									  wxDefaultPosition, wxDefaultSize,
-									  wxGA_HORIZONTAL );
-
-			sizer->Add(m_gauge[i], 0, wxLEFT | wxRIGHT | wxTOP | wxEXPAND, layout);
-			m_gauge[i]->SetValue(0);
-
-			sizer->AddSpacer(5);
-		}
-
-		SetSizerAndFit(sizer);
-		if(size != wxDefaultSize)
-		{
-			SetSize(size);
-		}
-		else
-		{
-			wxSize ws;
-			ws.x = 400;
-			ws.y = GetSize().y + 8;
-			SetSize(ws);
-		}
-
-		Show();
-	}
-
-	__forceinline void Update(const u8 thread_id, const u64 value, const wxString& msg)
-	{
-		if(thread_id > m_cores) return;
-
-		const int curupdate = (int)(((double)value/(double)m_maximum[thread_id])*1000);
-		if(curupdate == m_lastupdate[thread_id]) return;
-		m_lastupdate[thread_id] = curupdate;
-
-		m_msg[thread_id]->SetLabel(msg);
-
-		if(value >= (u32)m_maximum[thread_id]) return;
-		m_gauge[thread_id]->SetValue(((double)value / (double)m_maximum[thread_id]) * maxdial);
-	}
-
-	const u32 GetMaxValue(const uint thread_id) const
-	{
-		if(thread_id > m_cores) return 0;
-		return m_maximum[thread_id];
-	}
-
-	void SetMaxFor(const uint thread_id, const u64 val)
-	{
-		if(thread_id > m_cores) return;
-		m_maximum[thread_id] = val;
-	}
-
-	virtual void Close(bool force = false)
-	{
-		m_lastupdate.Empty();
-		m_maximum.Empty();
-
-		wxDialog::Close(force);
-	}
-};
-
+#include <Utilites/MTProgressDialog.h>
 #include "Loader/ELF.h"
-ArrayF<Elf64_Shdr>* shdr_arr = NULL;
+ArrayF<Elf64_Shdr>* shdr_arr_64 = NULL;
+ArrayF<Elf32_Shdr>* shdr_arr_32 = NULL;
 ELF64Loader* l_elf64 = NULL;
+ELF32Loader* l_elf32 = NULL;
+bool ElfType64 = false;
 
 class DumperThread : public StepThread
 {
@@ -224,9 +133,8 @@ public:
 		arr = _arr;
 
 		*done = false;
-		ID thread;
-		Emu.GetCPU().GetIDs().GetFirst(thread);
-		if((*(PPCThread*)thread.m_data).IsSPU())
+
+		if(Emu.GetCPU().GetThreads()[0].IsSPU())
 		{
 			SPU_DisAsm& dis_asm = *new SPU_DisAsm(*(PPCThread*)NULL, DumpMode);
 			decoder = new SPU_Decoder(dis_asm);
@@ -247,10 +155,14 @@ public:
 
 		//wxFile f(Emu.m_path);
 
-		for(u32 sh=0, vsize=0; sh<shdr_arr->GetCount(); ++sh)
+		const u32 shdr_count = ElfType64 ? shdr_arr_64->GetCount() : shdr_arr_32->GetCount();
+
+		for(u32 sh=0, vsize=0; sh<shdr_count; ++sh)
 		{
-			const Elf64_Shdr& c_sh = (*shdr_arr)[sh];
-			const u64 sh_size = c_sh.sh_size / 4;
+			//const Elf64_Shdr& c_sh = (*shdr_arr)[sh];
+			const u64 sh_size = (ElfType64 ? (*shdr_arr_64)[sh].sh_size : (*shdr_arr_32)[sh].sh_size) / 4;
+			const u64 sh_addr = (ElfType64 ? (*shdr_arr_64)[sh].sh_addr : (*shdr_arr_32)[sh].sh_addr);
+
 			u64 d_size = sh_size / cores;
 			const u64 s_fix = sh_size % cores;
 			if(id <= s_fix) d_size++;
@@ -260,7 +172,7 @@ public:
 				prog_dial->Update(id, vsize,
 					wxString::Format("%d thread: %d of %d", (int)id + 1, vsize, max_value));
 
-				disasm->dump_pc = c_sh.sh_addr + off;
+				disasm->dump_pc = sh_addr + off;
 				//f.Seek(c_sh.sh_offset + off);
 				//u32 buf;
 				//f.Read(&buf, sizeof(buf));
@@ -338,12 +250,14 @@ struct WaitDumperThread : public ThreadBase
 		wxFile fd;
 		fd.Open(patch, wxFile::write);
 
-		for(uint sh=0, counter=0; sh<shdr_arr->GetCount(); ++sh)
-		{
-			const Elf64_Shdr& c_sh = (*shdr_arr)[sh];
+		const u32 shdr_count = ElfType64 ? shdr_arr_64->GetCount() : shdr_arr_32->GetCount();
 
-			if(!c_sh.sh_size) continue;
-			const uint c_sh_size = c_sh.sh_size / 4;
+		for(uint sh=0, counter=0; sh<shdr_count; ++sh)
+		{
+			const u64 sh_size = ElfType64 ? (*shdr_arr_64)[sh].sh_size : (*shdr_arr_32)[sh].sh_size;
+
+			if(!sh_size) continue;
+			const uint c_sh_size = sh_size / 4;
 
 			fd.Write(wxString::Format("Start of section header %d (instructions count: %d)\n", sh, c_sh_size));
 
@@ -370,12 +284,13 @@ struct WaitDumperThread : public ThreadBase
 
 		for(uint c=0; c<cores; ++c)
 		{
-			for(uint sh=0; sh<shdr_arr->GetCount(); ++sh) arr[c][sh].Empty();
+			for(uint sh=0; sh<shdr_count; ++sh) arr[c][sh].Empty();
 		}
 
 		free(arr);
 
 		//safe_delete(shdr_arr);
+		safe_delete(l_elf32);
 		safe_delete(l_elf64);
 
 		prog_dial2.Close();
@@ -408,24 +323,26 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	l_elf64 = new ELF64Loader(Emu.m_path);
-
 	switch(ehdr.GetClass())
 	{
-	case CLASS_ELF64:  break;
-	case CLASS_ELF32:
-		ConLog.Error("Dump from ELF32 not supported yet!");
-		free(l_elf64);
-	return;
-	default:
-		ConLog.Error("Corrupted ELF!");
-		free(l_elf64);
-		return;
-	}
+	case CLASS_ELF64:
+		ElfType64 = true;
+		l_elf64 = new ELF64Loader(Emu.m_path);
+		if(!l_elf64->Load()) return;
+		shdr_arr_64 = &l_elf64->shdr_arr;
+		if(l_elf64->shdr_arr.GetCount() <= 0) return;
+	break;
 
-	if(!l_elf64->Load()) return;
-	shdr_arr = &l_elf64->shdr_arr;
-	if(l_elf64->shdr_arr.GetCount() <= 0) return;
+	case CLASS_ELF32:
+		ElfType64 = false;
+		l_elf32 = new ELF32Loader(Emu.m_path);
+		if(!l_elf32->Load()) return;
+		shdr_arr_32 = &l_elf32->shdr_arr;
+		if(l_elf32->shdr_arr.GetCount() <= 0) return;
+	break;
+
+	default: ConLog.Error("Corrupted ELF!"); return;
+	}
 
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
@@ -436,9 +353,20 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	max.Clear();
 
 	u64 max_count = 0;
-	for(uint sh=0; sh<l_elf64->shdr_arr.GetCount(); ++sh)
+
+	if(ElfType64)
 	{
-		max_count += l_elf64->shdr_arr[sh].sh_size / 4;
+		for(uint sh=0; sh<l_elf64->shdr_arr.GetCount(); ++sh)
+		{
+			max_count += l_elf64->shdr_arr[sh].sh_size / 4;
+		}
+	}
+	else
+	{
+		for(uint sh=0; sh<l_elf32->shdr_arr.GetCount(); ++sh)
+		{
+			max_count += l_elf32->shdr_arr[sh].sh_size / 4;
+		}
 	}
 
 	for(uint c=0; c<cores_count; ++c) max.Add(max_count / cores_count);
@@ -453,7 +381,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 	for(uint i=0; i<cores_count; ++i)
 	{
-		arr[i] = new wxArrayString[l_elf64->shdr_arr.GetCount()];
+		arr[i] = new wxArrayString[ElfType64 ? l_elf64->shdr_arr.GetCount() : l_elf32->shdr_arr.GetCount()];
 		dump[i].Set(i, cores_count, &threads_done[i], prog_dial, arr);
 		dump[i].Start(true);
 	}

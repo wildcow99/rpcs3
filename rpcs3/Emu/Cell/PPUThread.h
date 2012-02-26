@@ -111,12 +111,13 @@ union CRhdr
 union XERhdr
 {
 	u64 XER;
+
 	struct
 	{
 		u64	L	: 61;
-		u32 CA	: 1;
-		u32 OV	: 1;
-		u32 SO	: 1;
+		u64 CA	: 1;
+		u64 OV	: 1;
+		u64 SO	: 1;
 	};
 };
 
@@ -190,9 +191,13 @@ union VPR_reg
 		return wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 	}
 
-	VPR_reg operator ^  (VPR_reg& right) { return _mm_xor_si128(*this, right); }
-	VPR_reg operator |  (VPR_reg& right) { return _mm_or_si128 (*this, right); }
-	VPR_reg operator &  (VPR_reg& right) { return _mm_and_si128(*this, right); }
+	VPR_reg operator ^  (VPR_reg right) { return _mm_xor_si128(*this, right); }
+	VPR_reg operator |  (VPR_reg right) { return _mm_or_si128 (*this, right); }
+	VPR_reg operator &  (VPR_reg right) { return _mm_and_si128(*this, right); }
+
+	VPR_reg operator ^  (__m128i right) { return _mm_xor_si128(*this, right); }
+	VPR_reg operator |  (__m128i right) { return _mm_or_si128 (*this, right); }
+	VPR_reg operator &  (__m128i right) { return _mm_and_si128(*this, right); }
 
 	bool operator == (const VPR_reg& right){ return _u64[0] == right._u64[0] && _u64[1] == right._u64[1]; }
 
@@ -219,7 +224,7 @@ union VPR_reg
 	bool operator != (const s16 right)	{ return !(*this == right); }
 	bool operator != (const s8 right)	{ return !(*this == right); }
 
-	void Clear() { _u128 = u128::From32(0); }
+	void Clear() { memset(&_u128, 0, sizeof(_u128)); }
 };
 /*
 struct VPR_table
@@ -301,65 +306,70 @@ public:
 	//TBR : Time-Base Registers
 	u64 TB;	//TBR 0x10C - 0x10D
 
-	u32 reserve32;
-	bool has_reserve32;
+	u64 reserve_addr;
+	bool reserve;
+
+	u64 cycle;
 
 public:
-	inline void UpdateCR(const u8 n, const u32 value, const bool set)
+	PPUThread();
+	~PPUThread();
+
+	inline u8 GetCR(const u8 n) const
 	{
 		switch(n)
 		{
-		case 0: set ? CR.cr0 |= value : CR.cr0 &= ~value; break;
-		case 1: set ? CR.cr1 |= value : CR.cr1 &= ~value; break;
-		case 2: set ? CR.cr2 |= value : CR.cr2 &= ~value; break;
-		case 3: set ? CR.cr3 |= value : CR.cr3 &= ~value; break;
-		case 4: set ? CR.cr4 |= value : CR.cr4 &= ~value; break;
-		case 5: set ? CR.cr5 |= value : CR.cr5 &= ~value; break;
-		case 6: set ? CR.cr6 |= value : CR.cr6 &= ~value; break;
-		case 7: set ? CR.cr7 |= value : CR.cr7 &= ~value; break;
+		case 7: return CR.cr0;
+		case 6: return CR.cr1;
+		case 5: return CR.cr2;
+		case 4: return CR.cr3;
+		case 3: return CR.cr4;
+		case 2: return CR.cr5;
+		case 1: return CR.cr6;
+		case 0: return CR.cr7;
 		}
+
+		return 0;
 	}
 
 	inline void SetCR(const u8 n, const u32 value)
 	{
 		switch(n)
 		{
-		case 0: CR.cr0 = value; break;
-		case 1: CR.cr1 = value; break;
-		case 2: CR.cr2 = value; break;
-		case 3: CR.cr3 = value; break;
-		case 4: CR.cr4 = value; break;
-		case 5: CR.cr5 = value; break;
-		case 6: CR.cr6 = value; break;
-		case 7: CR.cr7 = value; break;
+		case 7: CR.cr0 = value; break;
+		case 6: CR.cr1 = value; break;
+		case 5: CR.cr2 = value; break;
+		case 4: CR.cr3 = value; break;
+		case 3: CR.cr4 = value; break;
+		case 2: CR.cr5 = value; break;
+		case 1: CR.cr6 = value; break;
+		case 0: CR.cr7 = value; break;
 		}
 	}
 
-	inline void UpdateCR_LT(const u8 n, const bool set) { UpdateCR(n, CR_LT, set); }
-	inline void UpdateCR_GT(const u8 n, const bool set) { UpdateCR(n, CR_GT, set); }
-	inline void UpdateCR_EQ(const u8 n, const bool set) { UpdateCR(n, CR_EQ, set); }
-	inline void UpdateCR_SO(const u8 n, const bool set) { UpdateCR(n, CR_SO, set); }
-
-	inline u8 GetCR(const u8 n) const
+	inline void SetCRBit(const u8 n, const u32 bit, const bool value)
 	{
 		switch(n)
 		{
-		case 0: return CR.cr0;
-		case 1: return CR.cr1;
-		case 2: return CR.cr2;
-		case 3: return CR.cr3;
-		case 4: return CR.cr4;
-		case 5: return CR.cr5;
-		case 6: return CR.cr6;
-		case 7: return CR.cr7;
+		case 7: value ? CR.cr0 |= bit : CR.cr0 &= ~bit; break;
+		case 6: value ? CR.cr1 |= bit : CR.cr1 &= ~bit; break;
+		case 5: value ? CR.cr2 |= bit : CR.cr2 &= ~bit; break;
+		case 4: value ? CR.cr3 |= bit : CR.cr3 &= ~bit; break;
+		case 3: value ? CR.cr4 |= bit : CR.cr4 &= ~bit; break;
+		case 2: value ? CR.cr5 |= bit : CR.cr5 &= ~bit; break;
+		case 1: value ? CR.cr6 |= bit : CR.cr6 &= ~bit; break;
+		case 0: value ? CR.cr7 |= bit : CR.cr7 &= ~bit; break;
 		}
-
-		return 0;
 	}
 
-	inline bool IsCR_EQ(const u8 n) const { return (GetCR(n) & CR_EQ) > 0; }
-	inline bool IsCR_GT(const u8 n) const { return (GetCR(n) & CR_GT) > 0; }
-	inline bool IsCR_LT(const u8 n) const { return (GetCR(n) & CR_LT) > 0; }
+	inline void SetCR_EQ(const u8 n, const bool value) { SetCRBit(n, CR_EQ, value); }
+	inline void SetCR_GT(const u8 n, const bool value) { SetCRBit(n, CR_GT, value); }
+	inline void SetCR_LT(const u8 n, const bool value) { SetCRBit(n, CR_LT, value); }	
+	inline void SetCR_SO(const u8 n, const bool value) { SetCRBit(n, CR_SO, value); }
+
+	inline bool IsCR_EQ(const u8 n) const { return (GetCR(n) & CR_EQ) ? 1 : 0; }
+	inline bool IsCR_GT(const u8 n) const { return (GetCR(n) & CR_GT) ? 1 : 0; }
+	inline bool IsCR_LT(const u8 n) const { return (GetCR(n) & CR_LT) ? 1 : 0; }
 
 	template<typename T> void UpdateCRn(const u8 n, const T a, const T b)
 	{
@@ -367,25 +377,19 @@ public:
 		else if	(a >  b) SetCR(n, CR_GT);
 		else if	(a == b) SetCR(n, CR_EQ);
 
-		UpdateCR_SO(n, XER.SO);
+		SetCR_SO(n, XER.SO);
 	}
 
-	void UpdateCR0(const s64 val)
+	template<typename T> void UpdateCR0(const T val)
 	{
-		UpdateCRn<s64>(0, val, 0);
+		UpdateCRn<T>(0, val, 0);
 	}
 
-	const u8 GetCR_Bit(const u8 bit) const { return 1 << (3 - (bit % 4)); }
+	const u8 GetCRBit(const u32 bit) const { return 1 << (3 - (bit % 4)); }
 
-	void UpdateCR(const u8 bit, bool set)
-	{
-		UpdateCR(bit/4, GetCR_Bit(bit), set);
-	}
+	void SetCRBit(const u32 bit, bool set) { SetCRBit(bit/4, GetCRBit(bit), set); }
 
-	const u8 IsCR(const u8 bit) const
-	{
-		return (GetCR(bit/4) & GetCR_Bit(bit)) ? 1 : 0;
-	}
+	const u8 IsCR(const u32 bit) const { return (GetCR(bit/4) & GetCRBit(bit)) ? 1 : 0; }
 
 	bool IsCarry(const u64 a, const u64 b) { return b > (~a); }
 
@@ -400,10 +404,6 @@ public:
 		if(val) SetFPSCRException(FPSCR_XX);
         FPSCR.FI = val;
 	}
-
-public:
-	PPUThread();
-	~PPUThread();
 
 	virtual wxString RegsToString()
 	{

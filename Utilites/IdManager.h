@@ -23,6 +23,8 @@ class IdManager
 {
 	ArrayF<ID> IDs;
 
+	static const u64 first_id = 1;
+
 	void Cleanup()
 	{
 		while(IDs.GetCount())
@@ -53,17 +55,17 @@ public:
 	{
 		if(id == 0 || id > (u64)NumToID(IDs.GetCount()-1) || id >= GetMaxID()) return false;
 
-		return GetIDData(id).m_used;
+		return IDs[IDToNum(id)].m_used;
 	}
 	
 	__forceinline const ID_TYPE NumToID(const ID_TYPE num) const
 	{
-		return num + 1;
+		return num + first_id;
 	}
 	
 	__forceinline const ID_TYPE IDToNum(const ID_TYPE id) const
 	{
-		return id - 1;
+		return id - first_id;
 	}
 
 	void Clear()
@@ -98,7 +100,11 @@ public:
 		return GetNext(pos, dst, _id);
 	}
 
-	bool HasID() const { return IDs.GetCount() != 0; }
+	bool HasID(const s64 id)
+	{
+		if(id == wxID_ANY) return IDs.GetCount() != 0;
+		return CheckID(id);
+	}
 
 	bool GetNext(u32& pos, ID& dst, ID_TYPE* _id = NULL)
 	{

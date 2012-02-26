@@ -100,9 +100,25 @@ class MemoryBase
 
 public:
 	MemoryBlock MainRam;
+	MemoryBlock UserMem;
 	MemoryBlock Video_FrameBuffer;
 	MemoryBlock Video_GPUdata;
 	ArrayF<MemoryBlock> MemoryBlocks;
+
+	struct UsedUserMem
+	{
+		u64 addr;
+		u64 size;
+
+		UsedUserMem(u64 _addr, u64 _size)
+			: addr(_addr)
+			, size(_size)
+		{
+		}
+	};
+
+	Array<UsedUserMem> m_used_user_mem;
+	u64 m_used_mem_size;
 
 	MemoryFlags MemFlags;
 
@@ -174,11 +190,14 @@ public:
 		ConLog.Write("Initing memory...");
 
 		MainRam.SetRange(0x00000000, 0x0FFFFFFF); //256 MB
+		UserMem.SetRange(0x30000010, 0x0d500000);
 		Video_FrameBuffer.SetRange(MainRam.GetEndAddr(), 0x0FFFFFFF); //252 MB
 		Video_GPUdata.SetRange(Video_FrameBuffer.GetEndAddr(), 0x003FFFFF); //4 MB
 		MemoryBlocks.Add(MainRam);
+		MemoryBlocks.Add(UserMem);
 		MemoryBlocks.Add(Video_FrameBuffer);
 		MemoryBlocks.Add(Video_GPUdata);
+		m_used_mem_size = 0;
 	}
 
 	bool IsGoodAddr(const u32 addr)
@@ -205,6 +224,8 @@ public:
 
 		MemoryBlocks.Clear();
 		MemFlags.Clear();
+		m_used_mem_size = 0;
+		m_used_user_mem.Clear();
 	}
 
 	void Reset()
@@ -260,6 +281,54 @@ public:
 		}
 
 		Write8(addr + str.Length(), 0);
+	}
+
+	static u64 AlignAddr(const u64 addr, const u8 align)
+	{
+		return (addr + (align-1)) & ~(align-1);
+	}
+
+	u32 GetUserMemTotalSize()
+	{
+		return UserMem.GetSize();
+	}
+
+	u32 GetUserMemAvailSize()
+	{
+		return UserMem.GetSize() - m_used_mem_size;
+	}
+
+	u64 GetNewAddr(const u64 size, const u64 align, const u64 min_addr = 0, const u64 max_addr = ~0)
+	{
+		if(!m_used_user_mem.GetCount())
+		{
+			if(size >= UserMem.GetEndAddr() - UserMem.GetStartAddr())
+			{
+				ConLog.Error("Get new addr error: size too large [0x%llx]", size);
+				return 0;
+			}
+
+			return UserMem.GetStartAddr();
+		}
+		UsedUserMem& mem = m_used_user_mem[m_used_user_mem.GetCount() - 1];
+		const u64 addr = mem.addr + mem.size;
+		if(addr + size >= UserMem.GetEndAddr())
+		{
+			//TODO
+			ConLog.Error("Not enought free user mem");
+			return 0;
+		}
+
+		return addr;
+	}
+
+	u64 Alloc(const u64 size, const u64 align)
+	{
+		const u64 alloc_addr = GetNewAddr(size, align);
+		if(!alloc_addr) return 0;
+		m_used_mem_size += size;
+		m_used_user_mem.Add(new UsedUserMem(alloc_addr, size));
+		return alloc_addr;
 	}
 };
 
