@@ -120,7 +120,7 @@ public:
 		return false;
 	}
 
-	virtual bool RemoveID(const ID_TYPE _id)
+	virtual bool RemoveID(const ID_TYPE _id, bool free_data = true)
 	{
 		if(!CheckID(_id)) return false;
 		ID& id = IDs[IDToNum(_id)];
@@ -128,7 +128,7 @@ public:
 		id.m_used = false;
 		id.m_attr = 0;
 		id.m_name.Clear();
-		free(id.m_data);
+		if(free_data) free(id.m_data);
 		id.m_data = NULL;
 		if(IDToNum(_id) == IDs.GetCount()-1) Cleanup();
 		return true;
