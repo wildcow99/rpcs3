@@ -55,7 +55,7 @@ void PPCThreadManager::RemoveThread(const u32 id)
 		m_threads.RemoveAt(i);
 		break;
 	}
-	Emu.GetIdManager().RemoveID(id);
+	Emu.GetIdManager().RemoveID(id, false);
 	Emu.CheckStatus();
 }
 
