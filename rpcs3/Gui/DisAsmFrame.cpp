@@ -103,8 +103,8 @@ void DisAsmFrame::Resume()
 #include "Thread.h"
 #include <Utilites/MTProgressDialog.h>
 #include "Loader/ELF.h"
-ArrayF<Elf64_Shdr>* shdr_arr_64 = NULL;
-ArrayF<Elf32_Shdr>* shdr_arr_32 = NULL;
+Array<Elf64_Shdr>* shdr_arr_64 = NULL;
+Array<Elf32_Shdr>* shdr_arr_32 = NULL;
 ELF64Loader* l_elf64 = NULL;
 ELF32Loader* l_elf32 = NULL;
 bool ElfType64 = false;
@@ -328,7 +328,11 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	case CLASS_ELF64:
 		ElfType64 = true;
 		l_elf64 = new ELF64Loader(Emu.m_path);
-		if(!l_elf64->Load()) return;
+		if(!l_elf64->LoadInfo())
+		{
+			safe_delete(l_elf64);
+			return;
+		}
 		shdr_arr_64 = &l_elf64->shdr_arr;
 		if(l_elf64->shdr_arr.GetCount() <= 0) return;
 	break;
@@ -336,7 +340,11 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	case CLASS_ELF32:
 		ElfType64 = false;
 		l_elf32 = new ELF32Loader(Emu.m_path);
-		if(!l_elf32->Load()) return;
+		if(!l_elf32->LoadInfo())
+		{
+			safe_delete(l_elf32);
+			return;
+		}
 		shdr_arr_32 = &l_elf32->shdr_arr;
 		if(l_elf32->shdr_arr.GetCount() <= 0) return;
 	break;

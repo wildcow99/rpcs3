@@ -13,13 +13,24 @@ ELF64Loader::ELF64Loader(const wxString& path)
 {
 }
 
-bool ELF64Loader::Load()
+bool ELF64Loader::LoadInfo()
 {
 	if(!elf64_f.IsOpened()) return false;
 
-	if(!LoadEhdr()) return false;
-	if(!LoadPhdr()) return false;
-	if(!LoadShdr()) return false;
+	if(!LoadEhdrInfo()) return false;
+	if(!LoadPhdrInfo()) return false;
+	if(!LoadShdrInfo()) return false;
+
+	return true;
+}
+
+bool ELF64Loader::LoadData()
+{
+	if(!elf64_f.IsOpened()) return false;
+
+	if(!LoadEhdrData()) return false;
+	if(!LoadPhdrData()) return false;
+	if(!LoadShdrData()) return false;
 
 	return true;
 }
@@ -29,7 +40,7 @@ bool ELF64Loader::Close()
 	return elf64_f.Close();
 }
 
-bool ELF64Loader::LoadEhdr()
+bool ELF64Loader::LoadEhdrInfo()
 {
 	elf64_f.Seek(0);
 	ehdr.Load(elf64_f);
@@ -68,14 +79,10 @@ bool ELF64Loader::LoadEhdr()
 		return false;
 	}
 
-	ConLog.SkipLn();
-	ehdr.Show();
-	ConLog.SkipLn();
-
 	return true;
 }
 
-bool ELF64Loader::LoadPhdr()
+bool ELF64Loader::LoadPhdrInfo()
 {
 	phdr_arr.Clear();
 
@@ -85,46 +92,18 @@ bool ELF64Loader::LoadPhdr()
 		return false;
 	}
 
-	for(uint i=0; i<ehdr.e_phnum; ++i)
+	elf64_f.Seek(ehdr.e_phoff);
+	for(u32 i=0; i<ehdr.e_phnum; ++i)
 	{
-		elf64_f.Seek(ehdr.e_phoff + (ehdr.e_phentsize * i));
 		Elf64_Phdr phdr;
 		phdr.Load(elf64_f);
-		phdr.Show();
-
-		if (phdr.p_vaddr != phdr.p_paddr)
-		{
-			ConLog.Warning
-			( 
-				"ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
-				phdr.p_paddr, phdr.p_vaddr
-			);
-		}
-
-
-		switch(phdr.p_type)
-		{
-			case 0x00000001: //LOAD
-			{
-				elf64_f.Seek(phdr.p_offset);
-				elf64_f.Read(Memory.GetMemFromAddr(phdr.p_paddr), phdr.p_filesz);
-			}
-			break;
-
-			case 0x00000007: //TLS
-				Emu.SetTLSData(phdr.p_paddr, phdr.p_filesz, phdr.p_memsz);
-			break;
-		}
-
-		ConLog.SkipLn();
-
-		phdr_arr.Add(new Elf64_Phdr(phdr));
+		phdr_arr.AddCpy(phdr);
 	}
 
 	return true;
 }
 
-bool ELF64Loader::LoadShdr()
+bool ELF64Loader::LoadShdrInfo()
 {
 	shdr_arr.Clear();
 	shdr_name_arr.Clear();
@@ -134,137 +113,120 @@ bool ELF64Loader::LoadShdr()
 		return false;
 	}
 
-	Memory.MemFlags.Clear();
-
-	Elf64_Shdr* strtab	= NULL;
-	Elf64_Shdr* symtab	= NULL;
-	Elf64_Shdr* opd		= NULL;
-	Elf64_Shdr* got		= NULL;
-	Elf64_Shdr* sys_proc_param = NULL;
-
-	for(uint i=0; i<ehdr.e_shnum; ++i)
+	elf64_f.Seek(ehdr.e_shoff);
+	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
-		Elf64_Shdr& shdr = *new Elf64_Shdr();
-		elf64_f.Seek(ehdr.e_shoff + (ehdr.e_shentsize * i));
+		Elf64_Shdr shdr;
 		shdr.Load(elf64_f);
-
-		shdr_arr.Add(shdr);
-
-		if(ehdr.e_shstrndx == i && shdr.sh_type == SHT_STRTAB)
-		{
-			if(!strtab) strtab = &shdr;
-		}
-		else if(shdr.sh_type == SHT_SYMTAB)
-		{
-			if(!symtab) symtab = &shdr;
-		}
+		shdr_arr.AddCpy(shdr);
 	}
+
+	if(ehdr.e_shstrndx >= shdr_arr.GetCount())
+	{
+		ConLog.Error("LoadShdr64 error: shstrndx too big!");
+		return false;
+	}
+
+	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
+	{
+		elf64_f.Seek(shdr_arr[ehdr.e_shstrndx].sh_offset + shdr_arr[i].sh_name);
+		wxString name = wxEmptyString;
+		while(!elf64_f.Eof())
+		{
+			char c;
+			elf64_f.Read(&c, 1);
+			if(c == 0) break;
+			name += c;
+		}
+
+		shdr_name_arr.Add(name);
+	}
+
+	return true;
+}
+
+bool ELF64Loader::LoadEhdrData()
+{
+	ConLog.SkipLn();
+	ehdr.Show();
+	ConLog.SkipLn();
+
+	return true;
+}
+
+bool ELF64Loader::LoadPhdrData()
+{
+	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
+	{
+		phdr_arr[i].Show();
+
+		if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
+		{
+			ConLog.Warning
+			( 
+				"ElfProgram different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
+				phdr_arr[i].p_paddr, phdr_arr[i].p_vaddr
+			);
+		}
+
+		switch(phdr_arr[i].p_type)
+		{
+			case 0x00000001: //LOAD
+			{
+				elf64_f.Seek(phdr_arr[i].p_offset);
+				elf64_f.Read(Memory.GetMemFromAddr(phdr_arr[i].p_paddr), phdr_arr[i].p_filesz);
+			}
+			break;
+
+			case 0x00000007: //TLS
+				Emu.SetTLSData(phdr_arr[i].p_paddr, phdr_arr[i].p_filesz, phdr_arr[i].p_memsz);
+			break;
+		}
+
+		ConLog.SkipLn();
+	}
+
+	return true;
+}
+
+bool ELF64Loader::LoadShdrData()
+{
+	Memory.MemFlags.Clear();
 
 	for(uint i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		Elf64_Shdr& shdr = shdr_arr[i];
-		if(strtab)
+
+		if(i < shdr_name_arr.GetCount())
 		{
-			elf64_f.Seek(strtab->sh_offset + shdr.sh_name);
-			wxString name = wxEmptyString;
-			while(!elf64_f.Eof())
-			{
-				char c;
-				elf64_f.Read(&c, 1);
-				if(c == 0) break;
-				name += c;
-			}
+			const wxString& name = shdr_name_arr[i];
+			ConLog.Write("Name: %s", shdr_name_arr[i]);
 
-			//hack!
-			if(name.Length() > 0 && name[0] != '.')
-			{
-				bool is_done = true;
-
-				if(!opd)
-				{
-					is_done = entry >= shdr.sh_addr && entry < shdr.sh_addr + shdr.sh_size;
-					if(is_done) name = ".opd";
-				}
-
-				if(!is_done) //.rodata.sceFNID
-				{
-					if(shdr.sh_size > 4)
-					{
-						is_done = true;
-						const wxFileOffset pos = elf64_f.Tell();
-						elf64_f.Seek(shdr.sh_offset);
-						while(elf64_f.Tell() < (s64)(shdr.sh_offset+shdr.sh_size) && is_done && !elf64_f.Eof())
-						{
-							u32 buf;
-							elf64_f.Read(&buf, 4);
-							is_done = (buf >> 24) == 0x00;
-						}
-
-						elf64_f.Seek(pos);
-					}
-
-					if(is_done) name = ".rodata.sceFNID";
-				}
-
-				if(!is_done) //.data.sceFStub
-				{
-					if(shdr.sh_size >= 32)
-					{
-						const wxFileOffset pos = elf64_f.Tell();
-
-						elf64_f.Seek(shdr.sh_offset);
-						u32 buf[8];
-						for(u8 i=0; i<8; ++i) elf64_f.Read(&buf[i], 4);
-						
-						/*
-						0: 39 80 00 00 	li      r12,0
-						1: 65 8c 00 03 	oris    r12,r12,X
-						2: 81 8c 01 9c 	lwz     r12,X(r12)
-						3: f8 41 00 28 	std     r2,40(r1)
-						4: 80 0c 00 00 	lwz     r0,0(r12)
-						5: 80 4c 00 04 	lwz     r2,4(r12)
-						6: 7c 09 03 a6 	mtctr   r0
-						7: 4e 80 04 20 	bctr
-						*/
-
-						is_done =
-							//buf[0] == 0x39800000 && //li    r12,0
-							//buf[3] == 0xf8410028 && //std   r2,40(r1)
-							//buf[4] == 0x800c0000 && //lwz   r0,0(r12)
-							//buf[5] == 0x804c0004 && //lwz   r2,4(r12)
-							buf[6] == 0x7c0903a6 && //mtctr r0
-							buf[7] == 0x4e800420;	//bctr
-
-						elf64_f.Seek(pos);
-
-					}
-
-					if(is_done) name = ".sceStub.text";
-				}
-
-				if(!is_done) //.text
-				{
-					is_done = true;
-					for(uint sh=0; sh<shdr_arr.GetCount() && is_done; ++sh)
-					{
-						if(sh != i) is_done = shdr.sh_size > shdr_arr[sh].sh_size;
-					}
-
-					if(is_done) name = ".text";
-				}
-			}
-
-			shdr_name_arr.Add(name);
-			ConLog.Write("Name: %s", name);
-
-			if(!opd && !name.CmpNoCase(".opd"))
+			if(!name.CmpNoCase(".opd"))
 			{
 				Memory.MemFlags.SetOPDRange(shdr.sh_addr, shdr.sh_size);
-				opd = &shdr;
+				const u32 offs = shdr.sh_offset;
+				const u32 size = shdr.sh_size;
+
+				elf64_f.Seek(offs);
+				for(uint i=0; i<size; i += sizeof(s64))
+				{
+					Memory.MemFlags.Add(Read32(elf64_f));
+					Memory.MemFlags.Add(Read32(elf64_f));
+				}
 			}
-			else if(!got && !name.CmpNoCase(".got"))
+			else if(!name.CmpNoCase(".got"))
 			{
-				got = &shdr;
+				const u32 offs = shdr.sh_offset;
+				const u32 size = shdr.sh_size;
+
+				elf64_f.Seek(offs);
+				for(uint i=0; i<size; i += sizeof(s32))
+				{
+					const u32 code = Read32(elf64_f);
+					if(code == 0x7f7f7f7f) break;
+					Memory.MemFlags.Add(code);
+				}
 			}
 			else if(!name.CmpNoCase(".data.sceFStub"))
 			{
@@ -281,7 +243,6 @@ bool ELF64Loader::LoadShdr()
 			else if(!name.CmpNoCase(".sys_proc_param"))
 			{
 				ConLog.Warning("section .sys_proc_param founded!");
-				sys_proc_param = &shdr;
 				struct sys_process_param
 				{
 					u32 size;
@@ -305,18 +266,25 @@ bool ELF64Loader::LoadShdr()
 				}
 				else
 				{
-					ConLog.Write("*** sdk version: 0x%x", Memory.Reverse32(proc_param.sdk_version));
-					ConLog.Write("*** primary prio: %d", Memory.Reverse32(proc_param.primary_prio));
-					ConLog.Write("*** primary stacksize: 0x%x", Memory.Reverse32(proc_param.primary_stacksize));
-					ConLog.Write("*** malloc pagesize: 0x%x", Memory.Reverse32(proc_param.malloc_pagesize));
-					ConLog.Write("*** ppc seg: 0x%x", Memory.Reverse32(proc_param.ppc_seg));
-					ConLog.Write("*** crash dump param addr: 0x%x", Memory.Reverse32(proc_param.crash_dump_param_addr));
+					ConLog.Write("*** sdk version: 0x%x", re(proc_param.sdk_version));
+					ConLog.Write("*** primary prio: %d", re(proc_param.primary_prio));
+					ConLog.Write("*** primary stacksize: 0x%x", re(proc_param.primary_stacksize));
+					ConLog.Write("*** malloc pagesize: 0x%x", re(proc_param.malloc_pagesize));
+					ConLog.Write("*** ppc seg: 0x%x", re(proc_param.ppc_seg));
+					ConLog.Write("*** crash dump param addr: 0x%x", re(proc_param.crash_dump_param_addr));
+
+					Emu.SetMallocPageSize(re(proc_param.malloc_pagesize));
 				}
 			}
 			//else if(!name.CmpNoCase(".lib.stub"))
 			//{
 			//	Memory.MemFlags.SetStubRange(shdr.sh_addr, shdr.sh_size);
 			//}
+		}
+
+		if(shdr.sh_type == SHT_SYMTAB)
+		{
+			//TODO
 		}
 
 		shdr.Show();
@@ -339,38 +307,6 @@ bool ELF64Loader::LoadShdr()
 		case SHT_PROGBITS:
 		break;
 		}
-	}
-
-	if(opd)
-	{
-		const u32 offs = opd->sh_offset;
-		const u32 size = opd->sh_size;
-
-		elf64_f.Seek(offs);
-		for(uint i=0; i<size; i += sizeof(s64))
-		{
-			Memory.MemFlags.Add(Read32(elf64_f));
-			Memory.MemFlags.Add(Read32(elf64_f)); //???
-		}
-	}
-
-	if(got)
-	{
-		const u32 offs = got->sh_offset;
-		const u32 size = got->sh_size;
-
-		elf64_f.Seek(offs);
-		for(uint i=0; i<size; i += sizeof(s32))
-		{
-			const u32 code = Read32(elf64_f);
-			if(code == 0x7f7f7f7f) break;
-			Memory.MemFlags.Add(code);
-		}
-	}
-
-	if(symtab)
-	{
-		//TODO
 	}
 
 	return true;

@@ -147,7 +147,7 @@ struct Elf64_Phdr
 		ConLog.Write("File size: 0x%08llx",			p_filesz);
 		ConLog.Write("Memory size: 0x%08llx",		p_memsz);
 		ConLog.Write("Flags: %s",					Phdr_FlagsToString(p_flags));
-		ConLog.Write("Algin: 0x%llx",				p_align);
+		ConLog.Write("Align: 0x%llx",				p_align);
 	}
 };
 
@@ -158,18 +158,22 @@ class ELF64Loader : public LoaderBase
 public:
 	Elf64_Ehdr ehdr;
 	wxArrayString shdr_name_arr;
-	ArrayF<Elf64_Shdr> shdr_arr;
-	ArrayF<Elf64_Phdr> phdr_arr;
+	Array<Elf64_Shdr> shdr_arr;
+	Array<Elf64_Phdr> phdr_arr;
 
 	ELF64Loader(wxFile& f);
 	ELF64Loader(const wxString& path);
 	~ELF64Loader() {Close();}
 
-	virtual bool Load();
+	virtual bool LoadInfo();
+	virtual bool LoadData();
 	virtual bool Close();
 
 private:
-	bool LoadEhdr();
-	bool LoadPhdr();
-	bool LoadShdr();
+	bool LoadEhdrInfo();
+	bool LoadPhdrInfo();
+	bool LoadShdrInfo();
+	bool LoadEhdrData();
+	bool LoadPhdrData();
+	bool LoadShdrData();
 };

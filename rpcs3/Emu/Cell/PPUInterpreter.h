@@ -1,5 +1,4 @@
 #include "Emu/Cell/PPUOpcodes.h"
-#include "Emu/Display/Display.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"
@@ -8,7 +7,7 @@
 #define START_OPCODES_GROUP(x) /*x*/
 #define END_OPCODES_GROUP(x) /*x*/
 
-#define HLE_CALL_DEBUG
+//#define HLE_CALL_LOG
 
 static u64 rotate_mask[64][64];
 void InitRotateMask()
@@ -217,8 +216,10 @@ private:
 	{
 		CPU.GPR[3] = SysCallsManager.DoSyscall(CPU.GPR[11], CPU);
 
-#ifdef HLE_CALL_DEBUG
-		ConLog.Write("SysCall[%lld] done with code [%lld]! #pc: 0x%x", CPU.GPR[11], CPU.GPR[3], CPU.PC);
+		if((s32)CPU.GPR[3] < 0) ConLog.Error("SysCall[%lld] done with code [0x%x]! #pc: 0x%x", CPU.GPR[11], (u32)CPU.GPR[3], CPU.PC);
+
+#ifdef HLE_CALL_LOG
+		else ConLog.Write("SysCall[%lld] done with code [0x%llx]! #pc: 0x%x", CPU.GPR[11], CPU.GPR[3], CPU.PC);
 #endif
 	}
 
@@ -226,11 +227,13 @@ private:
 	{
 		CPU.GPR[3] = SysCallsManager.DoFunc(code, CPU);
 
-#ifdef HLE_CALL_DEBUG
-		ConLog.Write("Func[0x%x] done with code [%lld]! #pc: 0x%x", code, CPU.GPR[3], CPU.PC);
+		if((s32)CPU.GPR[3] < 0) ConLog.Write("Func[0x%x] done with code [0x%x]! #pc: 0x%x", code, (u32)CPU.GPR[3], CPU.PC);
+
+#ifdef HLE_CALL_LOG
+		else ConLog.Write("Func[0x%x] done with code [0x%llx]! #pc: 0x%x", code, CPU.GPR[3], CPU.PC);
 #endif
 
-		CPU.GPR[r0] = /*CPU.stack_addr; //*/(Memory.MainRam.GetEndAddr() & ~0x3) - 4*4;
+		CPU.GPR[r0] = CPU.stack_addr;
 		Memory.Write32(CPU.GPR[r0],		CPU.LR);
 		Memory.Write32(CPU.GPR[r0] + 4, CPU.GPR[3]);
 	}
@@ -290,7 +293,7 @@ private:
 	virtual void SUBFIC(OP_REG rt, OP_REG ra, OP_sIMM simm16)
 	{
 		const u64 RA = CPU.GPR[ra];
-		CPU.GPR[rt] = (s64)simm16 - RA;
+		CPU.GPR[rt] = ~RA + (s64)simm16 + 1;
 		CPU.XER.CA = (RA == 0 || CPU.IsCarry(0-RA, simm16));
 	}
 	virtual void CMPLI(OP_REG bf, OP_REG l, OP_REG ra, OP_uIMM uimm16)
@@ -413,7 +416,11 @@ private:
 		CPU.GPR[ra] = rotl32(CPU.GPR[rs], sh) & rotate_mask[32 + mb][32 + me];
 		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
 	}
-
+	virtual void RLWNM(OP_REG ra, OP_REG rs, OP_REG rb, OP_REG mb, OP_REG me, bool rc)
+	{
+		CPU.GPR[ra] = rotl32(CPU.GPR[rs], CPU.GPR[rb] & 0x1f) & rotate_mask[32 + mb][32 + me];
+		if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+	}
 	virtual void ORI(OP_REG rs, OP_REG ra, OP_uIMM uimm16)
 	{
 		if(rs == 0 && ra == 0 && uimm16 == 0)
@@ -536,8 +543,7 @@ private:
 		{
 			const u32 n = CPU.GPR[rb] & 0x1f;
 			const u32 r = rotl32((u32)CPU.GPR[rs], n);
-			u32 m = 0;
-			if((CPU.GPR[rb] & 0x20) == 0) m = rotate_mask[32][63 - n];
+			const u32 m = (CPU.GPR[rb] & 0x20) ? 0 : rotate_mask[32][63 - n];
 
 			CPU.GPR[ra] = r & m;
 
@@ -681,6 +687,12 @@ private:
 		{
 			Memory.Write32(ra ? CPU.GPR[ra] + CPU.GPR[rb] : CPU.GPR[rb], CPU.GPR[rs]);
 		}
+		virtual void STDUX(OP_REG rs, OP_REG ra, OP_REG rb)
+		{
+			const u32 addr = CPU.GPR[ra] + CPU.GPR[rb];
+			Memory.Write64(addr, CPU.GPR[rs]);
+			CPU.GPR[ra] = addr;
+		}
 		virtual void ADDZE(OP_REG rs, OP_REG ra, OP_REG oe, bool rc)
 		{
 			const s64 RA = CPU.GPR[ra];
@@ -810,7 +822,7 @@ private:
 
 			if(rc) CPU.UpdateCR0<s64>(CPU.GPR[rt]);
 		}
-		virtual void DIVWU(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
+		virtual void DIVWU(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
 			const u32 RA = CPU.GPR[ra];
 			const u32 RB = CPU.GPR[rb];
@@ -818,14 +830,14 @@ private:
 			if(RB == 0)
 			{
 				if(oe) ConLog.Warning("divwuo");
-				CPU.GPR[rt] = 0;
+				CPU.GPR[rd] = 0;
 			}
 			else
 			{
-				CPU.GPR[rt] = RA / RB;
+				CPU.GPR[rd] = RA / RB;
 			}
 
-			if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rt]);
+			if(rc) CPU.UpdateCR0<s32>(CPU.GPR[rd]);
 		}
 		virtual void MTSPR(OP_REG spr, OP_REG rs)
 		{
@@ -842,7 +854,7 @@ private:
 		}
 		virtual void SRD(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
 		{
-			CPU.GPR[ra] = CPU.GPR[rb] & 0x20 ? 0 : CPU.GPR[rs] >> (CPU.GPR[rb] & 0x3f);
+			CPU.GPR[ra] = CPU.GPR[rb] & 0x40 ? 0 : CPU.GPR[rs] >> (CPU.GPR[rb] & 0x3f);
 			if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 		}
 		/*0x237*///LFSUX
@@ -850,6 +862,70 @@ private:
 		/*0x28a*///LDUX
 		/*0x277*///LFDUX
 		/*0x316*///LHBRX
+		virtual void SRAW(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
+		{
+			if(CPU.GPR[rb] & 0x20)
+			{
+				if(CPU.GPR[rs] & 0x80000000)
+				{
+					CPU.GPR[ra] = ~0LL;
+					CPU.XER.CA = 1;
+				}
+				else
+				{
+					CPU.GPR[ra] = 0LL;
+					CPU.XER.CA = 0;
+				}
+			}
+			else
+			{
+				const u8 n = CPU.GPR[rb] & 0x1f;
+				if(n == 0)
+				{
+					CPU.GPR[ra] = (s64)(s32)CPU.GPR[rs];
+					CPU.XER.CA = 0;
+				}
+				else
+				{
+					CPU.GPR[ra] = (s32)CPU.GPR[rs] >> n;
+					CPU.XER.CA = (CPU.GPR[rs] & 0x80000000) > 0;
+				}
+			}
+
+			if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+		}
+		virtual void SRAD(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
+		{
+			if(CPU.GPR[rb] & 0x40)
+			{
+				if(CPU.GPR[rs] & 0x8000000000000000LL)
+				{
+					CPU.GPR[ra] = ~0LL;
+					CPU.XER.CA = 1;
+				}
+				else
+				{
+					CPU.GPR[ra] = 0LL;
+					CPU.XER.CA = 0;
+				}
+			}
+			else
+			{
+				const u8 n = CPU.GPR[rb] & 0x3f;
+				if(n == 0)
+				{
+					CPU.GPR[ra] = CPU.GPR[rs];
+					CPU.XER.CA = 0;
+				}
+				else
+				{
+					CPU.GPR[ra] = (s64)CPU.GPR[rs] >> n;
+					CPU.XER.CA = (CPU.GPR[rs] & 0x8000000000000000LL) > 0;
+				}
+			}
+
+			if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		}
 		virtual void SRAWI(OP_REG ra, OP_REG rs, OP_REG sh, bool rc)
 		{
 			const u8 n = sh & 0x1f;
@@ -898,7 +974,7 @@ private:
 		virtual void EXTSW(OP_REG ra, OP_REG rs, bool rc)
 		{
 			CPU.GPR[ra] = (s64)(s32)CPU.GPR[rs];
-			if(rc) CPU.UpdateCR0<s32>(CPU.GPR[ra]);
+			if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
 		}
 		/*0x3d6*///ICBI
 		/*0x3f6*///DCBZ
@@ -935,7 +1011,6 @@ private:
 	}
 	virtual void STW(OP_REG rs, OP_REG ra, OP_sIMM d)
 	{
-		if(ra == 11 && d == 4) ConLog.Warning("STW: r%d, r11, 4 #pc: 0x%x", rs, CPU.PC);
 		Memory.Write32(ra ? CPU.GPR[ra] + d : d, CPU.GPR[rs]);
 	}
 	virtual void STWU(OP_REG rs, OP_REG ra, OP_sIMM ds)
@@ -1405,17 +1480,15 @@ private:
 			r30: 0x0
 			r31: 0xd0010fc0
 			*/
+
 			CPU.GPR[2] = toc;
-			CPU.GPR[3] = 1; //?
-			CPU.GPR[7] = 0x4f0d90;
+			//CPU.GPR[3] = 1; //?
+			//CPU.GPR[7] = 0x4f0d90;
 			CPU.GPR[8] = CPU.PC; //entry point addr
-			CPU.GPR[10] = 0x1322e0;
-			CPU.GPR[11] = 0x80; 
-			CPU.GPR[12] = 0x100000; //malloc page size
-			CPU.GPR[13] = 0x10007060; //?
-			CPU.GPR[28] = CPU.GPR[4];
-			CPU.GPR[29] = 0x1; //?
-			CPU.GPR[31] = CPU.GPR[5];
+			//CPU.GPR[10] = 0x1322e0;
+			//CPU.GPR[11] = 0x80; 
+			CPU.GPR[12] = Emu.GetMallocPageSize(); //malloc page size
+			//CPU.GPR[13] = 0x10007060; //?
 
 			CPU.SetBranch(code);
 			return;

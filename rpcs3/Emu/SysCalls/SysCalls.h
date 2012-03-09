@@ -23,7 +23,7 @@ public:
 #ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + wxString::Format("[%d]: ", id) + wxString::FormatV(fmt, list));
+		ConLog.Write(GetName() + wxString::Format("[%d]: ", id) + wxString::FormatV(fmt, list));
 		va_end(list);
 #endif
 	}
@@ -33,7 +33,7 @@ public:
 #ifdef SYSCALLS_DEBUG
 		va_list list;
 		va_start(list, fmt);
-		ConLog.Warning(GetName() + ": " + wxString::FormatV(fmt, list));
+		ConLog.Write(GetName() + ": " + wxString::FormatV(fmt, list));
 		va_end(list);
 #endif
 	}
@@ -85,7 +85,7 @@ static wxString FixPatch(const wxString& patch)
 
 //process
 extern int sys_process_getpid();
-int sys_game_process_exitspawn(	u64 path_addr, u64 argv_addr, u64 envp_addr,
+extern int sys_game_process_exitspawn(	u64 path_addr, u64 argv_addr, u64 envp_addr,
 								u32 data, u32 data_size, int prio, u64 flags );
 
 //memory
@@ -109,6 +109,19 @@ extern int cellFsRename(const u64 from_addr, const u64 to_addr);
 extern int cellFsRmdir(const u64 path_addr);
 extern int cellFsUnlink(const u64 path_addr);
 extern int cellFsLseek(const u32 fd, const s64 offset, const u32 whence, const u64 pos_addr);
+
+//cellVideo
+extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);
+
+//cellPad
+extern int cellPadInit(u32 max_connect);
+extern int cellPadEnd();
+extern int cellPadClearBuf(u32 port_no);
+extern int cellPadGetData(u32 port_no, u32 data_addr);
+extern int cellPadGetDataExtra(u32 port_no, u32 device_type_addr, u32 data_addr);
+extern int cellPadSetActDirect(u32 port_no, u32 param_addr);
+extern int cellPadGetInfo2(u32 info_addr);
+extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
 
 #define SC_ARGS_1 CPU.GPR[3]
 #define SC_ARGS_2 SC_ARGS_1,CPU.GPR[4]
@@ -236,7 +249,7 @@ public:
 			case 813: return cellFsRmdir(SC_ARGS_1);
 			case 818: return cellFsLseek(SC_ARGS_4);
 			case 988:
-				ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, r5: 0x%llx, pc: 0x%llx",
+				ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, r5: 0x%llx, pc: 0x%x",
 					CPU.GPR[3], CPU.GPR[4], CPU.GPR[5], CPU.PC);
 			return 0;
 		}

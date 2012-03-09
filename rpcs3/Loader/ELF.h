@@ -41,6 +41,7 @@ struct Elf_Ehdr
 class ELFLoader : public LoaderBase
 {
 	wxFile& elf_f;
+	LoaderBase* loader;
 
 public:
 	Elf_Ehdr ehdr;
@@ -49,6 +50,7 @@ public:
 	ELFLoader(const wxString& path);
 	~ELFLoader() {Close();}
 
-	virtual bool Load();
+	virtual bool LoadInfo();
+	virtual bool LoadData();
 	virtual bool Close();
 };

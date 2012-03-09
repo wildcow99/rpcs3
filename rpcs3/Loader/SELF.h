@@ -75,5 +75,6 @@ public:
 	SELFLoader(const wxString& path);
 	~SELFLoader() {Close();}
 
-	virtual bool Load();
+	virtual bool LoadInfo();
+	virtual bool LoadData();
 };

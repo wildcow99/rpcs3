@@ -237,28 +237,43 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
 
-	wxStaticBoxSizer* s_round_decoder( new wxStaticBoxSizer( wxVERTICAL, diag, _("Decoder") ) );
+	wxStaticBoxSizer* s_round_cpu( new wxStaticBoxSizer( wxVERTICAL, diag, _("CPU") ) );
+	wxStaticBoxSizer* s_round_cpu_decoder( new wxStaticBoxSizer( wxVERTICAL, diag, _("Decoder") ) );
 
-	wxStaticBoxSizer* s_round_video( new wxStaticBoxSizer( wxHORIZONTAL, diag, _("Video") ) );
-	wxStaticBoxSizer* s_round_video_render( new wxStaticBoxSizer( wxVERTICAL, diag, _("Render") ) );
+	wxStaticBoxSizer* s_round_gs( new wxStaticBoxSizer( wxHORIZONTAL, diag, _("GS") ) );
+	wxStaticBoxSizer* s_round_gs_render( new wxStaticBoxSizer( wxVERTICAL, diag, _("Render") ) );
 
-	wxComboBox* cbox_decoder = new wxComboBox(diag, wxID_ANY);
-	wxComboBox* cbox_video_render = new wxComboBox(diag, wxID_ANY);
+	wxStaticBoxSizer* s_round_pad( new wxStaticBoxSizer( wxHORIZONTAL, diag, _("Pad") ) );
+	wxStaticBoxSizer* s_round_pad_handler( new wxStaticBoxSizer( wxVERTICAL, diag, _("Handler") ) );
 
-	cbox_decoder->Append("DisAsm");
-	cbox_decoder->Append("Interpreter & DisAsm");
-	cbox_decoder->Append("Interpreter");
+	wxComboBox* cbox_cpu_decoder = new wxComboBox(diag, wxID_ANY);
+	wxComboBox* cbox_gs_render = new wxComboBox(diag, wxID_ANY);
+	wxComboBox* cbox_pad_handler = new wxComboBox(diag, wxID_ANY);
 
-	cbox_video_render->Append("Software");
-	cbox_video_render->Append("OGL");
+	cbox_cpu_decoder->Append("DisAsm");
+	cbox_cpu_decoder->Append("Interpreter & DisAsm");
+	cbox_cpu_decoder->Append("Interpreter");
 
-	cbox_decoder->SetSelection(Ini.m_DecoderMode.GetValue());
-	cbox_video_render->SetSelection(Ini.m_RenderMode.GetValue());
+	cbox_gs_render->Append("Null");
+	//cbox_gs_render->Append("Software");
+	//cbox_gs_render->Append("OpenGL");
 
-	s_round_decoder->Add(cbox_decoder);
+	cbox_pad_handler->Append("Null");
+	cbox_pad_handler->Append("Windows");
+	//cbox_pad_handler->Append("DirectInput");
 
-	s_round_video_render->Add(cbox_video_render);
-	s_round_video->Add(s_round_video_render);
+	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue());
+	cbox_gs_render->SetSelection(Ini.GSRenderMode.GetValue());
+	cbox_pad_handler->SetSelection(Ini.PadHandlerMode.GetValue());
+
+	s_round_cpu_decoder->Add(cbox_cpu_decoder);
+	s_round_cpu->Add(s_round_cpu_decoder);
+
+	s_round_gs_render->Add(cbox_gs_render);
+	s_round_gs->Add(s_round_gs_render);
+
+	s_round_pad_handler->Add(cbox_pad_handler);
+	s_round_pad->Add(s_round_pad_handler);
 
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
@@ -266,9 +281,11 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_b_panel->AddSpacer(5);
 	s_b_panel->Add(new wxButton(diag, wxID_CANCEL));
 
-	s_panel->Add(s_round_decoder);
+	s_panel->Add(s_round_cpu);
 	s_panel->AddSpacer(5);
-	s_panel->Add(s_round_video);
+	s_panel->Add(s_round_gs);
+	s_panel->AddSpacer(5);
+	s_panel->Add(s_round_pad);
 	s_panel->AddSpacer(8);
 	s_panel->Add(s_b_panel, wxRIGHT);
 
@@ -276,8 +293,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	
 	if(diag->ShowModal() == wxID_OK)
 	{
-		Ini.m_DecoderMode.SetValue(cbox_decoder->GetSelection());
-		Ini.m_RenderMode.SetValue(cbox_video_render->GetSelection());
+		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection());
+		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
+		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
 		Ini.Save();
 	}
 

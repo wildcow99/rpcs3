@@ -172,6 +172,7 @@ int sys_memory_container_destroy(u32 cid)
 
 int sys_memory_allocate(u32 size, u32 flags, u64 alloc_addr_addr)
 {
+	ConLog.Write("sys_memory_allocate(size=0x%x, flags=0x%x)", size, flags);
 	u32 addr;
 	switch(flags)
 	{
@@ -195,9 +196,17 @@ int sys_memory_allocate(u32 size, u32 flags, u64 alloc_addr_addr)
 	return CELL_OK;
 }
 
+struct sys_memory_info
+{
+	u32 total_user_memory;
+	u32 available_user_memory;
+};
+
 int sys_memory_get_user_memory_size(u64 mem_info_addr)
 {
-	Memory.Write32(mem_info_addr, Memory.GetUserMemTotalSize());
-	Memory.Write32(mem_info_addr+4, Memory.GetUserMemAvailSize());
+	sys_memory_info info;
+	info.total_user_memory = re(Memory.GetUserMemTotalSize());
+	info.available_user_memory = re(Memory.GetUserMemAvailSize());
+	Memory.WriteData(mem_info_addr, info);
 	return CELL_OK;
 }

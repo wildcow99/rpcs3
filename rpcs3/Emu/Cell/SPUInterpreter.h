@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Emu/Cell/SPUOpcodes.h"
-#include "Emu/Display/Display.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/SysCalls/SysCalls.h"

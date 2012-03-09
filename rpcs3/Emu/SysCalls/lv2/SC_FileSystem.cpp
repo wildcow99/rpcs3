@@ -17,7 +17,6 @@ enum Lv2FsOflag
 
 #define CELL_FS_TYPE_UNKNOWN   0
 
-
 enum Lv2FsSeek
 {
 	LV2_SEEK_SET,
@@ -79,7 +78,7 @@ int cellFsOpen(const u64 path_addr, const int flags, const u64 fd_addr, const u6
 	sc_log.Log("cellFsOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%llx, size: 0x%llx)",
 		path, flags, fd_addr, arg_addr, size);
 
-	const wxString& ppath = wxGetCwd() + path;
+	const wxString& ppath = wxGetCwd() + (path[0] == '//' ? path : "//" + path);
 
 	wxFile::OpenMode o_mode;
 

@@ -19,8 +19,8 @@ struct SectionInfo
 	{
 		code.Clear();
 		memset(&shdr, 0, sizeof(Elf64_Shdr));
-		shdr.sh_addr = 0x10200;
-		shdr.sh_addralign = 4;
+		shdr.sh_addr = 0;
+		shdr.sh_addralign = 0;
 	}
 };
 
@@ -28,9 +28,11 @@ struct ProgramInfo
 {
 	Array<u32> code;
 	Elf64_Phdr phdr;
+	bool is_preload;
 
 	ProgramInfo()
 	{
+		is_preload = false;
 		code.Clear();
 		memset(&phdr, 0, sizeof(Elf64_Phdr));
 	}

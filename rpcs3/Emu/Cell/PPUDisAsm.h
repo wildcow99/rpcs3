@@ -309,7 +309,10 @@ private:
 	{
 		DisAsm_R2_INT3_RC("rlwinm", ra, rs, sh, mb, me, rc);
 	}
-	
+	virtual void RLWNM(OP_REG ra, OP_REG rs, OP_REG rb, OP_REG MB, OP_REG ME, bool rc)
+	{
+		DisAsm_R3_INT2_RC("rlwnm", ra, rs, rb, MB, ME, rc);
+	}
 	virtual void ORI(OP_REG rs, OP_REG ra, OP_uIMM uimm16)
 	{
 		if(rs == 0 && ra == 0 && uimm16 == 0)
@@ -498,6 +501,10 @@ private:
 		{
 			DisAsm_R3("stwx", rs, ra, rb);
 		}
+		virtual void STDUX(OP_REG rs, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_R3("stdux", rs, ra, rb);
+		}
 		virtual void ADDZE(OP_REG rs, OP_REG ra, OP_REG oe, bool rc)
 		{
 			DisAsm_R2_OE_RC("addze", rs, ra, oe, rc);
@@ -631,6 +638,14 @@ private:
 		/*0x28a*///LDUX
 		/*0x277*///LFDUX
 		/*0x316*///LHBRX
+		virtual void SRAW(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
+		{
+			DisAsm_R3_RC("sraw", ra, rs, rb, rc);
+		}
+		virtual void SRAD(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
+		{
+			DisAsm_R3_RC("srad", ra, rs, rb, rc);
+		}
 		virtual void SRAWI(OP_REG ra, OP_REG rs, OP_REG sh, bool rc)
 		{
 			DisAsm_R2_INT1_RC("srawi", ra, rs, sh, rc);

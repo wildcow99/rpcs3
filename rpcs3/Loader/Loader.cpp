@@ -76,19 +76,6 @@ const wxString Ehdr_MachineToString(const u16 machine)
 	return wxString::Format("Unknown (%x)", machine);
 }
 
-static const wxString GetFlagsString(u32 flags)
-{
-	enum {R = 0x1, W = 0x2, E = 0x4};
-
-	wxString result = wxEmptyString;
-
-	result += flags & R ? "R" : "-";
-	result += flags & W ? "W" : "-";
-	result += flags & E ? "E" : "-";
-
-	return result;
-}
-
 const wxString Phdr_FlagsToString(u32 flags)
 {
 	enum {ppu_R = 0x1, ppu_W = 0x2, ppu_E = 0x4};
@@ -140,41 +127,54 @@ Loader::Loader(const wxString& path)
 {
 }
 
+LoaderBase* Loader::SearchLoader()
+{
+	LoaderBase* l = NULL;
+
+	if((l=new ELFLoader(f))->LoadInfo()) return l;
+	safe_delete(l);
+	if((l=new SELFLoader(f))->LoadInfo()) return l;
+	safe_delete(l);
+	return NULL;
+}
+
 bool Loader::Load()
 {
-	LoaderBase* l = new ELFLoader(f);
-	if(!l->Load())
+	LoaderBase* l = SearchLoader();
+	if(!l)
 	{
-		free(l);
-		l = new SELFLoader(f);
-		if(!l->Load())
+		ConLog.Error("Unknown file type");
+		return false;
+	}
+
+	if(!l->LoadData())
+	{
+		ConLog.Error("Broken file");
+		safe_delete(l);
+		return false;
+	}
+
+	machine = l->GetMachine();
+	entry = l->GetEntry();
+	safe_delete(l);
+
+	const wxString& root = wxFileName(wxFileName(m_path).GetPath()).GetPath();
+	const wxString& psf_path = root + "\\" + "PARAM.SFO";
+	if(wxFileExists(psf_path))
+	{
+		PSFLoader psf_l(psf_path);
+		if(psf_l.Load())
 		{
-			free(l);
-			l = NULL;
+			CurGameInfo = psf_l.m_info;
+			CurGameInfo.root = root;
+			psf_l.Close();
 		}
 	}
 
+	return true;
+}
+
+Loader::~Loader()
+{
 	f.Close();
-
-	if(l)
-	{
-		machine = l->GetMachine();
-		entry = l->GetEntry();
-		free(l);
-
-		const wxString& root = wxFileName(wxFileName(m_path).GetPath()).GetPath();
-		const wxString& psf_path = root + "\\" + "PARAM.SFO";
-		if(wxFileExists(psf_path))
-		{
-			PSFLoader psf_l(psf_path);
-			if(psf_l.Load())
-			{
-				CurGameInfo = psf_l.m_info;
-				CurGameInfo.root = root;
-				psf_l.Close();
-			}
-		}
-	}
-
-	return l != NULL;
 }
