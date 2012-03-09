@@ -118,7 +118,7 @@ void InterpreterDisAsmFrame::ShowPc(const int pc)
 	PC = pc;
 	for(uint i=0; i<show_lines; ++i, PC += 4)
 	{
-		if(!Memory.IsGoodAddr(PC))
+		if(!Memory.IsGoodAddr(PC, 4))
 		{
 			m_list->SetItem(i, 0, wxString::Format("[%08x] illegal address", PC));
 			continue;
@@ -178,11 +178,11 @@ void InterpreterDisAsmFrame::Show_PC(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::DoOpcode(wxCommandEvent& WXUNUSED(event))
 {
-#if 0
+#if 1
 	static bool founded = false;
 	if(!founded)
 	{
-		while(CPU.PC != 0x10b50/*0x24728*/) CPU.Exec();
+		while(CPU.PC != 0x1875c) CPU.Exec();
 		founded = true;
 	}
 	else

@@ -26,6 +26,9 @@
     <Filter Include="Emu\Io">
       <UniqueIdentifier>{57263311-75a4-4309-81aa-b86fd212794b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GS">
+      <UniqueIdentifier>{461eddb5-b8a8-46be-918c-98cc7eaf995b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -50,9 +53,6 @@
       <Filter>Gui</Filter>
     </ClCompile>
     <ClCompile Include="Emu\System.cpp">
-      <Filter>Emu</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Display\Display.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
     <ClCompile Include="Ini.cpp">
@@ -123,6 +123,15 @@
     </ClCompile>
     <ClCompile Include="Emu\DbgConsole.cpp">
       <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\GSManager.cpp">
+      <Filter>Emu\GS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Pad.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

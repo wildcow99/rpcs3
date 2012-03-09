@@ -25,6 +25,7 @@ enum PPU_MainOpcodes
 	B = 0x12,
 	G_13 = 0x13,
 	RLWINM = 0x15,
+	RLWNM = 0x17,
 	ORI = 0x18,
 	ORIS = 0x19,
 	XORI = 0x1a,
@@ -120,6 +121,7 @@ enum G_1fOpcodes //Field 21 - 30
 	MTOCRF = 0x90,
 	STWCX_ = 0x96,
 	STWX = 0x97,
+	STDUX = 0xb5,
 	ADDZE = 0xca,
 	STVX = 0xe7,
 	ADDME = 0xea,
@@ -156,6 +158,8 @@ enum G_1fOpcodes //Field 21 - 30
 	LDUX = 0x28a,
 	LFDUX = 0x277,
 	LHBRX = 0x316,
+	SRAW = 0x318,
+	SRAD = 0x31A,
 	SRAWI = 0x338,
 	SRADI1 = 0x33a, //sh_5 == 0
 	SRADI2 = 0x33b, //sh_5 != 0
@@ -274,6 +278,7 @@ public:
 	END_OPCODES_GROUP(G_13);
 	
 	ADD_OPCODE(RLWINM,(OP_REG ra, OP_REG rs, OP_REG sh, OP_REG mb, OP_REG me, bool rc));
+	ADD_OPCODE(RLWNM,(OP_REG ra, OP_REG rs, OP_REG rb, OP_REG MB, OP_REG ME, bool rc));
 	ADD_OPCODE(ORI,(OP_REG rs, OP_REG ra, OP_uIMM uimm16));
 	ADD_OPCODE(ORIS,(OP_REG rs, OP_REG ra, OP_uIMM uimm16));
 	ADD_OPCODE(XORI,(OP_REG rs, OP_REG ra, OP_uIMM uimm16));
@@ -315,6 +320,7 @@ public:
 		/*0x090*/ADD_OPCODE(MTOCRF,(OP_REG fxm, OP_REG rs));
 		/*0x096*/ADD_OPCODE(STWCX_,(OP_REG rs, OP_REG ra, OP_REG rb));
 		/*0x097*/ADD_OPCODE(STWX,(OP_REG rs, OP_REG ra, OP_REG rb));
+		/*0x0b5*/ADD_OPCODE(STDUX,(OP_REG rs, OP_REG ra, OP_REG rb));
 		/*0x0ca*/ADD_OPCODE(ADDZE,(OP_REG rs, OP_REG ra, OP_REG oe, bool rc));
 		/*0x0e7*/ADD_OPCODE(STVX,(OP_REG vrd, OP_REG ra, OP_REG rb));
 		/*0x0ea*/ADD_OPCODE(ADDME,(OP_REG rs, OP_REG ra, OP_REG oe, bool rc));
@@ -337,8 +343,8 @@ public:
 		/*0x177*/ADD_OPCODE(LHAUX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x1b6*/ADD_OPCODE(ECOWX,(OP_REG rs, OP_REG ra, OP_REG rb));
 		/*0x1bc*/ADD_OPCODE(OR,(OP_REG ra, OP_REG rs, OP_REG rb));
-		/*0x1c9*/ADD_OPCODE(DIVDU,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
-		/*0x1cb*/ADD_OPCODE(DIVWU,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
+		/*0x1c9*/ADD_OPCODE(DIVDU,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
+		/*0x1cb*/ADD_OPCODE(DIVWU,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x1d3*/ADD_OPCODE(MTSPR,(OP_REG spr, OP_REG rs));
 		/*0x1d6*///DCBI
 		/*0x1e9*///DIVD
@@ -351,6 +357,8 @@ public:
 		/*0x28a*///LDUX
 		/*0x277*///LFDUX
 		/*0x316*///LHBRX
+		/*0x318*/ADD_OPCODE(SRAW,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
+		/*0x31A*/ADD_OPCODE(SRAD,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x338*/ADD_OPCODE(SRAWI,(OP_REG ra, OP_REG rs, OP_REG sh, bool rc));
 		/*0x33a*/ADD_OPCODE(SRADI1,(OP_REG ra, OP_REG rs, OP_REG sh, bool rc));
 		/*0x33b*/ADD_OPCODE(SRADI2,(OP_REG ra, OP_REG rs, OP_REG sh, bool rc));

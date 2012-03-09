@@ -81,7 +81,8 @@ public:
 
 	bool IsFlag(const u64 addr, const u64 pc, u64& gpr)
 	{
-		for(uint i=0; i<GetCount()-1; i+=2)
+		if(!GetCount()) return false;
+		for(u32 i=0; i<GetCount()-1; i+=2)
 		{
 			if(m_memflags[i] != addr) continue;
 			/*if(IsOPDRange(pc))*/ gpr = m_memflags[i+1];
@@ -97,28 +98,29 @@ public:
 class MemoryBase
 {
 	NullMemoryBlock NullMem;
+	ArrayF<MemoryBlock> MemoryBlocks;
 
 public:
 	MemoryBlock MainRam;
-	MemoryBlock UserMem;
 	MemoryBlock Video_FrameBuffer;
 	MemoryBlock Video_GPUdata;
-	ArrayF<MemoryBlock> MemoryBlocks;
 
-	struct UsedUserMem
+	struct UserMemInfo
 	{
-		u64 addr;
-		u64 size;
+		u32 addr;
+		u32 size;
 
-		UsedUserMem(u64 _addr, u64 _size)
+		UserMemInfo(u32 _addr, u32 _size)
 			: addr(_addr)
 			, size(_size)
 		{
 		}
 	};
 
-	Array<UsedUserMem> m_used_user_mem;
-	u64 m_used_mem_size;
+	Array<UserMemInfo> m_used_usermem;
+	Array<UserMemInfo> m_free_usermem;
+	u64 m_mem_point;
+	static const u64 m_max_usermem_size = 0x0d500000;
 
 	MemoryFlags MemFlags;
 
@@ -134,12 +136,12 @@ public:
 		Close();
 	}
 
-	static s16 Reverse16(const s16 val)
+	static s16 Reverse16(const u16 val)
 	{
 		return ((val >> 8) & 0xff) | ((val << 8) & 0xff00);
 	}
 
-	static s32 Reverse32(const s32 val)
+	static s32 Reverse32(const u32 val)
 	{
 		return
 			((val >> 24) & 0x000000ff) |
@@ -148,7 +150,7 @@ public:
 			((val << 24) & 0xff000000);
 	}
 
-	static s64 Reverse64(const s64 val)
+	static s64 Reverse64(const u64 val)
 	{
 		return
 			((val >> 56) & 0x00000000000000ff) |
@@ -159,6 +161,18 @@ public:
 			((val << 24) & 0x0000ff0000000000) |
 			((val << 40) & 0x00ff000000000000) |
 			((val << 56) & 0xff00000000000000);
+	}
+
+	template<typename T> static T Reverse(T val)
+	{
+		switch(sizeof(T))
+		{
+		case 2: return Reverse16(val);
+		case 4: return Reverse32(val);
+		case 8: return Reverse64(val);
+		}
+
+		return val;
 	}
 
 	MemoryBlock& GetMemByNum(const u8 num)
@@ -190,14 +204,12 @@ public:
 		ConLog.Write("Initing memory...");
 
 		MainRam.SetRange(0x00000000, 0x0FFFFFFF); //256 MB
-		UserMem.SetRange(0x30000010, 0x0d500000);
 		Video_FrameBuffer.SetRange(MainRam.GetEndAddr(), 0x0FFFFFFF); //252 MB
 		Video_GPUdata.SetRange(Video_FrameBuffer.GetEndAddr(), 0x003FFFFF); //4 MB
 		MemoryBlocks.Add(MainRam);
-		MemoryBlocks.Add(UserMem);
 		MemoryBlocks.Add(Video_FrameBuffer);
 		MemoryBlocks.Add(Video_GPUdata);
-		m_used_mem_size = 0;
+		m_mem_point = MainRam.GetEndAddr();
 	}
 
 	bool IsGoodAddr(const u32 addr)
@@ -208,6 +220,11 @@ public:
 		}
 
 		return false;
+	}
+
+	bool IsGoodAddr(const u32 addr, const u32 size)
+	{
+		return IsGoodAddr(addr) && IsGoodAddr(addr + size - 1);
 	}
 
 	void Close()
@@ -224,8 +241,9 @@ public:
 
 		MemoryBlocks.Clear();
 		MemFlags.Clear();
-		m_used_mem_size = 0;
-		m_used_user_mem.Clear();
+		m_mem_point = 0;
+		m_free_usermem.Clear();
+		m_used_usermem.Clear();
 	}
 
 	void Reset()
@@ -248,6 +266,17 @@ public:
 	u32 Read32(const u32 addr);
 	u64 Read64(const u32 addr);
 	u128 Read128(const u32 addr);
+
+	template<typename T> void WriteData(const u32 addr, const T* data)
+	{
+		memcpy(GetMemFromAddr(addr), data, sizeof(T));
+	}
+
+	template<typename T> void WriteData(const u32 addr, const T data)
+	{
+
+		*(T*)GetMemFromAddr(addr) = data;
+	}
 
 	wxString ReadString(const u32 addr, const u64 len)
 	{
@@ -290,45 +319,84 @@ public:
 
 	u32 GetUserMemTotalSize()
 	{
-		return UserMem.GetSize();
+		return m_max_usermem_size;
 	}
 
 	u32 GetUserMemAvailSize()
 	{
-		return UserMem.GetSize() - m_used_mem_size;
+		u32 used_usermem_size = 0;
+		for(u32 i=0; i<m_used_usermem.GetCount(); ++i) used_usermem_size += m_used_usermem[i].size;
+		return m_max_usermem_size - used_usermem_size;
 	}
 
-	u64 GetNewAddr(const u64 size, const u64 align, const u64 min_addr = 0, const u64 max_addr = ~0)
+	void CombineFreeMem()
 	{
-		if(!m_used_user_mem.GetCount())
-		{
-			if(size >= UserMem.GetEndAddr() - UserMem.GetStartAddr())
-			{
-				ConLog.Error("Get new addr error: size too large [0x%llx]", size);
-				return 0;
-			}
+		if(m_free_usermem.GetCount() < 2) return;
 
-			return UserMem.GetStartAddr();
-		}
-		UsedUserMem& mem = m_used_user_mem[m_used_user_mem.GetCount() - 1];
-		const u64 addr = mem.addr + mem.size;
-		if(addr + size >= UserMem.GetEndAddr())
+		for(u32 i1=0; i1<m_free_usermem.GetCount(); ++i1)
 		{
-			//TODO
+			UserMemInfo& u1 = m_free_usermem[i1];
+			for(u32 i2=i1+1; i2<m_free_usermem.GetCount(); ++i2)
+			{
+				const UserMemInfo u2 = m_free_usermem[i2];
+				if(u1.addr + u1.size != u2.addr) continue;
+				u1.size += u2.size;
+				m_free_usermem.RemoveAt(i2);
+				break;
+			}
+		}
+	}
+
+	u32 Alloc(const u32 size, const u32 align)
+	{
+		if(GetUserMemAvailSize() < size)
+		{
 			ConLog.Error("Not enought free user mem");
 			return 0;
 		}
 
-		return addr;
+		for(u32 i=0; i<m_free_usermem.GetCount(); ++i)
+		{
+			if(m_free_usermem[i].size < size) continue;
+			UserMemInfo mem(m_free_usermem[i].addr, size);
+			m_used_usermem.AddCpy(mem);
+
+			if(m_free_usermem[i].size == size)
+			{
+				m_free_usermem.RemoveAt(i);
+			}
+			else
+			{
+				m_free_usermem[i].addr += size;
+				m_free_usermem[i].size -= size;
+			}
+
+			memset(GetMemFromAddr(mem.addr), 0, mem.size);
+			return mem.addr;
+		}
+
+		const u32 point = m_mem_point - size;
+		UserMemInfo mem(point, size);
+		//ConLog.Warning("Memory alloc: creating new block (addr=0x%x,size=0x%x)", mem.addr, mem.size);
+		if(!IsGoodAddr(mem.addr, mem.size)) return 0;
+		memset(GetMemFromAddr(mem.addr), 0, mem.size);
+		m_used_usermem.AddCpy(mem);
+		m_mem_point = point;
+		return mem.addr;
 	}
 
-	u64 Alloc(const u64 size, const u64 align)
+	bool Free(const u64 addr)
 	{
-		const u64 alloc_addr = GetNewAddr(size, align);
-		if(!alloc_addr) return 0;
-		m_used_mem_size += size;
-		m_used_user_mem.Add(new UsedUserMem(alloc_addr, size));
-		return alloc_addr;
+		for(u32 i=0; i<m_used_usermem.GetCount(); ++i)
+		{
+			if(m_used_usermem[i].addr != addr) continue;
+			m_free_usermem.AddCpy(m_used_usermem[i]);
+			m_used_usermem.RemoveAt(i);
+			CombineFreeMem();
+			return true;
+		}
+
+		return false;
 	}
 };
 

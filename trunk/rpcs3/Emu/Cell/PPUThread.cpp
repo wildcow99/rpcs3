@@ -38,8 +38,8 @@ void PPUThread::DoReset()
 
 void PPUThread::_InitStack()
 {
-	GPR[5] = stack_size + stack_addr - 0x50;
-	GPR[4] = GPR[5] + 0x10;
+	//GPR[5] = stack_size + stack_addr - 0x50;
+	//GPR[4] = GPR[5] + 0x10;
 	
 	GPR[1] = stack_point;
 	GPR[3] = m_arg;
@@ -53,7 +53,7 @@ u64 PPUThread::GetFreeStackSize() const
 
 void PPUThread::DoRun()
 {
-	switch(Ini.m_DecoderMode.GetValue())
+	switch(Ini.CPUDecoderMode.GetValue())
 	{
 	case 0:
 		m_dec = new PPU_Decoder(*new PPU_DisAsm(*this));

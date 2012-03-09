@@ -84,34 +84,33 @@ template<typename T> struct IniEntry : public Ini
 class Inis
 {
 private:
-	const wxString m_DefPath;
-	const wxString m_VideoPath;
-	const wxString m_MainPath;
+	const wxString DefPath;
 
 public:
-	IniEntry<u8> m_DecoderMode;
-	IniEntry<u8> m_RenderMode;
+	IniEntry<u8> CPUDecoderMode;
+	IniEntry<u8> GSRenderMode;
+	IniEntry<u8> PadHandlerMode;
 
 public:
-	Inis()
-		: m_DefPath("EmuSettings")
-		, m_MainPath(m_DefPath + "\\" + "Main")
-		, m_VideoPath(m_DefPath + "\\" + "Video")
+	Inis() : DefPath("EmuSettings")
 	{
-		m_DecoderMode.Init("DecoderMode", m_MainPath);
-		m_RenderMode.Init("RenderMode", m_VideoPath);
+		CPUDecoderMode.Init("DecoderMode", DefPath + "\\" + "CPU");
+		GSRenderMode.Init("RenderMode", DefPath + "\\" + "GS");
+		PadHandlerMode.Init("HandlerMode", DefPath + "\\" + "Pad");
 	}
 
 	void Load()
 	{
-		m_DecoderMode.Load(2);
-		m_RenderMode.Load(1);
+		CPUDecoderMode.Load(2);
+		GSRenderMode.Load(0);
+		PadHandlerMode.Load(0);
 	}
 
 	void Save()
 	{
-		m_DecoderMode.Save();
-		m_RenderMode.Save();
+		CPUDecoderMode.Save();
+		GSRenderMode.Save();
+		PadHandlerMode.Save();
 	}
 };
 

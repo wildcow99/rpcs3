@@ -1,7 +1,7 @@
 #pragma once
 #include "Array.h"
 
-typedef u8 ID_TYPE;
+typedef u32 ID_TYPE;
 
 struct ID
 {

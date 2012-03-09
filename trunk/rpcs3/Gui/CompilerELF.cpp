@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "CompilerELF.h"
 
+#define USE_RICH
+
 void Write8(wxFile& f, const u8 data)
 {
 	f.Write(&data, 1);
@@ -184,7 +186,7 @@ u32 CompileInstruction(Instruction instr, wxArrayLong& arr)
 	case MASK_BO_BI_BD_AA_LK:
 		return code | ToBO(arr[0]) | ToBI(arr[1]) | ToBD(arr[2]) | ToAA(arr[3]) | ToLK(arr[4]);
 	case MASK_SYS: 
-		return code | ToSYS(/*arr[0]*/1);
+		return code | ToSYS(/*arr[0]*/2);
 	case MASK_LL_AA_LK:
 		return code | ToLL(arr[0]) | ToAA(arr[1]) | ToLK(arr[2]);
 	case MASK_RA_RS_SH_MB_ME:
@@ -217,9 +219,17 @@ CompilerELF::CompilerELF(wxWindow* parent) : FrameBase(parent, wxID_ANY, "Compil
 	SetMenuBar(&menubar);
 
 	asm_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-		wxTE_MULTILINE | wxTE_DONTWRAP | wxTE_RICH2);
+		wxTE_MULTILINE | wxTE_DONTWRAP
+#ifdef USE_RICH
+		| wxTE_RICH2
+#endif
+	);
 	hex_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(155, -1),
-		wxTE_MULTILINE | wxTE_DONTWRAP | wxTE_READONLY | wxTE_RICH2);    
+		wxTE_MULTILINE | wxTE_DONTWRAP | wxTE_READONLY
+#ifdef USE_RICH
+		| wxTE_RICH2
+#endif
+		);    
 	err_list = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(140, 200),
 		wxTE_MULTILINE | wxTE_READONLY);
 
@@ -247,6 +257,19 @@ CompilerELF::CompilerELF(wxWindow* parent) : FrameBase(parent, wxID_ANY, "Compil
 	a_instr = new wxTextAttr(wxColour(0, 160, 0));
 
 	asm_list->SetValue(
+		"start_elf_info\n"
+		"\tentry 0x10200\n"
+		"\tcurver 0x1\n"
+		"\tversion 0x1\n"
+		"end_elf_info\n"
+		"\n"
+		"start_program_info\n"
+		"\taddr 0x10230\n"
+		"\talign 0x4\n"
+		"\ttype 1\n"
+		"\tflags 6\n"
+		"end_program_info\n"
+		"\n"
 		"start_section_info\n"
 		"\tname \".text\"\n"
 		"\taddr 0x10230\n"
@@ -313,11 +336,12 @@ void CompilerELF::OnUpdateScroll(wxTimerEvent& WXUNUSED(event))
 
 void CompilerELF::UpdateScroll()
 {
-	return;
+#ifndef USE_RICH
 	const int asm_count = asm_list->GetScrollPos(wxVERTICAL);
 	const int hex_count = hex_list->GetScrollPos(wxVERTICAL);
 
 	if(asm_count != hex_count) hex_list->ScrollLines(asm_count - hex_count);
+#endif
 }
 
 void CompilerELF::WriteError(const u32 line, const wxString& error)
@@ -369,25 +393,6 @@ int StringToReg(wxString str)
 	return -1;
 }
 
-bool StringToImm(wxString str, s64* imm)
-{
-	if(str.IsEmpty()) return false;
-
-	str.ToLongLong(imm);
-	if(*imm == 0)
-	{
-		if(str.Length() == 1) return !str.Cmp("0");
-
-		if(str.Length() <= 2 || !!str(0, 2).Cmp("0x")) return false;
-			
-		str.erase(0, 2);
-		sscanf(str, "%x", imm);
-		return true;
-	}
-
-	return true;
-}
-
 bool IsSkipChar(const wxString& str)	{return !str.Cmp("\t") || !str.Cmp(" ");}
 bool IsNewLine(const wxString& str)		{return !str.Cmp("\n");}
 bool IsBreakChar2(const wxString& str)	{return IsNewLine(str) || !str.Cmp(",") || !str.Cmp("#");}
@@ -424,10 +429,105 @@ bool CompilerELF::SearchReg(u64& p, const wxString& line_text, const u32 line_nu
 	return false;
 }
 
+enum
+{
+	SYM_COMMIT,
+	SYM_SKIP,
+	SYM_NEXT_REG,
+	SYM_CHAR,
+};
+
+int GetSymType(char s)
+{
+	switch(s)
+	{
+	case ' ': case '\t': return SYM_SKIP;
+	case '#': return SYM_COMMIT;
+	case ',': return SYM_NEXT_REG;
+	}
+
+	return SYM_CHAR;
+}
+
 bool CompilerELF::SearchImm(u64& p, const wxString& line_text, const u32 line_num, const u32 line_len, wxArrayLong& arr)
 {
 	wxString buf = wxEmptyString;
 
+#if 0
+	for(p++; p<line_len; p++)
+	{
+		if(GetSymType(line_text[p]) == SYM_CHAR) break;
+	}
+
+	enum
+	{
+		IMM_NUM,
+		IMM_SYM,
+	};
+
+	const u8 type = line_text[p] == '\"' ? IMM_SYM : IMM_NUM;
+	if(type == IMM_SYM) p++;
+	for(; p<line_len; p++)
+	{
+		bool end_ln = p == line_len - 1;
+		const char cur_sym = line_text[p];
+
+		switch(type)
+		{
+		case IMM_NUM:
+		{
+			if(!end_ln && GetSymType(cur_sym) == SYM_CHAR)
+			{
+				if(buf.Len() < 2) goto _END_SYM_;
+				if(!buf(0, 2).Cmp("0x"))
+				{
+					if((cur_sym >= '0' && cur_sym <= '9') || (cur_sym >= 'a' && cur_sym <= 'f') || (cur_sym >= 'A' && cur_sym <= 'F')) goto _END_SYM_;
+					WriteError(line_num, wxString::Format("Bad symbol '%c'", cur_sym));
+					return false;
+				}
+
+				if(cur_sym >= '0' && cur_sym <= '9') goto _END_SYM_;
+				WriteError(line_num, wxString::Format("Bad symbol '%c'", cur_sym));
+				return false;
+			}
+
+			if(end_ln) buf += line_text[p];
+
+			u32 imm;
+			const bool is_num_16 = !buf(0, 2).Cmp("0x");
+			const s32 sscanf_result = sscanf(buf, (is_num_16 ? "%x" : "%d"), &imm);
+			if((is_num_16 && buf.Len() <= 2) || sscanf_result == -1 || sscanf_result == 0)
+			{
+				WriteError(line_num, wxString::Format("Bad immediate '%s'", buf));
+				return false;
+			}
+
+			arr.Add(imm);
+			return true;
+		}
+		break;
+
+		case IMM_SYM:
+			if(line_text[p] != '\"')
+			{
+				if(end_ln)
+				{
+					WriteError(line_num, wxString::Format("Bad immediate '%s'", buf));
+					return false;
+				}
+				continue;
+			}
+
+			arr.Add(*(u64*)buf.c_str());
+			return true;
+		break;
+		}
+
+_END_SYM_:
+		buf += line_text[p];
+	}
+
+#else
 	for(p++; p<line_len; p++)
 	{
 		const wxString& cur_str = line_text(p, 1);
@@ -458,19 +558,27 @@ bool CompilerELF::SearchImm(u64& p, const wxString& line_text, const u32 line_nu
 			if(p == line_len - 1 || !cur_str.Cmp(",") || !cur_str.Cmp("#"))
 			{
 				if(p == line_len-1 && !IsSkipChar(cur_str)) buf += cur_str;
-					
-				if(StringToImm(buf, &imm))
+				
+				u64 imm;
+				if(!buf.ToULongLong(&imm))
 				{
-					arr.Add(imm);
-					return true;
+					if(buf.Len() <= 2 || !!buf(0, 2).Cmp("0x"))
+					{
+						WriteError(line_num, wxString::Format("Bad immediate '%s'", buf));
+						return false;
+					}
+
+					sscanf(buf, "%llx", &imm);
 				}
-				break;
+				arr.Add(imm);
+				return true;
 			}
 		}
 			
 		buf += cur_str;
 	}
-		
+#endif
+
 	WriteError(line_num, wxString::Format("Unknown immediate '%s'", buf));
 	return false;
 }
@@ -585,25 +693,23 @@ void CompilerELF::LoadElf(wxCommandEvent& event)
 
 void CompilerELF::LoadElf(const wxString& path)
 {
+	wxCriticalSection lock;
+
 	if(!wxFile::Access(path, wxFile::read))
 	{
 		ConLog.Error("Error opening '%s'", path);
 		return;
 	}
 
-	Memory.Init();
-
 	wxFile f(path);
 	ELF64Loader l(f);
-	if(!l.Load())
+	if(!l.LoadInfo())
 	{
 		ConLog.Error("Error loading '%s'", path);
 		Memory.Close();
 		l.Close();
 		return;
 	}
-
-	Memory.Close();
 	
 	Sleep(10);
 	asm_list->SetLabel(wxEmptyString);
@@ -613,7 +719,7 @@ void CompilerELF::LoadElf(const wxString& path)
 
 	asm_list->WriteText("start_elf_info\n");
 	asm_list->WriteText(wxString::Format("\tentry 0x%x\n", l.ehdr.e_entry));
-	asm_list->WriteText(wxString::Format("\tshoff 0x%x\n", l.ehdr.e_shoff));
+	//asm_list->WriteText(wxString::Format("\tshoff 0x%x\n", l.ehdr.e_shoff));
 	asm_list->WriteText(wxString::Format("\tcurver 0x%x\n", l.ehdr.e_curver));
 	asm_list->WriteText(wxString::Format("\tversion 0x%x\n", l.ehdr.e_version));
 	asm_list->WriteText(wxString::Format("\tflags 0x%x\n", l.ehdr.e_flags));
@@ -645,10 +751,11 @@ void CompilerELF::LoadElf(const wxString& path)
 		asm_list->WriteText("end_program_info\n");
 		asm_list->WriteText("\n");
 
-		if(!l.phdr_arr[p].p_offset) continue;
+		//if(!l.phdr_arr[p].p_offset) continue;
 		if(!l.phdr_arr[p].p_vaddr) continue;
-		f.Seek(l.phdr_arr[p].p_offset);
-		for(u32 o=0; o<l.phdr_arr[p].p_filesz;)
+		const u32 c = 0;//l.phdr_arr[p].p_offset ? 0 : sizeof(Elf64_Ehdr) + sizeof(Elf64_Phdr) * l.phdr_arr.GetCount();
+		f.Seek(l.phdr_arr[p].p_offset + c);
+		for(u32 o=0; o<l.phdr_arr[p].p_filesz - c;)
 		{
 			if(l.phdr_arr[p].p_align < 4)
 			{
@@ -692,7 +799,17 @@ void CompilerELF::LoadElf(const wxString& path)
 			else
 			{
 				hex_list->SetInsertionPointEnd();
-				for(u32 j=0; j<disasm.last_opcode.Len(); ++j) *asm_list << disasm.last_opcode[j];
+#ifdef USE_RICH
+				asm_list->WriteText(disasm.last_opcode);
+#else
+				lock.Enter();
+				for(u32 j=0; j<disasm.last_opcode.Len(); ++j)
+				{
+					const u32 last_len = asm_list->GetLabel().Len();
+					while(last_len == asm_list->GetLabel().Len()) asm_list->WriteText(disasm.last_opcode[j]);
+				}
+				lock.Leave();
+#endif
 			}
 
 			o += 4;
@@ -804,6 +921,7 @@ enum
 	LNTYPE_INSTR,
 	LNTYPE_SECTION,
 	LNTYPE_PROGRAM,
+	LNTYPE_PRELOAD_PROGRAM,
 	LNTYPE_ELF,
 };
 
@@ -854,6 +972,7 @@ u32 SearchLineType(const wxString& line_text)
 		if(cur_str == "#") return LNTYPE_COMMIT;
 		if(CmpLine(line_text(p, line_len), "start_section_info")) return LNTYPE_SECTION;
 		if(CmpLine(line_text(p, line_len), "start_program_info")) return LNTYPE_PROGRAM;
+		if(CmpLine(line_text(p, line_len), "start_preload_program_info")) return LNTYPE_PRELOAD_PROGRAM;
 		if(CmpLine(line_text(p, line_len), "start_elf_info")) return LNTYPE_ELF;
 		return LNTYPE_INSTR;
 	}
@@ -967,9 +1086,11 @@ int CompilerELF::CompileLine_Instr(wxString line_text, const u32 line_num, const
 			switch(instr.mask)
 			{
 			case MASK_NO_ARG:
+				//ConLog.Write("MASK_NO_ARG");
 			break;
 
 			case MASK_UNK:
+				//ConLog.Write("MASK_UNK");
 				SEARCH_IMM;
 			break;
 
@@ -977,12 +1098,14 @@ int CompilerELF::CompileLine_Instr(wxString line_text, const u32 line_num, const
 			case MASK_RST_RA_DS:
 			case MASK_RST_RA_IMM16:
 			case MASK_RA_RST_IMM16:
+				//ConLog.Write("MASK_RA_RST_IMM16");
 				SEARCH_REG;
 				SEARCH_REG;
 				SEARCH_IMM;
 			break;
 
 			case MASK_BF_L_RA_IMM16:
+				//ConLog.Write("MASK_BF_L_RA_IMM16");
 				SEARCH_IMM;
 				SEARCH_IMM;
 				SEARCH_REG;
@@ -990,6 +1113,7 @@ int CompilerELF::CompileLine_Instr(wxString line_text, const u32 line_num, const
 			break;
 
 			case MASK_BO_BI_BD_AA_LK:
+				//ConLog.Write("MASK_BO_BI_BD_AA_LK");
 				SEARCH_IMM;
 				SEARCH_IMM;
 				SEARCH_IMM;
@@ -998,16 +1122,19 @@ int CompilerELF::CompileLine_Instr(wxString line_text, const u32 line_num, const
 			break;
 
 			case MASK_SYS:
+				//ConLog.Write("MASK_SYS");
 				//SEARCH_IMM;
 			break;
 
 			case MASK_LL_AA_LK:
+				//ConLog.Write("MASK_LL_AA_LK");
 				SEARCH_IMM;
 				SEARCH_IMM;
 				SEARCH_IMM;
 			break;
 
 			case MASK_RA_RS_SH_MB_ME:
+				//ConLog.Write("MASK_RA_RS_SH_MB_ME");
 				SEARCH_REG;
 				SEARCH_REG;
 				SEARCH_IMM;
@@ -1245,6 +1372,17 @@ void CompilerELF::CompileLine_Program(Array<ProgramInfo>& programs_info, u64& er
 					}
 					info.phdr.p_memsz = imm[0];
 				}
+				else if(!buf.Cmp("offset"))
+				{
+					wxArrayLong imm;
+					imm.Clear();
+					if(!SearchImm(p, line_text, line_num, line_len, imm))
+					{
+						errors_count++;
+						break;
+					}
+					info.phdr.p_offset = imm[0];
+				}
 				else if(!buf.Cmp("vaddr"))
 				{
 					wxArrayLong imm;
@@ -1432,226 +1570,294 @@ void CompilerELF::CompileLine_Elf(Elf64_Ehdr& elf_info, u64& errors_count, u32& 
 
 #include <Utilites/MTProgressDialog.h>
 
-void CompilerELF::DoAnalyzeCode(bool compile)
+struct AnalyzeThread : public StepThread
 {
-	if(!compile) return;
-	const uint lines_count = (uint)asm_list->GetNumberOfLines();
-	u64 errors_count = 0;
+	//volatile u32 id;
+	bool m_compile;
+	MTProgressDialog* m_progress_dial;
+	CompilerELF* m_caller;
 
-	//hex_list->Clear();
-	err_list->Clear();
-	hex_list->Freeze();
-
-	Array<SectionInfo> sections_info;
-	Array<ProgramInfo> programs_info;
-	Elf64_Ehdr elf_info;
-	sections_info.Clear();
-	programs_info.Clear();
-	memset(&elf_info, 0, sizeof(Elf64_Ehdr));
-	u32 current_section = 0;
-	u32 current_program = 0;
-	bool store_in_program = true;
-
-	elf_info.e_magic = 0x7F454C46;
-	elf_info.e_curver = 0x1;
-	elf_info.e_version = 0x1;
-	elf_info.e_class = 0x1;
-	elf_info.e_magic = 0x7F454C46;
-	elf_info.e_class = 2; //ELF64
-	elf_info.e_data = 2;
-	elf_info.e_curver = 1; //ver 1
-	elf_info.e_os_abi = 0x66; //Cell OS LV-2
-	elf_info.e_abi_ver = 0;
-	elf_info.e_type = 2; //EXEC (Executable file)
-	elf_info.e_machine = MACHINE_PPC64; //PowerPC64
-	elf_info.e_version = 1; //ver 1
-	elf_info.e_entry = 0x10200;
-	elf_info.e_phoff = sizeof(Elf64_Ehdr);
-	elf_info.e_shoff = 0;
-	elf_info.e_flags = 0x0;
-	elf_info.e_ehsize = sizeof(Elf64_Ehdr);
-	elf_info.e_phentsize = sizeof(Elf64_Phdr);
-	elf_info.e_shentsize = sizeof(Elf64_Shdr);
-	elf_info.e_shstrndx = 1;
-
-	MTProgressDialog* progress_dial = 
-		new MTProgressDialog(this, wxDefaultSize, "Analyze code...", "Loading...", wxArrayLong(), 1);
-
-	progress_dial->SetMaxFor(0, lines_count);
-
-	for(u32 l=0, addr=0; l<lines_count; ++l)
+	AnalyzeThread()
+		: StepThread("AnalyzeThread")
+		, m_compile(false)
+		, m_caller(NULL)
 	{
-		WriteLine(hex_list, l, wxEmptyString);
-		//if(line > 0) hex_list->WriteText("\n");
-		if(compile && errors_count > 0) break;
-		wxString buf = wxEmptyString;
-		wxString line_text = asm_list->GetLineText(l);
-		progress_dial->Update(0, l, wxString::Format("Line %d of %d", l + 1, lines_count));
-		const u32 type = SearchLineType(line_text);
-		switch(type)
+		Start();
+	}
+
+	~AnalyzeThread()
+	{
+		Exit();
+	}
+
+	void DoAnalyze(bool compile, MTProgressDialog* progress_dial, CompilerELF* caller)
+	{
+		m_compile = compile;
+		m_progress_dial = progress_dial;
+		m_caller = caller;
+
+		DoStep();
+	}
+
+private:
+	bool Analyze(Elf64_Ehdr& elf_info, Array<SectionInfo>& sections_info, Array<ProgramInfo>& programs_info)
+	{
+		u64 errors_count = 0;
+		u32 current_section = 0;
+		u32 current_program = 0;
+		bool store_in_program = true;
+		const u32 lines_count = (u32)m_caller->asm_list->GetNumberOfLines();
+
+		m_progress_dial->SetMaxFor(0, lines_count);
+
+		for(u32 l=0, addr=0; l<lines_count; ++l)
 		{
-			case LNTYPE_NULL: case LNTYPE_COMMIT: continue;
-			case LNTYPE_INSTR:
+			WriteLine(m_caller->hex_list, l, wxEmptyString);
+			if(m_compile && errors_count > 0) break;
+			wxString buf = wxEmptyString;
+			wxString line_text = m_caller->asm_list->GetLineText(l);
+			m_progress_dial->Update(0, l, wxString::Format("Line %d of %d", l + 1, lines_count));
+			const u32 type = SearchLineType(line_text);
+			switch(type)
 			{
-				bool has_error;
-				const u32 compiled_code = CompileLine_Instr(line_text, l, line_text.Length(), has_error);
-
-				if(has_error) errors_count++;
-				if(errors_count) continue;
-
-				if(!store_in_program && current_section >= sections_info.GetCount())
+				case LNTYPE_NULL: case LNTYPE_COMMIT: continue;
+				case LNTYPE_INSTR:
 				{
-					WriteError(l, "Section info not found");
-					errors_count++;
-					continue;
-				}
-				else if(store_in_program && current_program >= programs_info.GetCount())
-				{
-					WriteError(l, "Program info not found");
-					errors_count++;
-					continue;
-				}
+					bool has_error;
+					const u32 compiled_code = m_caller->CompileLine_Instr(line_text, l, line_text.Length(), has_error);
 
-				WriteLine(hex_list, l, wxString::Format("%x: [%08x]", addr, compiled_code));
+					if(has_error) errors_count++;
+					if(errors_count) continue;
 
-				if(compile)
-				{
-					Array<u32>& code = !store_in_program ? sections_info[current_section].code : programs_info[current_program].code;
-					const u32 align = !store_in_program ? sections_info[current_section].shdr.sh_addralign : programs_info[current_program].phdr.p_align;
-					code.AddCpy(compiled_code);
-					addr += min<int>(align, 4);
+					if(store_in_program)
+					{
+						if(current_program >= programs_info.GetCount())
+						{
+							m_caller->WriteError(l, "Program info not found");
+							errors_count++;
+							continue;
+						}
+
+						if(programs_info[current_program].is_preload)
+						{
+							m_caller->WriteError(l, "Write code to preload program not supported");
+							errors_count++;
+							continue;
+						}
+					}
+					else
+					{
+						if(current_section >= sections_info.GetCount())
+						{
+							m_caller->WriteError(l, "Section info not found");
+							errors_count++;
+							continue;
+						}
+					}
+
+					WriteLine(m_caller->hex_list, l, wxString::Format("%x: [%08x]", addr, compiled_code));
+
+					if(m_compile)
+					{
+						Array<u32>& code = !store_in_program ? sections_info[current_section].code : programs_info[current_program].code;
+						const u32 align = !store_in_program ? sections_info[current_section].shdr.sh_addralign : programs_info[current_program].phdr.p_align;
+						code.AddCpy(compiled_code);
+						addr += min<int>(align, 4);
+					}
 				}
+				break;
+
+				case LNTYPE_SECTION:
+					m_caller->CompileLine_Section(sections_info, errors_count, addr, current_section, l, lines_count);
+					store_in_program = false;
+				break;
+
+				case LNTYPE_PROGRAM:
+					m_caller->CompileLine_Program(programs_info, errors_count, addr, current_program, l, lines_count);
+					store_in_program = true;
+				break;
+
+				case LNTYPE_PRELOAD_PROGRAM:
+				{
+					const u64 last_errors_count = errors_count;
+					m_caller->CompileLine_Program(programs_info, errors_count, addr, current_program, l, lines_count);
+					if(last_errors_count == errors_count) programs_info[current_program].is_preload = true;
+					store_in_program = true;
+				}
+				break;
+
+				case LNTYPE_ELF:
+					m_caller->CompileLine_Elf(elf_info, errors_count, l, lines_count);
+				continue;
 			}
-			break;
-
-			case LNTYPE_SECTION:
-				CompileLine_Section(sections_info, errors_count, addr, current_section, l, lines_count);
-				store_in_program = false;
-			break;
-
-			case LNTYPE_PROGRAM:
-				CompileLine_Program(programs_info, errors_count, addr, current_program, l, lines_count);
-				store_in_program = true;
-			break;
-
-			case LNTYPE_ELF:
-				CompileLine_Elf(elf_info, errors_count, l, lines_count);
-			continue;
 		}
+
+		SetLineCount(m_caller->hex_list, lines_count);
+		m_progress_dial->Close();
+
+		return !errors_count;
 	}
 
-	SetLineCount(hex_list, lines_count);
-	hex_list->Thaw();
-	progress_dial->Close();
-	if(!compile) return;
-
-	wxFile f("compiled.elf", wxFile::write);
-
+	void Step()
 	{
-		SectionInfo shstrtab;
-		shstrtab.name = ".shstrtab";
-		shstrtab.shdr.sh_type = 3;
-		shstrtab.shdr.sh_addralign = 1;
-		sections_info.AddCpy(shstrtab);
-	}
+		Array<SectionInfo> sections_info;
+		Array<ProgramInfo> programs_info;
+		Elf64_Ehdr elf_info;
+		sections_info.Clear();
+		programs_info.Clear();
+		memset(&elf_info, 0, sizeof(Elf64_Ehdr));
 
-	elf_info.e_phnum = programs_info.GetCount();
-	elf_info.e_shnum = sections_info.GetCount();
-	elf_info.e_shstrndx = sections_info.GetCount() - 1;
-	WriteEhdr(f, elf_info);
+		elf_info.e_magic = 0x7F454C46;
+		elf_info.e_curver = 0x1;
+		elf_info.e_version = 0x1;
+		elf_info.e_class = 0x1;
+		elf_info.e_magic = 0x7F454C46;
+		elf_info.e_class = 2; //ELF64
+		elf_info.e_data = 2;
+		elf_info.e_curver = 1; //ver 1
+		elf_info.e_os_abi = 0x66; //Cell OS LV-2
+		elf_info.e_abi_ver = 0;
+		elf_info.e_type = 2; //EXEC (Executable file)
+		elf_info.e_machine = MACHINE_PPC64; //PowerPC64
+		elf_info.e_version = 1; //ver 1
+		elf_info.e_entry = 0x10200;
+		elf_info.e_phoff = sizeof(Elf64_Ehdr);
+		elf_info.e_shoff = 0;
+		elf_info.e_flags = 0x0;
+		elf_info.e_ehsize = sizeof(Elf64_Ehdr);
+		elf_info.e_phentsize = sizeof(Elf64_Phdr);
+		elf_info.e_shentsize = sizeof(Elf64_Shdr);
+		elf_info.e_shstrndx = 1;
 
-	u32 hdr_offset = elf_info.e_phoff + sizeof(Elf64_Phdr) * elf_info.e_phnum;
+		m_caller->err_list->Clear();
+		m_caller->hex_list->Freeze();
 
-	f.Seek(elf_info.e_phoff);
-	for(u32 i=0; i<programs_info.GetCount(); ++i)
-	{
-		programs_info[i].phdr.p_filesz = programs_info[i].code.GetCount() * min<int>(programs_info[i].phdr.p_align, 4);
-		programs_info[i].phdr.p_offset = hdr_offset;
-		hdr_offset += programs_info[i].phdr.p_filesz;
-		WritePhdr(f, programs_info[i].phdr);
-	}
+		bool analyze_result = Analyze(elf_info, sections_info, programs_info);
 
-	f.Seek(elf_info.e_shoff);
-	u32 str_len = 0;
-	for(u32 i=0; i<sections_info.GetCount(); ++i)
-	{
-		sections_info[i].shdr.sh_name = str_len;
-		str_len += sections_info[i].name.Len() + 1;
+		m_caller->hex_list->Thaw();
 
-		if(i == elf_info.e_shstrndx)
+		if(!m_compile || !analyze_result) return;
+
+		wxFile f("compiled.elf", wxFile::write);
+
 		{
-			sections_info[i].shdr.sh_size = str_len;
-			sections_info[i].shdr.sh_offset = hdr_offset;
-			hdr_offset += str_len;
+			SectionInfo shstrtab;
+			shstrtab.name = ".shstrtab";
+			shstrtab.shdr.sh_type = 3;
+			shstrtab.shdr.sh_addralign = 1;
+			sections_info.AddCpy(shstrtab);
 		}
-		else
+
+		elf_info.e_phnum = programs_info.GetCount();
+		elf_info.e_shnum = sections_info.GetCount();
+		elf_info.e_shstrndx = sections_info.GetCount() - 1;
+		if(!elf_info.e_shoff) elf_info.e_shoff = elf_info.e_phoff + sizeof(Elf64_Phdr) * programs_info.GetCount();
+		WriteEhdr(f, elf_info);
+
+		u32 hdr_offset = elf_info.e_shoff + sizeof(Elf64_Shdr) * elf_info.e_shnum;
+
+		f.Seek(elf_info.e_phoff);
+		for(u32 i=0; i<programs_info.GetCount(); ++i)
 		{
-			if(sections_info[i].code.GetCount())
+			if(!programs_info[i].is_preload)
 			{
-				sections_info[i].shdr.sh_size = sections_info[i].code.GetCount() * min<int>(sections_info[i].shdr.sh_addralign, 4);
+				programs_info[i].phdr.p_filesz = programs_info[i].code.GetCount() * min<int>(programs_info[i].phdr.p_align, 4);
+				programs_info[i].phdr.p_offset = hdr_offset;
+				hdr_offset += programs_info[i].phdr.p_filesz;
+			}
+			WritePhdr(f, programs_info[i].phdr);
+		}
+
+		f.Seek(elf_info.e_shoff);
+		u32 str_len = 0;
+		for(u32 i=0; i<sections_info.GetCount(); ++i)
+		{
+			sections_info[i].shdr.sh_name = str_len;
+			str_len += sections_info[i].name.Len() + 1;
+
+			if(i == elf_info.e_shstrndx)
+			{
+				sections_info[i].shdr.sh_size = str_len;
 				sections_info[i].shdr.sh_offset = hdr_offset;
 				hdr_offset += sections_info[i].shdr.sh_size;
 			}
 			else
 			{
-				sections_info[i].shdr.sh_offset = 0;
-				for(u32 p=0; p<programs_info.GetCount(); ++p)
+				if(sections_info[i].code.GetCount())
 				{
-					if(!programs_info[p].phdr.p_offset) continue;
-					if(!programs_info[p].phdr.p_vaddr) continue;
-
-					if(!(programs_info[p].phdr.p_vaddr <= sections_info[i].shdr.sh_addr &&
-						programs_info[p].phdr.p_vaddr + programs_info[p].phdr.p_filesz >= sections_info[i].shdr.sh_addr + sections_info[i].shdr.sh_size))
-						continue;
-
-					sections_info[i].shdr.sh_offset = 
-						programs_info[p].phdr.p_offset + (sections_info[i].shdr.sh_addr - programs_info[p].phdr.p_vaddr);
-					break;
+					sections_info[i].shdr.sh_size = sections_info[i].code.GetCount() * min<int>(sections_info[i].shdr.sh_addralign, 4);
+					sections_info[i].shdr.sh_offset = hdr_offset;
+					hdr_offset += sections_info[i].shdr.sh_size;
 				}
+				else
+				{
+					sections_info[i].shdr.sh_offset = 0;
+					for(u32 p=0; p<programs_info.GetCount(); ++p)
+					{
+						if(programs_info[p].is_preload) continue;
+						if(!programs_info[p].phdr.p_offset) continue;
+						if(!programs_info[p].phdr.p_vaddr) continue;
 
-				if(!sections_info[i].shdr.sh_offset) sections_info[i].shdr.sh_offset = hdr_offset;
+						if(!(programs_info[p].phdr.p_vaddr <= sections_info[i].shdr.sh_addr &&
+							programs_info[p].phdr.p_vaddr + programs_info[p].phdr.p_filesz >= sections_info[i].shdr.sh_addr + sections_info[i].shdr.sh_size))
+							continue;
+
+						sections_info[i].shdr.sh_offset = 
+							programs_info[p].phdr.p_offset + (sections_info[i].shdr.sh_addr - programs_info[p].phdr.p_vaddr);
+						break;
+					}
+
+					if(!sections_info[i].shdr.sh_offset) sections_info[i].shdr.sh_offset = hdr_offset;
+				}
 			}
+
+			WriteShdr(f, sections_info[i].shdr);
 		}
 
-		WriteShdr(f, sections_info[i].shdr);
-	}
-
-	f.Seek(sections_info[elf_info.e_shstrndx].shdr.sh_offset);
-	for(u32 i=0; i<sections_info.GetCount(); ++i)
-	{
-		f.Write(sections_info[i].name);
-		f.Seek(f.Tell() + 1);
-	}
-
-	for(u32 i=0; i<sections_info.GetCount(); ++i)
-	{
-		f.Seek(sections_info[i].shdr.sh_offset);
-		for(u32 c=0; c<sections_info[i].code.GetCount();)
+		for(u32 i=0; i<sections_info.GetCount(); ++i)
 		{
-			switch(min<int>(sections_info[i].shdr.sh_addralign, 4))
-			{
-			case 1: Write8 (f, sections_info[i].code[c]); c += 1; break;
-			case 2: Write16(f, sections_info[i].code[c]); c += 2; break;
-			case 4: Write32(f, sections_info[i].code[c]); c += 4; break;
-			}
+			f.Seek(sections_info[elf_info.e_shstrndx].shdr.sh_offset + sections_info[i].shdr.sh_name);
+			f.Write(sections_info[i].name);
 		}
-	}
 
-	for(u32 i=0; i<programs_info.GetCount(); ++i)
-	{
-		f.Seek(programs_info[i].phdr.p_offset);
-		for(u32 c=0; c<programs_info[i].code.GetCount();)
+		for(u32 i=0; i<sections_info.GetCount(); ++i)
 		{
-			switch(min<int>(programs_info[i].phdr.p_align, 4))
+			f.Seek(sections_info[i].shdr.sh_offset);
+			for(u32 c=0; c<sections_info[i].code.GetCount(); ++c)
 			{
-			case 1: Write8 (f, programs_info[i].code[c]); c += 1; break;
-			case 2: Write16(f, programs_info[i].code[c]); c += 2; break;
-			case 4: Write32(f, programs_info[i].code[c]); c += 4; break;
+				switch(min<int>(sections_info[i].shdr.sh_addralign, 4))
+				{
+				case 1: Write8 (f, sections_info[i].code[c]); break;
+				case 2: Write16(f, sections_info[i].code[c]); break;
+				case 4: Write32(f, sections_info[i].code[c]); break;
+				}
 			}
 		}
+
+		for(u32 i=0; i<programs_info.GetCount(); ++i)
+		{
+			f.Seek(programs_info[i].phdr.p_offset);
+			for(u32 c=0; c<programs_info[i].code.GetCount(); ++c)
+			{
+				switch(min<int>(programs_info[i].phdr.p_align, 4))
+				{
+				case 1: Write8 (f, programs_info[i].code[c]); break;
+				case 2: Write16(f, programs_info[i].code[c]); break;
+				case 4: Write32(f, programs_info[i].code[c]); break;
+				}
+			}
+		}
+
+		f.Close();
+
+		wxMessageBox("elf saved.");
 	}
+};
 
-	f.Close();
-
-	wxMessageBox("elf saved.");
+void CompilerELF::DoAnalyzeCode(bool compile)
+{
+	if(!compile) return;
+	MTProgressDialog* progress_dial = 
+			new MTProgressDialog(this, wxDefaultSize, "Analyze code...", "Loading...", wxArrayLong(), 1);
+	(new AnalyzeThread())->DoAnalyze(compile, progress_dial, this);
 }

@@ -56,7 +56,8 @@ protected:
 	}
 
 public:
-	virtual bool Load(){return false;};
+	virtual bool LoadInfo(){return false;};
+	virtual bool LoadData(){return false;};
 	virtual bool Close(){return false;};
 	Elf_Machine GetMachine() { return machine; }
 	u32 GetEntry() { return entry; }
@@ -69,6 +70,10 @@ class Loader : public LoaderBase
 
 public:
 	Loader(const wxString& path);
+	~Loader();
 
 	bool Load();
+
+private:
+	LoaderBase* SearchLoader();
 };

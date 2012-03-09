@@ -25,7 +25,6 @@ Emulator::Emulator()
 
 void Emulator::Init()
 {
-	m_pad_manager = new PadManager();
 	//if(m_memory_viewer) m_memory_viewer->Close();
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
@@ -93,6 +92,9 @@ void Emulator::Run()
 
 	Memory.Init();
 
+	SetTLSData(0, 0, 0);
+	SetMallocPageSize(0x100000);
+
 	Loader& loader = Loader(m_path);
 	if(!loader.Load())
 	{
@@ -109,13 +111,10 @@ void Emulator::Run()
 		return;
 	}
 
-#ifdef USE_GS_FRAME
-	m_gs_frame = new GSFrame_GL(wxGetApp().m_MainFrame);
-#endif
-
 	PPCThread& thread = GetCPU().AddThread(loader.GetMachine() == MACHINE_PPC64);
 
 	thread.SetPc(loader.GetEntry());
+	thread.SetArg(thread.GetId());
 	thread.Run();
 
 	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
@@ -128,7 +127,9 @@ void Emulator::Run()
 
 	if(!m_dbg_console) m_dbg_console = new DbgConsole();
 
-	if(Ini.m_DecoderMode.GetValue() != 1)
+	GetGSManager().Init();
+
+	if(Ini.CPUDecoderMode.GetValue() != 1)
 	{
 		GetCPU().Start();
 		GetCPU().Exec();
@@ -164,18 +165,15 @@ void Emulator::Stop()
 	m_status = Stoped;
 	wxGetApp().m_MainFrame->UpdateUI();
 
+	GetGSManager().Close();
+
 	GetCPU().Close();
 	SysCallsManager.Close();
 
 	Memory.Close();
 	CurGameInfo.Reset();
 	GetIdManager().Clear();
-	GetPadManager().cellPadEnd();
-
-#ifdef USE_GS_FRAME
-	if(m_gs_frame && m_gs_frame->IsShown()) m_gs_frame->Close();
-	safe_delete(m_gs_frame);
-#endif
+	GetPadManager().Close();
 
 	if(m_dbg_console){GetDbgCon().Close();m_dbg_console = NULL;}
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();

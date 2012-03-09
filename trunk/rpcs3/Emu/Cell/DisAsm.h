@@ -166,6 +166,10 @@ protected:
 	{
 		Write(wxString::Format("%s%s%s r%d,r%d,r%d", op, oe ? "o" : "", rc ? "." : "", r0, r1, r2));
 	}
+	void DisAsm_R3_INT2_RC(const wxString& op, OP_REG r0, OP_REG r1, OP_REG r2, OP_sIMM i0, OP_sIMM i1, bool rc)
+	{
+		Write(wxString::Format("%s%s r%d,r%d,r%d,%d,%d", op, rc ? "." : "", r0, r1, r2, i0, i1));
+	}
 	void DisAsm_R3_RC(const wxString& op, OP_REG r0, OP_REG r1, OP_REG r2, bool rc)
 	{
 		DisAsm_R3_OE_RC(op, r0, r1, r2, false, rc);

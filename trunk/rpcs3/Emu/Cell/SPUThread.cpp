@@ -34,7 +34,7 @@ u64 SPUThread::GetFreeStackSize() const
 
 void SPUThread::DoRun()
 {
-	switch(Ini.m_DecoderMode.GetValue())
+	switch(Ini.CPUDecoderMode.GetValue())
 	{
 	case 0:
 		m_dec = new SPU_Decoder(*new SPU_DisAsm(*this));

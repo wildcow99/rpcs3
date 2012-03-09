@@ -47,14 +47,18 @@ void DbgConsole::Step()
 
 	const u32 max_lines_count = 500;
 	if(!DbgConsole::IsShown()) Show();
+
+	m_console->Freeze();
 	while(m_packets.GetCount())
 	{
 		StepThread::SetCancelState(false);
 		m_console->SetDefaultStyle(m_packets[0].m_ch == 1 ? *m_color_red : *m_color_white);
+		m_console->SetInsertionPointEnd();
 		m_console->WriteText(m_packets[0].m_text);
 		m_packets.RemoveAt(0);
 		StepThread::SetCancelState(true);
 	}
+	m_console->Thaw();
 
 	Sleep(1);
 }

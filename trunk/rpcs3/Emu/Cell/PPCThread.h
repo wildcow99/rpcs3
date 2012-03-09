@@ -26,8 +26,6 @@ protected:
 	bool m_joining;
 
 public:
-	MemoryBlock Stack;
-	u32 stack_num;
 	u64 stack_size;
 	u64 stack_addr;
 	u64 stack_point;

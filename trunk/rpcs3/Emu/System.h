@@ -5,7 +5,7 @@
 #include "Utilites/Array.h"
 #include "Emu/Io/Pad.h"
 #include "Emu/DbgConsole.h"
-#include "Emu/Display/Display.h"
+#include "Emu/GS/GSManager.h"
 
 enum Status
 {
@@ -27,19 +27,18 @@ class Emulator
 	uint m_mode;
 
 	MemoryViewerPanel* m_memory_viewer;
-#ifdef USE_GS_FRAME
-	GSFrame_GL* m_gs_frame;
-#endif
 	//ArrayF<CPUThread> m_cpu_threads;
 
 	PPCThreadManager m_thread_manager;
-	PadManager* m_pad_manager;
+	PadManager m_pad_manager;
 	IdManager m_id_manager;
 	DbgConsole* m_dbg_console;
+	GSManager m_gs_manager;
 
 	u64 tls_addr;
 	u64 tls_filesz;
 	u64 tls_memsz;
+	u32 malloc_page_size;
 
 public:
 	wxString m_path;
@@ -52,24 +51,25 @@ public:
 	virtual void SetElf(const wxString& path);
 
 	PPCThreadManager&	GetCPU()		{ return m_thread_manager; }
-	PadManager&			GetPadManager()	{ return *m_pad_manager; }
+	PadManager&			GetPadManager()	{ return m_pad_manager; }
 	IdManager&			GetIdManager()	{ return m_id_manager; }
 	DbgConsole&			GetDbgCon()		{ return *m_dbg_console; }
+	GSManager&			GetGSManager()	{ return m_gs_manager; }
 
-	void SetTLSData(u64 addr, u64 filesz, u64 memsz)
+	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
 	{
 		tls_addr = addr;
 		tls_filesz = filesz;
 		tls_memsz = memsz;
 	}
 
+	void SetMallocPageSize(const u32 size) { malloc_page_size = size; }
+
 	u64 GetTLSAddr() const { return tls_addr; }
 	u64 GetTLSFilesz() const { return tls_filesz; }
 	u64 GetTLSMemsz() const { return tls_memsz; }
 
-#ifdef USE_GS_FRAME
-	GSFrame_GL&			GetGSFrame() { return *m_gs_frame; }
-#endif
+	u32 GetMallocPageSize() const { return malloc_page_size; }
 
 	void CheckStatus();
 

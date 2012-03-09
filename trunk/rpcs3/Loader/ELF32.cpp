@@ -13,13 +13,24 @@ ELF32Loader::ELF32Loader(const wxString& path)
 {
 }
 
-bool ELF32Loader::Load()
+bool ELF32Loader::LoadInfo()
 {
 	if(!elf32_f.IsOpened()) return false;
 
-	if(!LoadEhdr()) return false;
-	if(!LoadPhdr()) return false;
-	if(!LoadShdr()) return false;
+	if(!LoadEhdrInfo()) return false;
+	if(!LoadPhdrInfo()) return false;
+	if(!LoadShdrInfo()) return false;
+
+	return true;
+}
+
+bool ELF32Loader::LoadData()
+{
+	if(!elf32_f.IsOpened()) return false;
+
+	if(!LoadEhdrData()) return false;
+	if(!LoadPhdrData()) return false;
+	if(!LoadShdrData()) return false;
 
 	return true;
 }
@@ -29,7 +40,7 @@ bool ELF32Loader::Close()
 	return elf32_f.Close();
 }
 
-bool ELF32Loader::LoadEhdr()
+bool ELF32Loader::LoadEhdrInfo()
 {
 	elf32_f.Seek(0);
 	ehdr.Load(elf32_f);
@@ -56,14 +67,10 @@ bool ELF32Loader::LoadEhdr()
 		return false;
 	}
 
-	ConLog.SkipLn();
-	ehdr.Show();
-	ConLog.SkipLn();
-
 	return true;
 }
 
-bool ELF32Loader::LoadPhdr()
+bool ELF32Loader::LoadPhdrInfo()
 {
 	if(ehdr.e_phoff == 0 && ehdr.e_phnum)
 	{
@@ -71,82 +78,94 @@ bool ELF32Loader::LoadPhdr()
 		return false;
 	}
 
+	elf32_f.Seek(ehdr.e_phoff);
 	for(uint i=0; i<ehdr.e_phnum; ++i)
 	{
-		elf32_f.Seek(ehdr.e_phoff + (ehdr.e_phentsize * i));
 		Elf32_Phdr phdr;
 		phdr.Load(elf32_f);
-		phdr.Show();
-
-		if(phdr.p_type == 0x00000001) //LOAD
-		{
-			if (phdr.p_vaddr != phdr.p_paddr)
-			{
-				ConLog.Warning
-				( 
-					"LoadPhdr32 different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
-					phdr.p_paddr, phdr.p_vaddr
-				);
-			}
-
-			elf32_f.Seek(phdr.p_offset);
-			elf32_f.Read(Memory.GetMemFromAddr(phdr.p_paddr), phdr.p_filesz);
-		}
-
-		ConLog.SkipLn();
-
-		phdr_arr.Add(new Elf32_Phdr(phdr));
+		phdr_arr.AddCpy(phdr);
 	}
 
 	return true;
 }
 
-bool ELF32Loader::LoadShdr()
+bool ELF32Loader::LoadShdrInfo()
 {
-	shdr_arr.Clear();
-	shdr_name_arr.Clear();
-	if(ehdr.e_shoff == 0 && ehdr.e_shnum)
+	elf32_f.Seek(ehdr.e_shoff);
+	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
-		ConLog.Error("LoadShdr32 error: Section header offset is null!");
+		Elf32_Shdr shdr;
+		shdr.Load(elf32_f);
+		shdr_arr.AddCpy(shdr);
+	}
+
+	if(ehdr.e_shstrndx >= shdr_arr.GetCount())
+	{
+		ConLog.Error("LoadShdr64 error: shstrndx too big!");
 		return false;
 	}
 
-	Memory.MemFlags.Clear();
-
-	Elf32_Shdr* strtab	= NULL;
-
-	for(uint i=0; i<ehdr.e_shnum; ++i)
+	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
 	{
-		Elf32_Shdr& shdr = *new Elf32_Shdr();
-		elf32_f.Seek(ehdr.e_shoff + (ehdr.e_shentsize * i));
-		shdr.Load(elf32_f);
-
-		shdr_arr.Add(shdr);
-
-		if(ehdr.e_shstrndx == i && shdr.sh_type == SHT_STRTAB)
+		elf32_f.Seek(shdr_arr[ehdr.e_shstrndx].sh_offset + shdr_arr[i].sh_name);
+		wxString name = wxEmptyString;
+		while(!elf32_f.Eof())
 		{
-			if(!strtab) strtab = &shdr;
+			char c;
+			elf32_f.Read(&c, 1);
+			if(c == 0) break;
+			name += c;
 		}
+
+		shdr_name_arr.Add(name);
 	}
 
-	for(uint i=0; i<shdr_arr.GetCount(); ++i)
+	return true;
+}
+
+bool ELF32Loader::LoadEhdrData()
+{
+	ConLog.SkipLn();
+	ehdr.Show();
+	ConLog.SkipLn();
+	return true;
+}
+
+bool ELF32Loader::LoadPhdrData()
+{
+	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
 	{
-		Elf32_Shdr& shdr = shdr_arr[i];
-		if(strtab)
+		phdr_arr[i].Show();
+
+		if(phdr_arr[i].p_type == 0x00000001) //LOAD
 		{
-			elf32_f.Seek(strtab->sh_offset + shdr.sh_name);
-			wxString name = wxEmptyString;
-			while(!elf32_f.Eof())
+			if(phdr_arr[i].p_vaddr != phdr_arr[i].p_paddr)
 			{
-				char c;
-				elf32_f.Read(&c, 1);
-				if(c == 0) break;
-				name += c;
+				ConLog.Warning
+				( 
+					"LoadPhdr32 different load addrs: paddr=0x%8.8x, vaddr=0x%8.8x", 
+					phdr_arr[i].p_paddr, phdr_arr[i].p_vaddr
+				);
 			}
 
-			shdr_name_arr.Add(name);
-			ConLog.Write("Name: %s", name);
+			elf32_f.Seek(phdr_arr[i].p_offset);
+			elf32_f.Read(Memory.GetMemFromAddr(phdr_arr[i].p_paddr), phdr_arr[i].p_filesz);
 		}
+
+		ConLog.SkipLn();
+	}
+
+	return true;
+}
+
+bool ELF32Loader::LoadShdrData()
+{
+	Memory.MemFlags.Clear();
+
+	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
+	{
+		Elf32_Shdr& shdr = shdr_arr[i];
+		if(i < shdr_name_arr.GetCount()) ConLog.Write("Name: %s", shdr_name_arr[i]);
 
 		shdr.Show();
 		ConLog.SkipLn();
