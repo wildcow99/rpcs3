@@ -6,12 +6,49 @@
 #include "Emu/Io/Pad.h"
 #include "Emu/DbgConsole.h"
 #include "Emu/GS/GSManager.h"
+#include "Loader/Loader.h"
 
 enum Status
 {
 	Runned,
 	Paused,
 	Stoped,
+};
+
+struct EmuInfo
+{
+private:
+	u64 tls_addr;
+	u64 tls_filesz;
+	u64 tls_memsz;
+
+	sys_process_param_info proc_param;
+
+public:
+	EmuInfo() { Reset(); }
+
+	sys_process_param_info& GetProcParam() { return proc_param; }
+
+	void Reset()
+	{
+		SetTLSData(0, 0, 0);
+		memset(&proc_param, 0, sizeof(sys_process_param_info));
+
+		proc_param.malloc_pagesize = 0x100000;
+		proc_param.sdk_version = 0x360001;
+		//TODO
+	}
+
+	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
+	{
+		tls_addr = addr;
+		tls_filesz = filesz;
+		tls_memsz = memsz;
+	}
+
+	u64 GetTLSAddr() const { return tls_addr; }
+	u64 GetTLSFilesz() const { return tls_filesz; }
+	u64 GetTLSMemsz() const { return tls_memsz; }
 };
 
 class Emulator
@@ -34,11 +71,9 @@ class Emulator
 	IdManager m_id_manager;
 	DbgConsole* m_dbg_console;
 	GSManager m_gs_manager;
+	Loader m_loader;
 
-	u64 tls_addr;
-	u64 tls_filesz;
-	u64 tls_memsz;
-	u32 malloc_page_size;
+	EmuInfo m_info;
 
 public:
 	wxString m_path;
@@ -58,18 +93,16 @@ public:
 
 	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
 	{
-		tls_addr = addr;
-		tls_filesz = filesz;
-		tls_memsz = memsz;
+		m_info.SetTLSData(addr, filesz, memsz);
 	}
 
-	void SetMallocPageSize(const u32 size) { malloc_page_size = size; }
+	EmuInfo& GetInfo() { return m_info; }
 
-	u64 GetTLSAddr() const { return tls_addr; }
-	u64 GetTLSFilesz() const { return tls_filesz; }
-	u64 GetTLSMemsz() const { return tls_memsz; }
+	u64 GetTLSAddr() const { return m_info.GetTLSAddr(); }
+	u64 GetTLSFilesz() const { return m_info.GetTLSFilesz(); }
+	u64 GetTLSMemsz() const { return m_info.GetTLSMemsz(); }
 
-	u32 GetMallocPageSize() const { return malloc_page_size; }
+	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
 
 	void CheckStatus();
 

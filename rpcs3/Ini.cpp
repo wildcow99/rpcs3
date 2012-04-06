@@ -135,9 +135,9 @@ static WindowInfo StringToWindowInfo(const wxString str)
 
 static wxString WindowInfoToString(const WindowInfo wind)
 {
-	return wxString::Format("%dx%d:%dx%d",
-		wind.size.x, wind.size.y,
-		wind.position.x, wind.position.y);
+	const int px = wind.position.x < -wind.size.x ? -1 : wind.position.x;
+	const int py = wind.position.y < -wind.size.y ? -1 : wind.position.y;
+	return wxString::Format("%dx%d:%dx%d", wind.size.x, wind.size.y, px, py);
 }
 
 //Ini

@@ -15,6 +15,7 @@ class InterpreterDisAsmFrame : public FrameBase
 	u32 PC;
 	wxTextCtrl* m_regs;
 	bool exit;
+	Array<u32> m_break_points;
 
 public:
 	InterpreterDisAsmFrame(const wxString& title, PPCThread* cpu);
@@ -27,7 +28,12 @@ public:
 	virtual void OnUpdate(wxCommandEvent& event);
 	virtual void Show_Val(wxCommandEvent& event);
 	virtual void Show_PC(wxCommandEvent& event);
-	virtual void DoOpcode(wxCommandEvent& event);
+	virtual void DoRun(wxCommandEvent& event);
+	virtual void DoStep(wxCommandEvent& event);
+	virtual void DClick(wxListEvent& event);
 	void OnResize(wxSizeEvent& event);
 	void MouseWheel(wxMouseEvent& event);
+	bool IsBreakPoint(u32 pc);
+	void AddBreakPoint(u32 pc);
+	bool RemoveBreakPoint(u32 pc);
 };

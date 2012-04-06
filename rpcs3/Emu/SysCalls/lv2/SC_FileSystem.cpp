@@ -31,10 +31,29 @@ enum Lv2FsLength
 	LV2_MAX_FS_MP_LENGTH = 31,
 };
 
-#pragma pack(1)
+enum
+{
+	CELL_FS_S_IFDIR = 0040000,	//directory
+	CELL_FS_S_IFREG = 0100000,	//regular
+	CELL_FS_S_IFLNK = 0120000,	//symbolic link
+	CELL_FS_S_IFWHT = 0160000,	//unknown
+
+	CELL_FS_S_IRUSR = 0000400,	//R for owner
+	CELL_FS_S_IWUSR = 0000200,	//W for owner
+	CELL_FS_S_IXUSR = 0000100,	//X for owner
+
+	CELL_FS_S_IRGRP = 0000040,	//R for group
+	CELL_FS_S_IWGRP = 0000020,	//W for group
+	CELL_FS_S_IXGRP = 0000010,	//X for group
+
+	CELL_FS_S_IROTH = 0000004,	//R for other
+	CELL_FS_S_IWOTH = 0000002,	//W for other
+	CELL_FS_S_IXOTH = 0000001,	//X for other
+};
+
 struct Lv2FsStat
 {
-	s32 st_mode;
+	u32 st_mode;
 	s32 st_uid;
 	s32 st_gid;
 	time_t st_atime;
@@ -43,7 +62,6 @@ struct Lv2FsStat
 	u64 st_size;
 	u64 st_blksize;
 };
-#pragma pack()
 
 struct Lv2FsUtimbuf
 {
@@ -72,13 +90,14 @@ wxString ReadString(const u64 addr)
 	return wxGetCwd() + Memory.ReadString(addr);
 }
 
-int cellFsOpen(const u64 path_addr, const int flags, const u64 fd_addr, const u64 arg_addr, const u64 size)
+int cellFsOpen(const u32 path_addr, const int flags, const u32 fd_addr, const u32 arg_addr, const u64 size)
 {
 	const wxString& path = Memory.ReadString(path_addr);
-	sc_log.Log("cellFsOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%llx, size: 0x%llx)",
+	sc_log.Log("cellFsOpen(path: %s, flags: 0x%x, fd_addr: 0x%x, arg_addr: 0x%x, size: 0x%llx)",
 		path, flags, fd_addr, arg_addr, size);
 
-	const wxString& ppath = wxGetCwd() + (path[0] == '//' ? path : "//" + path);
+	const wxString& ppath = GetWinPath(path);
+	//ConLog.Warning("path: %s [%s]", ppath, path);
 
 	wxFile::OpenMode o_mode;
 
@@ -87,12 +106,12 @@ int cellFsOpen(const u64 path_addr, const int flags, const u64 fd_addr, const u6
 	{
 		_oflags &= ~LV2_O_CREAT;
 		//create path
-		for(uint p=1;p<path.Length();p++)
+		for(uint p=1;p<ppath.Length();p++)
 		{
-			for(;p<path.Length(); p++) if(path[p] == '/') break;
+			for(;p<ppath.Length(); p++) if(ppath[p] == '/') break;
 			
-			if(p == path.Length()) break;
-			const wxString& dir = wxGetCwd() + path(0, p);
+			if(p == ppath.Length()) break;
+			const wxString& dir = ppath(0, p);
 			if(!wxDirExists(dir))
 			{
 				ConLog.Write("create dir: %s", dir);
@@ -136,11 +155,11 @@ int cellFsOpen(const u64 path_addr, const int flags, const u64 fd_addr, const u6
 
 	if(_oflags != 0)
 	{
-		sc_log.Error("'%s' has unknown flags! flags: 0x%08x", path, flags);
+		sc_log.Error("'%s' has unknown flags! flags: 0x%08x", ppath, flags);
 		return CELL_EINVAL;
 	}
 
-	if(o_mode == wxFile::read && !wxFile::Access(ppath, o_mode)) return CELL_ENOENT;
+	if(/*o_mode == wxFile::read && */!wxFile::Access(ppath, o_mode)) return CELL_ENOENT;
 
 	Memory.Write32(fd_addr, 
 		Emu.GetIdManager().GetNewID(sc_log.GetName(), new wxFile(ppath, o_mode), flags));
@@ -148,19 +167,21 @@ int cellFsOpen(const u64 path_addr, const int flags, const u64 fd_addr, const u6
 	return CELL_OK;
 }
 
-int cellFsRead(const u32 fd, const u64 buf_addr, const u64 nbytes, const u64 nread_addr)
+int cellFsRead(const u32 fd, const u32 buf_addr, const u64 nbytes, const u32 nread_addr)
 {
-	sc_log.Log("cellFsRead(fd: %d, buf_addr: 0x%llx, nbytes: 0x%llx, nread_addr: 0x%llx)",
+	sc_log.Log("cellFsRead(fd: %d, buf_addr: 0x%x, nbytes: 0x%llx, nread_addr: 0x%x)",
 		fd, buf_addr, nbytes, nread_addr);
 	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
 	wxFile& file = *(wxFile*)Emu.GetIdManager().GetIDData(fd).m_data;
+
 	Memory.Write64(nread_addr, file.Read(Memory.GetMemFromAddr(buf_addr), nbytes));
+
 	return CELL_OK;
 }
 
-int cellFsWrite(const u32 fd, const u64 buf_addr, const u64 nbytes, const u64 nwrite_addr)
+int cellFsWrite(const u32 fd, const u32 buf_addr, const u64 nbytes, const u32 nwrite_addr)
 {
-	sc_log.Log("cellFsWrite(fd: %d, buf_addr: 0x%llx, nbytes: 0x%llx, nwrite_addr: 0x%llx)",
+	sc_log.Log("cellFsWrite(fd: %d, buf_addr: 0x%x, nbytes: 0x%llx, nwrite_addr: 0x%x)",
 		fd, buf_addr, nbytes, nwrite_addr);
 	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
 	wxFile& file = *(wxFile*)Emu.GetIdManager().GetIDData(fd).m_data;
@@ -178,16 +199,16 @@ int cellFsClose(const u32 fd)
 	return CELL_OK;
 }
 
-int cellFsOpendir(const u64 path_addr, const u64 fd_addr)
+int cellFsOpendir(const u32 path_addr, const u32 fd_addr)
 {
 	const wxString& path = ReadString(path_addr);
-	sc_log.Error("cellFsOpendir(path: %s, fd_addr: 0x%llx)", path, fd_addr);
+	sc_log.Error("cellFsOpendir(path: %s, fd_addr: 0x%x)", path, fd_addr);
 	return CELL_OK;
 }
 
-int cellFsReaddir(const u32 fd, const u64 dir_addr, const u64 nread_addr)
+int cellFsReaddir(const u32 fd, const u32 dir_addr, const u32 nread_addr)
 {
-	sc_log.Error("cellFsReaddir(fd: %d, dir_addr: 0x%llx, nread_addr: 0x%llx)", fd, dir_addr, nread_addr);
+	sc_log.Error("cellFsReaddir(fd: %d, dir_addr: 0x%x, nread_addr: 0x%x)", fd, dir_addr, nread_addr);
 	return CELL_OK;
 }
 
@@ -197,20 +218,42 @@ int cellFsClosedir(const u32 fd)
 	return CELL_OK;
 }
 
-int cellFsStat(const u64 path_addr, const u64 sb_addr)
+int cellFsStat(const u32 path_addr, const u32 sb_addr)
 {
 	const wxString& path = ReadString(path_addr);
-	sc_log.Error("cellFsFstat(path: %s, sb_addr: 0x%llx)", path, sb_addr);
+	sc_log.Error("cellFsFstat(path: %s, sb_addr: 0x%x)", path, sb_addr);
 	return CELL_OK;
 }
 
-int cellFsFstat(const u32 fd, const u64 sb_addr)
+int cellFsFstat(u32 fd, u32 sb_addr)
 {
-	sc_log.Error("cellFsFstat(fd: %d, sb_addr: 0x%llx)", fd, sb_addr);
+	sc_log.Log("cellFsFstat(fd: %d, sb_addr: 0x%llx)", fd, sb_addr);
+	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
+
+	wxFile& file = *(wxFile*)Emu.GetIdManager().GetIDData(fd).m_data;
+
+	Lv2FsStat stat;
+	stat.st_mode = re32(
+		CELL_FS_S_IRUSR | CELL_FS_S_IWUSR | CELL_FS_S_IXUSR |
+		CELL_FS_S_IRGRP | CELL_FS_S_IWGRP | CELL_FS_S_IXGRP |
+		CELL_FS_S_IROTH | CELL_FS_S_IWOTH | CELL_FS_S_IXOTH
+	);
+
+	stat.st_mode |= re32(CELL_FS_S_IFREG); //TODO: dir CELL_FS_S_IFDIR
+	stat.st_uid = re32(0);
+	stat.st_gid = re32(0);
+	stat.st_atime = re32(0); //TODO
+	stat.st_mtime = re32(0); //TODO
+	stat.st_ctime = re32(0); //TODO
+	stat.st_size = re64(file.Length());
+	stat.st_blksize = re64(4096);
+
+	Memory.WriteData(sb_addr, stat);
+
 	return CELL_OK;
 }
 
-int cellFsMkdir(const u64 path_addr, const u32 mode)
+int cellFsMkdir(const u32 path_addr, const u32 mode)
 {
 	const wxString& path = ReadString(path_addr);
 	sc_log.Log("cellFsMkdir(path: %s, mode: 0x%x)", path, mode);
@@ -219,7 +262,7 @@ int cellFsMkdir(const u64 path_addr, const u32 mode)
 	return CELL_OK;
 }
 
-int cellFsRename(const u64 from_addr, const u64 to_addr)
+int cellFsRename(const u32 from_addr, const u32 to_addr)
 {
 	const wxString& from = ReadString(from_addr);
 	const wxString& to = ReadString(to_addr);
@@ -230,7 +273,7 @@ int cellFsRename(const u64 from_addr, const u64 to_addr)
 	return CELL_OK;
 }
 
-int cellFsRmdir(const u64 path_addr)
+int cellFsRmdir(const u32 path_addr)
 {
 	const wxString& path = ReadString(path_addr);
 	sc_log.Log("cellFsRmdir(path: %s)", path);
@@ -239,16 +282,17 @@ int cellFsRmdir(const u64 path_addr)
 	return CELL_OK;
 }
 
-int cellFsUnlink(const u64 path_addr)
+int cellFsUnlink(const u32 path_addr)
 {
 	const wxString& path = ReadString(path_addr);
 	sc_log.Error("cellFsUnlink(path: %s)", path);
 	return CELL_OK;
 }
 
-int cellFsLseek(const u32 fd, const s64 offset, const u32 whence, const u64 pos_addr)
+int cellFsLseek(const u32 fd, const s64 offset, const u32 whence, const u32 pos_addr)
 {
 	wxSeekMode seek_mode;
+	sc_log.Log("cellFsLseek(fd: %d, offset: 0x%llx, whence: %d, pos_addr: 0x%x)", fd, offset, whence, pos_addr);
 	switch(whence)
 	{
 	case LV2_SEEK_SET: seek_mode = wxFromStart; break;

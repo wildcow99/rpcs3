@@ -121,19 +121,35 @@ const wxString Phdr_TypeToString(const u32 type)
 	return wxString::Format("Unknown (%x)", type);
 }
 
-Loader::Loader(const wxString& path)
-	: f(*new wxFile(path))
-	, m_path(path)
+Loader::Loader() : f(NULL)
 {
+}
+
+Loader::Loader(const wxString& path) : f(new wxFile(path))
+{
+}
+
+void Loader::Open(const wxString& path)
+{
+	m_path = path;
+	f = new wxFile(path);
+}
+
+void Loader::Open(wxFile& _f, const wxString& path)
+{
+	m_path = path;
+	f = &_f;
 }
 
 LoaderBase* Loader::SearchLoader()
 {
+	if(!f) return NULL;
+
 	LoaderBase* l = NULL;
 
-	if((l=new ELFLoader(f))->LoadInfo()) return l;
+	if((l=new ELFLoader(*f))->LoadInfo()) return l;
 	safe_delete(l);
-	if((l=new SELFLoader(f))->LoadInfo()) return l;
+	if((l=new SELFLoader(*f))->LoadInfo()) return l;
 	safe_delete(l);
 	return NULL;
 }
@@ -176,5 +192,6 @@ bool Loader::Load()
 
 Loader::~Loader()
 {
-	f.Close();
+	f->Close();
+	f = NULL;
 }

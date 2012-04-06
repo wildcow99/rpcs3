@@ -102,11 +102,12 @@ struct Button
 
 struct Pad
 {
-	Array<Button> m_buttons;
 	u32 m_port_status;
-    u32 m_port_setting;
-    u32 m_device_capability;
-    u32 m_device_type;
+	u32 m_port_setting;
+	u32 m_device_capability;
+	u32 m_device_type;
+
+	Array<Button> m_buttons;
 
 	s16 m_analog_left_x;
 	s16 m_analog_left_y;

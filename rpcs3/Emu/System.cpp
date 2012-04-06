@@ -7,8 +7,6 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 
-#include "Loader/Loader.h"
-
 #include "Emu/SysCalls/SysCalls.h"
 
 SysCalls SysCallsManager;
@@ -17,9 +15,6 @@ Emulator::Emulator()
 	: m_status(Stoped)
 	, m_mode(DisAsm)
 	, m_dbg_console(NULL)
-	, tls_addr(0)
-	, tls_filesz(0)
-	, tls_memsz(0)
 {
 }
 
@@ -92,18 +87,20 @@ void Emulator::Run()
 
 	Memory.Init();
 
-	SetTLSData(0, 0, 0);
-	SetMallocPageSize(0x100000);
+	GetInfo().Reset();
 
-	Loader& loader = Loader(m_path);
-	if(!loader.Load())
+	//SetTLSData(0, 0, 0);
+	//SetMallocPageSize(0x100000);
+
+	m_loader.Open(m_path);
+	if(!m_loader.Load())
 	{
 		Memory.Close();
 		Stop();
 		return;
 	}
 	
-	if(loader.GetMachine() == MACHINE_Unknown)
+	if(m_loader.GetMachine() == MACHINE_Unknown)
 	{
 		ConLog.Error("Unknown machine type");
 		Memory.Close();
@@ -111,9 +108,9 @@ void Emulator::Run()
 		return;
 	}
 
-	PPCThread& thread = GetCPU().AddThread(loader.GetMachine() == MACHINE_PPC64);
+	PPCThread& thread = GetCPU().AddThread(m_loader.GetMachine() == MACHINE_PPC64);
 
-	thread.SetPc(loader.GetEntry());
+	thread.SetPc(m_loader.GetEntry());
 	thread.SetArg(thread.GetId());
 	thread.Run();
 

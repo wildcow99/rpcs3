@@ -97,9 +97,6 @@
     <ClCompile Include="Loader\Loader.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp">
-      <Filter>Emu\SysCalls\lv2</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Cell\PPCThread.cpp">
       <Filter>Emu\CPU</Filter>
     </ClCompile>
@@ -131,6 +128,12 @@
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_Pad.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
     </ClCompile>
   </ItemGroup>

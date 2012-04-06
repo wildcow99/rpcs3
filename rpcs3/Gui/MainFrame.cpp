@@ -60,6 +60,7 @@ MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_, "Main
 	Connect( id_sys_stop,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
 
 	Connect( id_config_emu, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
+	wxGetApp().Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(MainFrame::OnKeyDown), (wxObject*)0, this);
 
 	UpdateUI();
 
@@ -307,6 +308,24 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 void MainFrame::OnQuit(wxCloseEvent& event)
 {
 	TheApp->Exit();
+}
+
+void MainFrame::OnKeyDown(wxKeyEvent& event)
+{
+	if(wxGetActiveWindow() != this || !event.ControlDown())
+	{
+		event.Skip();
+		return;
+	}
+
+	switch(event.GetKeyCode())
+	{
+	case 'C': case 'c': if(Emu.IsPaused()) Emu.Resume(); return;
+	case 'S': case 's': if(!Emu.IsStoped()) Emu.Stop(); return;
+	case 'R': case 'r': if(Emu.m_path.Len()) {Emu.Stop(); Emu.Run();} return;
+	}
+
+	event.Skip();
 }
 
 void MainFrame::UpdateUI()

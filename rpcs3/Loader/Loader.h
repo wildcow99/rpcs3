@@ -43,6 +43,24 @@ const wxString Ehdr_MachineToString(const u16 machine);
 const wxString Phdr_FlagsToString(u32 flags);
 const wxString Phdr_TypeToString(const u32 type);
 
+struct sys_process_param_info
+{
+	u32 sdk_version;
+	s32 primary_prio;
+	u32 primary_stacksize;
+	u32 malloc_pagesize;
+	u32 ppc_seg;
+	u32 crash_dump_param_addr;
+};
+
+struct sys_process_param
+{
+	u32 size;
+	u32 magic;
+	u32 version;
+	sys_process_param_info info;
+};
+
 class LoaderBase
 {
 protected:
@@ -65,11 +83,14 @@ public:
 
 class Loader : public LoaderBase
 {
-	wxFile& f;
+	wxFile* f;
 	wxString m_path;
 
 public:
+	Loader();
 	Loader(const wxString& path);
+	void Open(const wxString& path);
+	void Open(wxFile& f, const wxString& path);
 	~Loader();
 
 	bool Load();

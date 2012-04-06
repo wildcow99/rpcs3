@@ -4,7 +4,7 @@
 #include "Utilites/IdManager.h"
 #include "ErrorCodes.h"
 
-#define SYSCALLS_DEBUG
+//#define SYSCALLS_DEBUG
 
 class SysCallBase
 {
@@ -75,43 +75,59 @@ public:
 	}
 };
 
-static wxString FixPatch(const wxString& patch)
+static bool CmpPath(const wxString& path1, const wxString& path2)
 {
-	if(!patch(0, 10).CmpNoCase("/dev_hdd0/")) return CurGameInfo.root + patch(10, patch.Length());
+	if(path1.Len() < path2.Len()) return false;
 
-	ConLog.Warning("Unknown patch: %s", patch);
-	return patch;
+	return path1(0, path2.Len()).CmpNoCase(path2) == 0;
+}
+
+static wxString GetWinPath(const wxString& path)
+{
+	if (CmpPath(path, "/dev_hdd0/") ||
+		CmpPath(path, "/dev_hdd1/") ||
+		CmpPath(path, "/dev_bdvd/") ||
+		CmpPath(path, "/dev_usb001/") ||
+		CmpPath(path, "/ps3_home/") ||
+		CmpPath(path, "/app_home/") ||
+		CmpPath(path, "/dev_flash/") ||
+		CmpPath(path, "/dev_flash2/") ||
+		CmpPath(path, "/dev_flash3/")
+		) return wxGetCwd() + path;
+
+	return wxFileName(Emu.m_path).GetPath() + (path[0] == '/' ? path : "/" + path);
 }
 
 //process
 extern int sys_process_getpid();
-extern int sys_game_process_exitspawn(	u64 path_addr, u64 argv_addr, u64 envp_addr,
+extern int sys_game_process_exitspawn(u32 path_addr, u32 argv_addr, u32 envp_addr,
 								u32 data, u32 data_size, int prio, u64 flags );
 
 //memory
-extern int sys_memory_container_create(u64 cid_addr, u32 yield_size);
+extern int sys_memory_container_create(u32 cid_addr, u32 yield_size);
 extern int sys_memory_container_destroy(u32 cid);
-extern int sys_memory_allocate(u32 size, u32 flags, u64 alloc_addr_addr);
-extern int sys_memory_get_user_memory_size(u64 mem_info_addr);
+extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
+extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
 
 //cellFs
-extern int cellFsOpen(const u64 path_addr, const int flags, const u64 fd_addr, const u64 arg_addr, const u64 size);
-extern int cellFsRead(const u32 fd, const u64 buf_addr, const u64 nbytes, const u64 nread_addr);
-extern int cellFsWrite(const u32 fd, const u64 buf_addr, const u64 nbytes, const u64 nwrite_addr);
+extern int cellFsOpen(const u32 path_addr, const int flags, const u32 fd_addr, const u32 arg_addr, const u64 size);
+extern int cellFsRead(const u32 fd, const u32 buf_addr, const u64 nbytes, const u32 nread_addr);
+extern int cellFsWrite(const u32 fd, const u32 buf_addr, const u64 nbytes, const u32 nwrite_addr);
 extern int cellFsClose(const u32 fd);
-extern int cellFsOpendir(const u64 path_addr, const u64 fd_addr);
-extern int cellFsReaddir(const u32 fd, const u64 dir_addr, const u64 nread_addr);
+extern int cellFsOpendir(const u32 path_addr, const u32 fd_addr);
+extern int cellFsReaddir(const u32 fd, const u32 dir_addr, const u32 nread_addr);
 extern int cellFsClosedir(const u32 fd);
-extern int cellFsStat(const u64 path_addr, const u64 sb_addr);
-extern int cellFsFstat(const u32 fd, const u64 sb_addr);
-extern int cellFsMkdir(const u64 path_addr, const u32 mode);
-extern int cellFsRename(const u64 from_addr, const u64 to_addr);
-extern int cellFsRmdir(const u64 path_addr);
-extern int cellFsUnlink(const u64 path_addr);
-extern int cellFsLseek(const u32 fd, const s64 offset, const u32 whence, const u64 pos_addr);
+extern int cellFsStat(const u32 path_addr, const u32 sb_addr);
+extern int cellFsFstat(const u32 fd, const u32 sb_addr);
+extern int cellFsMkdir(const u32 path_addr, const u32 mode);
+extern int cellFsRename(const u32 from_addr, const u32 to_addr);
+extern int cellFsRmdir(const u32 path_addr);
+extern int cellFsUnlink(const u32 path_addr);
+extern int cellFsLseek(const u32 fd, const s64 offset, const u32 whence, const u32 pos_addr);
 
 //cellVideo
 extern int cellVideoOutGetState(u32 videoOut, u32 deviceIndex, u32 state_addr);
+extern int cellVideoOutGetResolution(u32 resolutionId, u32 resolution_addr);
 
 //cellPad
 extern int cellPadInit(u32 max_connect);
@@ -123,6 +139,12 @@ extern int cellPadSetActDirect(u32 port_no, u32 param_addr);
 extern int cellPadGetInfo2(u32 info_addr);
 extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
 
+//cellGcm
+extern int cellGcmInit(const u32 cmdSize, const u32 ioSize, const u32 ioAddress);
+extern int cellGcmGetConfiguration(const u32 config_addr);
+extern int cellGcmAddressToOffset(const u32 address, const u32 offset_addr);
+extern int cellGcmSetDisplayBuffer(const u8 id, const u32 offset, const u32 pitch, const u32 width, const u32 height);
+
 #define SC_ARGS_1 CPU.GPR[3]
 #define SC_ARGS_2 SC_ARGS_1,CPU.GPR[4]
 #define SC_ARGS_3 SC_ARGS_2,CPU.GPR[5]
@@ -130,6 +152,8 @@ extern int cellPadSetPortSetting(u32 port_no, u32 port_setting);
 #define SC_ARGS_5 SC_ARGS_4,CPU.GPR[7]
 #define SC_ARGS_6 SC_ARGS_5,CPU.GPR[8]
 #define SC_ARGS_7 SC_ARGS_6,CPU.GPR[9]
+
+extern bool dump_enable;
 
 class SysCalls
 {
@@ -226,8 +250,8 @@ public:
 			case 98: return Lv2LwmutexTrylock(CPU);
 			case 99: return Lv2LwmutexUnlock(CPU);
 			//time
-			case 146: ConLog.Warning("sys_time_get_system_time"); return CPU.TB / (timebase_frequency / 1000000);
-			case 147: ConLog.Warning("get timebase frequency"); return timebase_frequency; //get timebase frequency
+			case 146: ConLog.Write("sys_time_get_system_time()"); return CPU.TB / (timebase_frequency / 1000000);
+			case 147: ConLog.Write("get timebase frequency()"); return timebase_frequency; //get timebase frequency
 			//memory
 			case 324: return sys_memory_container_create(SC_ARGS_2);
 			case 325: return sys_memory_container_destroy(SC_ARGS_1);
@@ -244,13 +268,19 @@ public:
 			case 805: return cellFsOpendir(SC_ARGS_2);
 			case 806: return cellFsReaddir(SC_ARGS_3);
 			case 807: return cellFsClosedir(SC_ARGS_1);
+			case 809: return cellFsFstat(SC_ARGS_2);
 			case 811: return cellFsMkdir(SC_ARGS_2);
 			case 812: return cellFsRename(SC_ARGS_2);
 			case 813: return cellFsRmdir(SC_ARGS_1);
 			case 818: return cellFsLseek(SC_ARGS_4);
 			case 988:
-				ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, r5: 0x%llx, pc: 0x%x",
-					CPU.GPR[3], CPU.GPR[4], CPU.GPR[5], CPU.PC);
+				ConLog.Warning("SysCall 988! r3: 0x%llx, r4: 0x%llx, pc: 0x%x",
+					CPU.GPR[3], CPU.GPR[4], CPU.PC);
+			return 0;
+
+			case 999:
+				dump_enable = !dump_enable;
+				ConLog.Warning("Dump %s", dump_enable ? "enabled" : "disabled");
 			return 0;
 		}
 

@@ -38,7 +38,7 @@ int SysCalls::lv2PPUThreadExit(PPUThread& CPU)
 
 int SysCalls::lv2PPUThreadYield(PPUThread& CPU)
 {
-	ConLog.Warning("TODO: PPU[%d] thread yield!", CPU.GetId());
+	//ConLog.Warning("TODO: PPU[%d] thread yield!", CPU.GetId());
 	return CELL_OK;
 }
 
@@ -115,7 +115,7 @@ int SysCalls::lv2PPUThreadGetPageFaultContext(PPUThread& CPU)
 
 int SysCalls::lv2PPUThreadGetId(PPUThread& CPU)
 {
-	ConLog.Warning("PPU[%d] thread get id(0x%llx)", CPU.GetId(), CPU.GPR[3]);
+	//ConLog.Write("PPU[%d] thread get id(0x%llx)", CPU.GetId(), CPU.GPR[3]);
 	Memory.Write64(CPU.GPR[3], CPU.GetId());
 	return CELL_OK;
 }

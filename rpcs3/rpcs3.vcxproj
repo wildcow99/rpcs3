@@ -100,6 +100,7 @@
     <ClCompile Include="Emu\Memory\Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Lwmutex.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Pad.cpp" />
