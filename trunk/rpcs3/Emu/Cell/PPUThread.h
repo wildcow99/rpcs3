@@ -126,7 +126,7 @@ struct FPRdouble
 	union
 	{
 		double d;
-		u64 i;
+		struct { u64 i; u64 ih; };
 	};
 
 	FPRdouble() {}
@@ -387,7 +387,9 @@ public:
 
 	const u8 GetCRBit(const u32 bit) const { return 1 << (3 - (bit % 4)); }
 
-	void SetCRBit(const u32 bit, bool set) { SetCRBit(bit/4, GetCRBit(bit), set); }
+	void SetCRBit(const u32 bit, bool set) { SetCRBit(bit >> 2, GetCRBit(bit), set); }
+
+	void SetCRBit2(const u32 bit, bool set) { SetCRBit(bit >> 2, 0x8 >> (bit & 3), set); }
 
 	const u8 IsCR(const u32 bit) const { return (GetCR(bit/4) & GetCRBit(bit)) ? 1 : 0; }
 
@@ -416,6 +418,8 @@ public:
 		ret += wxString::Format("XER = 0x%llx\n", XER);
 		return ret;
 	}
+
+	void SetBranch(const u32 pc);
 
 public:
 	virtual void _InitStack(); 

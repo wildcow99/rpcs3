@@ -51,7 +51,7 @@ union u128
 
 	static u128 From64( u64 src )
 	{
-		u128 ret = {src, 0};
+		u128 ret = {0, src};
 		return ret;
 	}
 

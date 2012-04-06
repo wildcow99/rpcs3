@@ -193,6 +193,7 @@ bool ELF64Loader::LoadShdrData()
 {
 	Memory.MemFlags.Clear();
 
+	Elf64_Shdr* proc_prx_param_shdr = NULL;
 	for(uint i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		Elf64_Shdr& shdr = shdr_arr[i];
@@ -202,47 +203,9 @@ bool ELF64Loader::LoadShdrData()
 			const wxString& name = shdr_name_arr[i];
 			ConLog.Write("Name: %s", shdr_name_arr[i]);
 
-			if(!name.CmpNoCase(".opd"))
+			if(!name.CmpNoCase(".sys_proc_param"))
 			{
-				Memory.MemFlags.SetOPDRange(shdr.sh_addr, shdr.sh_size);
-				const u32 offs = shdr.sh_offset;
-				const u32 size = shdr.sh_size;
-
-				elf64_f.Seek(offs);
-				for(uint i=0; i<size; i += sizeof(s64))
-				{
-					Memory.MemFlags.Add(Read32(elf64_f));
-					Memory.MemFlags.Add(Read32(elf64_f));
-				}
-			}
-			else if(!name.CmpNoCase(".got"))
-			{
-				const u32 offs = shdr.sh_offset;
-				const u32 size = shdr.sh_size;
-
-				elf64_f.Seek(offs);
-				for(uint i=0; i<size; i += sizeof(s32))
-				{
-					const u32 code = Read32(elf64_f);
-					if(code == 0x7f7f7f7f) break;
-					Memory.MemFlags.Add(code);
-				}
-			}
-			else if(!name.CmpNoCase(".data.sceFStub"))
-			{
-				Memory.MemFlags.SetFStubRange(shdr.sh_addr, shdr.sh_size);
-			}
-			else if(!name.CmpNoCase(".rodata.sceFNID"))
-			{
-				Memory.MemFlags.SetFNIDRange(shdr.sh_addr, shdr.sh_size);
-			}
-			else if(!name.CmpNoCase(".sceStub.text"))
-			{
-				Memory.MemFlags.SetStubRange(shdr.sh_addr, shdr.sh_size);
-			}
-			else if(!name.CmpNoCase(".sys_proc_param"))
-			{
-				ConLog.Warning("section .sys_proc_param founded!");
+				/*
 				struct sys_process_param
 				{
 					u32 size;
@@ -255,31 +218,40 @@ bool ELF64Loader::LoadShdrData()
 					u32 ppc_seg;
 					u32 crash_dump_param_addr;
 				} &proc_param = *(sys_process_param*)Memory.GetMemFromAddr(shdr.sh_addr);
+				*/
 
-				if(Memory.Reverse32(proc_param.size) != sizeof(sys_process_param))
+				const sys_process_param& proc_param = *(sys_process_param*)Memory.GetMemFromAddr(shdr.sh_addr);
+
+				if(re(proc_param.size) != sizeof(sys_process_param))
 				{
 					ConLog.Warning("Bad proc param size! [0x%x : 0x%x]", proc_param.size, sizeof(sys_process_param));
 				}
-				if(Memory.Reverse32(proc_param.magic) != 0x13bcc5f6)
+				if(re(proc_param.magic) != 0x13bcc5f6)
 				{
 					ConLog.Error("Bad magic! [0x%x]", Memory.Reverse32(proc_param.magic));
 				}
 				else
 				{
-					ConLog.Write("*** sdk version: 0x%x", re(proc_param.sdk_version));
-					ConLog.Write("*** primary prio: %d", re(proc_param.primary_prio));
-					ConLog.Write("*** primary stacksize: 0x%x", re(proc_param.primary_stacksize));
-					ConLog.Write("*** malloc pagesize: 0x%x", re(proc_param.malloc_pagesize));
-					ConLog.Write("*** ppc seg: 0x%x", re(proc_param.ppc_seg));
-					ConLog.Write("*** crash dump param addr: 0x%x", re(proc_param.crash_dump_param_addr));
+					sys_process_param_info& info = Emu.GetInfo().GetProcParam();
+					info.sdk_version = re(proc_param.info.sdk_version);
+					info.primary_prio = re(proc_param.info.primary_prio);
+					info.primary_stacksize = re(proc_param.info.primary_stacksize);
+					info.malloc_pagesize = re(proc_param.info.malloc_pagesize);
+					info.ppc_seg = re(proc_param.info.ppc_seg);
+					info.crash_dump_param_addr = re(proc_param.info.crash_dump_param_addr);
 
-					Emu.SetMallocPageSize(re(proc_param.malloc_pagesize));
+					ConLog.Write("*** sdk version: 0x%x", info.sdk_version);
+					ConLog.Write("*** primary prio: %d", info.primary_prio);
+					ConLog.Write("*** primary stacksize: 0x%x", info.primary_stacksize);
+					ConLog.Write("*** malloc pagesize: 0x%x", info.malloc_pagesize);
+					ConLog.Write("*** ppc seg: 0x%x", info.ppc_seg);
+					ConLog.Write("*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
 				}
 			}
-			//else if(!name.CmpNoCase(".lib.stub"))
-			//{
-			//	Memory.MemFlags.SetStubRange(shdr.sh_addr, shdr.sh_size);
-			//}
+			else if(!name.CmpNoCase(".sys_proc_prx_param"))
+			{
+				proc_prx_param_shdr = &shdr;
+			}
 		}
 
 		if(shdr.sh_type == SHT_SYMTAB)
@@ -306,6 +278,127 @@ bool ELF64Loader::LoadShdrData()
 
 		case SHT_PROGBITS:
 		break;
+		}
+	}
+
+	struct sys_proc_prx_param
+	{
+		u32 size;
+		u32 magic;
+		u32 version;
+		u32 pad0;
+		u32 libentstart;
+		u32 libentend;
+		u32 libstubstart;
+		u32 libstubend;
+		u16 ver;
+		u16 pad1;
+		u32 pad2;
+	};
+
+	if(!proc_prx_param_shdr)
+	{
+		for(uint i=0; i<shdr_arr.GetCount(); ++i)
+		{
+			Elf64_Shdr& shdr = shdr_arr[i];
+			sys_proc_prx_param proc_prx_param = *(sys_proc_prx_param*)Memory.GetMemFromAddr(shdr.sh_addr);
+			if(re(proc_prx_param.magic) != 0x1b434cec) continue;
+			proc_prx_param_shdr = &shdr;
+			break;
+		}
+	}
+
+	if(proc_prx_param_shdr)
+	{
+		Elf64_Shdr& shdr = *proc_prx_param_shdr;
+		sys_proc_prx_param proc_prx_param = *(sys_proc_prx_param*)Memory.GetMemFromAddr(shdr.sh_addr);
+
+		proc_prx_param.size = re(proc_prx_param.size);
+		proc_prx_param.magic = re(proc_prx_param.magic);
+		proc_prx_param.version = re(proc_prx_param.version);
+		proc_prx_param.libentstart = re(proc_prx_param.libentstart);
+		proc_prx_param.libentend = re(proc_prx_param.libentend);
+		proc_prx_param.libstubstart = re(proc_prx_param.libstubstart);
+		proc_prx_param.libstubend = re(proc_prx_param.libstubend);
+		proc_prx_param.ver = re(proc_prx_param.ver);
+
+		ConLog.Write("*** size: 0x%x", proc_prx_param.size);
+		ConLog.Write("*** magic: 0x%x", proc_prx_param.magic);
+		ConLog.Write("*** version: 0x%x", proc_prx_param.version);
+		ConLog.Write("*** libentstart: 0x%x", proc_prx_param.libentstart);
+		ConLog.Write("*** libentend: 0x%x", proc_prx_param.libentend);
+		ConLog.Write("*** libstubstart: 0x%x", proc_prx_param.libstubstart);
+		ConLog.Write("*** libstubend: 0x%x", proc_prx_param.libstubend);
+		ConLog.Write("*** ver: 0x%x", proc_prx_param.ver);
+
+		if(proc_prx_param.magic != 0x1b434cec)
+		{
+			ConLog.Error("Bad magic!");
+		}
+		else
+		{
+			struct _StubHeader
+			{
+				u8 s_size; // = 0x2c
+				u8 s_unk0;
+				u16 s_version; // = 0x1
+				u16 s_unk1; // = 0x9 // flags?
+				u16 s_imports;
+				u32 s_unk2; // = 0x0
+				u32 s_unk3; // = 0x0
+				u32 s_modulename;
+				u32 s_nid;
+				u32 s_text;
+				u32 s_unk4; // = 0x0
+				u32 s_unk5; // = 0x0
+				u32 s_unk6; // = 0x0
+				u32 s_unk7; // = 0x0
+			};
+	
+			for(u32 s=proc_prx_param.libstubstart; s<proc_prx_param.libstubend; s+=sizeof(_StubHeader))
+			{
+				_StubHeader stub = *(_StubHeader*)Memory.GetMemFromAddr(s);
+				ConLog.SkipLn();
+				stub.s_size = re(stub.s_size);
+				stub.s_version = re(stub.s_version);
+				stub.s_unk0 = re(stub.s_unk0);
+				stub.s_unk1 = re(stub.s_unk1);
+				stub.s_imports = re(stub.s_imports);
+				stub.s_modulename = re(stub.s_modulename);
+				stub.s_nid = re(stub.s_nid);
+				stub.s_text = re(stub.s_text);
+
+				ConLog.Write("*** size: 0x%x", stub.s_size);
+				ConLog.Write("*** version: 0x%x", stub.s_version);
+				ConLog.Write("*** unk0: 0x%x", stub.s_unk0);
+				ConLog.Write("*** unk1: 0x%x", stub.s_unk1);
+				ConLog.Write("*** imports: %d", stub.s_imports);
+				ConLog.Write("*** module name: %s [0x%x]", Memory.ReadString(stub.s_modulename), stub.s_modulename);
+				ConLog.Write("*** nid: 0x%x", stub.s_nid);
+				ConLog.Write("*** text: 0x%x [0x%x]", Memory.Read32(stub.s_text), stub.s_text);
+
+				for(u32 i=0; i<stub.s_imports; ++i)
+				{
+					const u32 nid = Memory.Read32(stub.s_nid + i*4);
+					const u32 text = Memory.Read32(stub.s_text) + i*4*8;
+					ConLog.Write("import %d:", i+1);
+					ConLog.Write("*** nid: 0x%x", nid);
+					ConLog.Write("*** text: 0x%x", text);
+
+					Memory.MemFlags.Add(text, stub.s_text + i*4, nid);
+					/*
+					const u16 sc_id_hi = nid >> 16;
+					const u16 sc_id_lo = nid & 0xffff;
+					//lis r11,sc_id_hi
+					Memory.Write32(text, (0x0f << 26) | ((11 & 0x1f) << 21) | ((0 & 0x1f) << 16) | sc_id_hi);
+					//ori r11,r11,sc_id
+					Memory.Write32(text+4, (0x18 << 26) | ((11 & 0x1f) << 21) | ((11 & 0x1f) << 16) | sc_id_lo);
+					//sc
+					Memory.Write32(text+8, 0x44000002);
+					*/
+				}
+			}
+			ConLog.SkipLn();
 		}
 	}
 

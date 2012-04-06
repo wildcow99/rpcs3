@@ -18,6 +18,7 @@ private:
 	virtual void Pause(wxCommandEvent& event);
 	virtual void Stop(wxCommandEvent& event);
 	virtual void Config(wxCommandEvent& event);
+	virtual void OnKeyDown(wxKeyEvent& event);
 
 public:
 	virtual void UpdateUI();

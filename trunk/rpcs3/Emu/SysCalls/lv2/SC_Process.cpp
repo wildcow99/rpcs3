@@ -8,7 +8,7 @@ int sys_process_getpid()
 	return 1;
 }
 
-int sys_game_process_exitspawn(	u64 path_addr, u64 argv_addr, u64 envp_addr,
+int sys_game_process_exitspawn(	u32 path_addr, u32 argv_addr, u32 envp_addr,
 								u32 data, u32 data_size, int prio, u64 flags )
 {
 	sc_p.Log("sys_game_process_exitspawn: ");
@@ -71,7 +71,7 @@ int SysCalls::lv2ProcessKill(PPUThread& CPU)
 }
 int SysCalls::lv2ProcessExit(PPUThread& CPU)
 {
-	ConLog.Warning("lv2ProcessExit[return code: 0x%llx]", CPU.GPR[3]);
+	ConLog.Warning("lv2ProcessExit(%lld)", CPU.GPR[3]);
 	Emu.Pause();
 	return CELL_OK;
 }

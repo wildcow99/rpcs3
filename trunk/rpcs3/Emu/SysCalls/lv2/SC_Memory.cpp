@@ -154,25 +154,30 @@ int SysCalls::sys_memory_get_user_memory_size(PPUThread& CPU)
 	return CELL_OK;
 }*/
 
+SysCallBase sc_mem("memory");
+
 enum
 {
 	SYS_MEMORY_PAGE_SIZE_1M = 0x400,
 	SYS_MEMORY_PAGE_SIZE_64K = 0x200,
 };
 
-int sys_memory_container_create(u64 cid_addr, u32 yield_size)
+int sys_memory_container_create(u32 cid_addr, u32 yield_size)
 {
+	sc_mem.Warning("TODO: sys_memory_container_create(cid_addr=0x%x,yield_size=0x%x)", cid_addr, yield_size);
 	return CELL_OK;
 }
 
 int sys_memory_container_destroy(u32 cid)
 {
+	sc_mem.Warning("TODO: sys_memory_container_destroy(cid=0x%x)", cid);
 	return CELL_OK;
 }
 
-int sys_memory_allocate(u32 size, u32 flags, u64 alloc_addr_addr)
+int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr)
 {
-	ConLog.Write("sys_memory_allocate(size=0x%x, flags=0x%x)", size, flags);
+	//0x30000100;
+	sc_mem.Log("sys_memory_allocate(size=0x%x, flags=0x%x)", size, flags);
 	u32 addr;
 	switch(flags)
 	{
@@ -190,7 +195,7 @@ int sys_memory_allocate(u32 size, u32 flags, u64 alloc_addr_addr)
 	}
 
 	if(!addr) return CELL_ENOMEM;
-	ConLog.Warning("Memory allocated! [addr: 0x%x, size: 0x%x]", addr, size);
+	sc_mem.Log("Memory allocated! [addr: 0x%x, size: 0x%x]", addr, size);
 	Memory.Write32(alloc_addr_addr, addr);
 
 	return CELL_OK;
@@ -202,7 +207,7 @@ struct sys_memory_info
 	u32 available_user_memory;
 };
 
-int sys_memory_get_user_memory_size(u64 mem_info_addr)
+int sys_memory_get_user_memory_size(u32 mem_info_addr)
 {
 	sys_memory_info info;
 	info.total_user_memory = re(Memory.GetUserMemTotalSize());

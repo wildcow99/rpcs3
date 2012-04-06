@@ -9,6 +9,9 @@ template<typename T> T min(const T a, const T b) { return a < b ? a : b; }
 template<typename T> T max(const T a, const T b) { return a > b ? a : b; }
 
 #define re(val) MemoryBase::Reverse(val)
+#define re64(val) MemoryBase::Reverse64(val)
+#define re32(val) MemoryBase::Reverse32(val)
+#define re16(val) MemoryBase::Reverse16(val)
 
 class Rpcs3App : public wxApp
 {

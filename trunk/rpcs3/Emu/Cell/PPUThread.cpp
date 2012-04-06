@@ -4,6 +4,8 @@
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/PPUDisAsm.h"
 
+#include "Emu/SysCalls/SysCalls.h"
+
 PPUThread::PPUThread() : PPCThread(false)
 {
 	Reset();
@@ -36,14 +38,53 @@ void PPUThread::DoReset()
 	reserve_addr = 0;
 }
 
+void PPUThread::SetBranch(const u32 pc)
+{
+	u64 fid, waddr;
+	if(Memory.MemFlags.IsFlag(pc, waddr, fid))
+	{
+		GPR[3] = SysCallsManager.DoFunc(fid, *this);
+
+		if((s32)GPR[3] < 0) ConLog.Write("Func[0x%llx] done with code [0x%x]! #pc: 0x%x", fid, (u32)GPR[3], PC);
+#ifdef HLE_CALL_LOG
+		else ConLog.Write("Func[0xll%x] done with code [0x%llx]! #pc: 0x%x", fid, GPR[3], PC);
+#endif
+		//ConLog.Warning("Func waddr: 0x%llx", waddr);
+		Memory.Write32(waddr, Emu.GetTLSAddr());
+		Memory.Write32(Emu.GetTLSAddr(), PC + 4);
+		Memory.Write32(Emu.GetTLSAddr()+4, Emu.GetTLSMemsz());
+	}
+
+	PPCThread::SetBranch(pc);
+}
+
 void PPUThread::_InitStack()
 {
-	//GPR[5] = stack_size + stack_addr - 0x50;
-	//GPR[4] = GPR[5] + 0x10;
+	const u32 entry = Memory.Read32(PC);
+	const u32 rtoc = Memory.Read32(PC + 4);
+
+	SetPc(entry);
 	
 	GPR[1] = stack_point;
+	GPR[2] = rtoc;
 	GPR[3] = m_arg;
-	GPR[13] = Emu.GetTLSAddr();
+	GPR[4] = stack_addr + stack_size - 0x40;
+	GPR[5] = stack_addr + stack_size - 0x50;
+	GPR[7] = 0x80d90;
+	GPR[8] = entry;
+	GPR[10] = 0x131700;
+	GPR[11] = 0x80;
+	GPR[12] = Emu.GetMallocPageSize();
+	GPR[13] = 0x10090000;
+	GPR[28] = GPR[4];
+	GPR[29] = GPR[3];
+	GPR[31] = GPR[5];
+
+	//Memory.WriteString(GPR[4], "PATH1");
+	//Memory.WriteString(GPR[5], "PATH2");
+
+	Memory.Write32(GPR[4], Emu.GetTLSFilesz());
+	Memory.Write32(GPR[4]+4, Emu.GetTLSMemsz());
 }
 
 u64 PPUThread::GetFreeStackSize() const
@@ -83,8 +124,20 @@ void PPUThread::DoStop()
 	}
 }
 
+bool dump_enable = false;
+
 void PPUThread::DoCode(const s32 code)
 {
+	if(dump_enable)
+	{
+		static wxFile f("dump.txt", wxFile::write);
+		static PPU_DisAsm disasm(*this, DumpMode);
+		static PPU_Decoder decoder(disasm);
+		disasm.dump_pc = PC;
+		decoder.Decode(code);
+		f.Write(disasm.last_opcode);
+	}
+
 	if(++cycle > 220)
 	{
 		cycle = 0;
