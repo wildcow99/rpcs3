@@ -240,15 +240,23 @@ protected:
 	}
 	void DisAsm_CR1_R2_RC(const wxString& op, OP_REG cr0, OP_REG r0, OP_REG r1, bool rc)
 	{
-		Write(wxString::Format("%s%s cr%d,r%d,r%d", FixOp(op), rc ? "." : "", cr0, r0, r1 ));
+		Write(wxString::Format("%s%s cr%d,r%d,r%d", FixOp(op), rc ? "." : "", cr0, r0, r1));
 	}
 	void DisAsm_CR1_R2(const wxString& op, OP_REG cr0, OP_REG r0, OP_REG r1)
 	{
 		DisAsm_CR1_R2_RC(op, cr0, r0, r1, false);
 	}
+	void DisAsm_CR2(const wxString& op, OP_REG cr0, OP_REG cr1)
+	{
+		Write(wxString::Format("%s cr%d,cr%d", FixOp(op), cr0, cr1));
+	}
 	void DisAsm_INT3(const wxString& op, const int i0, const int i1, const int i2)
 	{
-		Write(wxString::Format("%s %d,%d,%d", FixOp(op), i0, i1, i2 ));
+		Write(wxString::Format("%s %d,%d,%d", FixOp(op), i0, i1, i2));
+	}
+	void DisAsm_INT1(const wxString& op, const int i0)
+	{
+		Write(wxString::Format("%s %d", FixOp(op), i0));
 	}
 	void DisAsm_BRANCH(const wxString& op, const int pc)
 	{

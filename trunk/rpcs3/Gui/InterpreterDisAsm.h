@@ -12,10 +12,10 @@ class InterpreterDisAsmFrame : public FrameBase
 	PPCThread& CPU;
 	DisAsm* disasm;
 	Decoder* decoder;
-	u32 PC;
+	u64 PC;
 	wxTextCtrl* m_regs;
 	bool exit;
-	Array<u32> m_break_points;
+	Array<u64> m_break_points;
 
 public:
 	InterpreterDisAsmFrame(const wxString& title, PPCThread* cpu);
@@ -23,7 +23,7 @@ public:
 	virtual void Close(bool force = false);
 	virtual void OnKeyDown(wxKeyEvent& event);
 	void DoUpdate();
-	void ShowPc(const int pc);
+	void ShowPc(const u64 pc);
 	void WriteRegs();
 	virtual void OnUpdate(wxCommandEvent& event);
 	virtual void Show_Val(wxCommandEvent& event);
@@ -33,7 +33,7 @@ public:
 	virtual void DClick(wxListEvent& event);
 	void OnResize(wxSizeEvent& event);
 	void MouseWheel(wxMouseEvent& event);
-	bool IsBreakPoint(u32 pc);
-	void AddBreakPoint(u32 pc);
-	bool RemoveBreakPoint(u32 pc);
+	bool IsBreakPoint(u64 pc);
+	void AddBreakPoint(u64 pc);
+	bool RemoveBreakPoint(u64 pc);
 };

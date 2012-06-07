@@ -9,8 +9,8 @@ struct GSInfo
 
 	GSInfo()
 	{
-		outresolution.width = 800;
-		outresolution.height = 600;
+		outresolution.width = 740;
+		outresolution.height = 480;
 
 		mode.resolutionId = CELL_VIDEO_OUT_RESOLUTION_576;
 		mode.scanMode = CELL_VIDEO_OUT_SCAN_MODE_INTERLACE;
@@ -19,6 +19,21 @@ struct GSInfo
 		mode.refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_50HZ;
 	}
 };
+
+struct gcmBuffer
+{
+	u32 offset;
+	u32 pitch;
+	u32 width;
+	u32 height;
+	bool update;
+
+	gcmBuffer() : update(false)
+	{
+	}
+};
+
+extern gcmBuffer gcmBuffers[2];
 
 class GSManager
 {
@@ -32,6 +47,7 @@ public:
 	void Close();
 
 	GSInfo& GetInfo() { return m_info; }
+	GSRender& GetRender() { return *m_render; }
 
 	u8 GetState();
 	u8 GetColorSpace();

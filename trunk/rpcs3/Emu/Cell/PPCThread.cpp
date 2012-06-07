@@ -42,16 +42,18 @@ void PPCThread::Reset()
 
 void PPCThread::InitStack()
 {
+	if(stack_addr) return;
 	if(stack_size == 0) stack_size = 0x10000;
 	stack_addr = Memory.Alloc(stack_size, 0x100);
 
-	stack_point = stack_addr;
+	stack_point = stack_addr + stack_size;
+	/*
 	stack_point += stack_size - 0x10;
 	stack_point &= -0x10;
 	Memory.Write64(stack_point, 0);
 	stack_point -= 0x60;
 	Memory.Write64(stack_point, stack_point + 0x60);
-
+	*/
 	if(wxFileExists("stack.dat"))
 	{
 		ConLog.Warning("loading stack.dat...");
@@ -59,8 +61,6 @@ void PPCThread::InitStack()
 		stack.Read(Memory.GetMemFromAddr(stack_addr), 0x10000);
 		stack.Close();
 	}
-
-	_InitStack();
 }
 
 void PPCThread::CloseStack()
@@ -109,14 +109,19 @@ void PPCThread::PrevPc()
 	SetPc(PC - 4);
 }
 
-void PPCThread::SetPc(const u32 pc)
+void PPCThread::SetPc(const u64 pc)
 {
 	PC = pc;
 	nPC = PC + 4;
 }
 
-void PPCThread::SetBranch(const u32 pc)
+void PPCThread::SetBranch(const u64 pc)
 {
+	if(!Memory.IsGoodAddr(pc) || Memory.UserMem.IsMyAddress(pc))
+	{
+		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName(), pc, PC);
+		Emu.Pause();
+	}
 	nPC = pc;
 	isBranch = true;
 }
@@ -156,6 +161,7 @@ void PPCThread::Run()
 	m_status = Runned;
 
 	InitStack();
+	InitRegs();
 	DoRun();
 	Emu.CheckStatus();
 	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).DoUpdate();

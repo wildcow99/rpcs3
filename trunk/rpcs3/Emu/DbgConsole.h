@@ -10,6 +10,11 @@ struct DbgPacket
 		, m_text(text)
 	{
 	}
+
+	~DbgPacket()
+	{
+		m_text.Clear();
+	}
 };
 
 class DbgConsole
@@ -22,12 +27,13 @@ class DbgConsole
 	Array<DbgPacket> m_packets;
 
 public:
-	bool hided;
-
 	DbgConsole();
 	~DbgConsole();
 	void Write(int ch, const wxString& text);
 	void Clear();
 	virtual void Step();
-	bool Close(bool force = false);
+
+private:
+	void OnQuit(wxCloseEvent& event);
+	DECLARE_EVENT_TABLE();
 };

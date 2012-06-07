@@ -115,6 +115,7 @@ void InterpreterDisAsmFrame::OnKeyDown(wxKeyEvent& event)
 		if(event.GetKeyCode() == WXK_SPACE)
 		{
 			DoStep(wxCommandEvent());
+			return;
 		}
 	}
 	else
@@ -137,7 +138,7 @@ void InterpreterDisAsmFrame::DoUpdate()
 	WriteRegs();
 }
 
-void InterpreterDisAsmFrame::ShowPc(const int pc)
+void InterpreterDisAsmFrame::ShowPc(const u64 pc)
 {
 	PC = pc;
 	m_list->Freeze();
@@ -145,7 +146,7 @@ void InterpreterDisAsmFrame::ShowPc(const int pc)
 	{
 		if(!Memory.IsGoodAddr(PC, 4))
 		{
-			m_list->SetItem(i, 0, wxString::Format("[%08x] illegal address", PC));
+			m_list->SetItem(i, 0, wxString::Format("[%08llx] illegal address", PC));
 			continue;
 		}
 
@@ -198,12 +199,12 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit( s_panel );
 
-	p_pc->SetLabel(wxString::Format("%x", CPU.PC));
+	p_pc->SetLabel(wxString::Format("%llx", CPU.PC));
 
 	if(diag->ShowModal() == wxID_OK)
 	{
 		u64 pc = CPU.PC;
-		sscanf(p_pc->GetLabel(), "%x", &pc);
+		sscanf(p_pc->GetLabel(), "%llx", &pc);
 		ShowPc(FixPc(pc));
 	}
 }
@@ -239,8 +240,8 @@ void InterpreterDisAsmFrame::DClick(wxListEvent& event)
 	long i = m_list->GetFirstSelected();
 	if(i < 0) return;
 
-	const u32 start_pc = PC - show_lines*4;
-	const u32 pc = start_pc + i*4;
+	const u64 start_pc = PC - show_lines*4;
+	const u64 pc = start_pc + i*4;
 	//ConLog.Write("pc=0x%x", pc);
 
 	if(!Memory.IsGoodAddr(pc, 4)) return;
@@ -289,7 +290,7 @@ void InterpreterDisAsmFrame::MouseWheel(wxMouseEvent& event)
 	event.Skip();
 }
 
-bool InterpreterDisAsmFrame::IsBreakPoint(u32 pc)
+bool InterpreterDisAsmFrame::IsBreakPoint(u64 pc)
 {
 	for(u32 i=0; i<m_break_points.GetCount(); ++i)
 	{
@@ -299,7 +300,7 @@ bool InterpreterDisAsmFrame::IsBreakPoint(u32 pc)
 	return false;
 }
 
-void InterpreterDisAsmFrame::AddBreakPoint(u32 pc)
+void InterpreterDisAsmFrame::AddBreakPoint(u64 pc)
 {
 	for(u32 i=0; i<m_break_points.GetCount(); ++i)
 	{
@@ -309,7 +310,7 @@ void InterpreterDisAsmFrame::AddBreakPoint(u32 pc)
 	m_break_points.AddCpy(pc);
 }
 
-bool InterpreterDisAsmFrame::RemoveBreakPoint(u32 pc)
+bool InterpreterDisAsmFrame::RemoveBreakPoint(u64 pc)
 {
 	for(u32 i=0; i<m_break_points.GetCount(); ++i)
 	{

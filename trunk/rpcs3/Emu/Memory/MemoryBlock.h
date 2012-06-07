@@ -4,9 +4,9 @@ class MemoryBlock
 {
 private:
 	u8* mem;
-	u32 range_start;
-	u32 range_end;
-	u32 range_size;
+	u64 range_start;
+	u64 range_end;
+	u64 range_size;
 
 public:
 	MemoryBlock();
@@ -21,14 +21,14 @@ public:
 
 	virtual bool IsNULL() { return false; }
 
-	u32 FixAddr(const u64 addr) const;
+	u64 FixAddr(const u64 addr) const;
 
 	bool GetMemFromAddr(void* dst, const u64 addr, const u32 size);
 	bool SetMemFromAddr(void* src, const u64 addr, const u32 size);
 	bool GetMemFFromAddr(void* dst, const u64 addr);
 	u8* GetMemFromAddr(const u64 addr);
 
-	void SetRange(const u64 start, const u32 size);
+	MemoryBlock* SetRange(const u64 start, const u32 size);
 	virtual bool IsMyAddress(const u64 addr);
 
 	__forceinline const u8 FastRead8(const u64 addr) const;
@@ -55,8 +55,8 @@ public:
 	virtual bool Write64(const u64 addr, const u64 value);
 	virtual bool Write128(const u64 addr, const u128 value);
 
-	const u32 GetStartAddr() const { return range_start; }
-	const u32 GetEndAddr() const { return range_end; }
+	const u64 GetStartAddr() const { return range_start; }
+	const u64 GetEndAddr() const { return range_end; }
 	const u32 GetSize() const { return range_size; }
 	void* GetMem() const { return mem; }
 };

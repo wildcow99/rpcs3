@@ -12,6 +12,11 @@ public:
 	{
 	}
 
+	~Array()
+	{
+		Clear();
+	}
+
 	inline bool RemoveAt(const u64 from, const u64 count = 1)
 	{
 		if(!m_count) return false;
@@ -78,6 +83,23 @@ public:
 
 	u64 GetCount() const { return m_count; }
 
+	void SetCount(const u32 count, bool memzero = true)
+	{
+		if(m_count >= count) return;
+
+		if(!m_count)
+		{
+			m_array = (T*)malloc(sizeof(T) * count);
+		}
+		else
+		{
+			m_array = (T*)realloc(m_array, sizeof(T) * count);
+		}
+
+		if(memzero) memset(m_array + m_count, 0, count - m_count);
+		m_count = count;
+	}
+
 	T& operator[](u64 num) const { return m_array[num]; }
 };
 
@@ -91,6 +113,11 @@ public:
 		: m_count(0)
 		, m_array(NULL)
 	{
+	}
+
+	~ArrayF()
+	{
+		Clear();
 	}
 
 	inline bool RemoveFAt(const u64 from, const u64 count = 1)

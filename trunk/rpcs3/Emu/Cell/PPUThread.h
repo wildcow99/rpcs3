@@ -123,27 +123,18 @@ union XERhdr
 
 struct FPRdouble
 {
-	union
-	{
-		double d;
-		struct { u64 i; u64 ih; };
-	};
-
-	FPRdouble() {}
-	FPRdouble(double _d) : d(_d) {}
-	FPRdouble(u64 _i) : i(_i) {}
-
-	bool IsINF() { return IsINF(d); }
-	bool IsNaN() { return IsNaN(d); }
-	bool IsQNaN(){ return IsQNaN(d); }
-	bool IsSNaN(){ return IsSNaN(d); }
-
+	static const u64 double_sign = 0x8000000000000000ULL;
+	static const u64 double_frac = 0x000FFFFFFFFFFFFFULL;
+	
 	static bool IsINF(double d);
 	static bool IsNaN(double d);
 	static bool IsQNaN(double d);
 	static bool IsSNaN(double d);
+	
+	static u32 To32(double d);
+	static u64 To64(double d);
 
-	int Cmp(FPRdouble& f);
+	static int Cmp(double a, double b);
 };
 
 union VPR_reg
@@ -224,8 +215,21 @@ union VPR_reg
 	bool operator != (const s16 right)	{ return !(*this == right); }
 	bool operator != (const s8 right)	{ return !(*this == right); }
 
+	s64& d(const u32 c) { return _i64[1 - c]; }
+	u64& ud(const u32 c) { return _u64[1 - c]; }
+
+	s32& w(const u32 c) { return _i32[3 - c]; }
+	u32& uw(const u32 c) { return _u32[3 - c]; }
+
+	s16& h(const u32 c) { return _i16[7 - c]; }
+	u16& uh(const u32 c) { return _u16[7 - c]; }
+
+	s8& b(const u32 c) { return _i8[15 - c]; }
+	u8& ub(const u32 c) { return _u8[15 - c]; }
+
 	void Clear() { memset(&_u128, 0, sizeof(_u128)); }
 };
+
 /*
 struct VPR_table
 {
@@ -245,7 +249,7 @@ static const s32 MAX_INT_VALUE = 0x7fffffff;
 class PPUThread : public PPCThread
 {
 public:
-	FPRdouble FPR[32]; //Floating Point Register
+	double FPR[32]; //Floating Point Register
 	FPSCRhdr FPSCR; //Floating Point Status and Control Register
 	u64 GPR[32]; //General-Purpose Register
 	VPR_reg VPR[32];
@@ -393,7 +397,7 @@ public:
 
 	const u8 IsCR(const u32 bit) const { return (GetCR(bit/4) & GetCRBit(bit)) ? 1 : 0; }
 
-	bool IsCarry(const u64 a, const u64 b) { return b > (~a); }
+	bool IsCarry(const u64 a, const u64 b) { return a > (~b); }
 
 	void SetFPSCRException(const FPSCR_EXP mask)
 	{
@@ -419,10 +423,11 @@ public:
 		return ret;
 	}
 
-	void SetBranch(const u32 pc);
+	void SetBranch(const u64 pc);
+	virtual void AddArgv(const wxString& arg);
 
 public:
-	virtual void _InitStack(); 
+	virtual void InitRegs(); 
 	virtual u64 GetFreeStackSize() const;
 
 protected:

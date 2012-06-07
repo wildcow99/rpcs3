@@ -22,7 +22,7 @@ void SPUThread::DoReset()
 	LSA = 0;
 }
 
-void SPUThread::_InitStack()
+void SPUThread::InitRegs()
 {
 	GPR[1]._u64[0] = stack_point;
 }
