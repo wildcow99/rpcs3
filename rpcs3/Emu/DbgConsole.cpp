@@ -1,16 +1,18 @@
 #include "stdafx.h"
 #include "DbgConsole.h"
 
+BEGIN_EVENT_TABLE(DbgConsole, FrameBase)
+	EVT_CLOSE(DbgConsole::OnQuit)
+END_EVENT_TABLE()
+
 DbgConsole::DbgConsole()
-	: FrameBase(NULL, wxID_ANY, "DbgConsole", wxEmptyString, wxDefaultSize,
-		wxDefaultPosition, wxDEFAULT_FRAME_STYLE & ~wxCLOSE_BOX)
+	: FrameBase(NULL, wxID_ANY, "DbgConsole", wxEmptyString, wxDefaultSize, wxDefaultPosition)
 	, StepThread("DbgConsole thread")
-	, hided(false)
 {
 	m_console = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition,
 		wxSize(500, 500), wxTE_MULTILINE | wxTE_READONLY | wxTE_RICH2);
 	m_console->SetBackgroundColour(wxColor("Black"));
-	m_console->SetFont(wxFont("Lucida Console"));
+	m_console->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
 	m_color_white = new wxTextAttr(wxColour(255, 255, 255));
 	m_color_red = new wxTextAttr(wxColour(255, 0, 0));
@@ -25,11 +27,11 @@ DbgConsole::~DbgConsole()
 
 void DbgConsole::Write(int ch, const wxString& text)
 {
-	if(StepThread::IsExit() || hided) return;
+	if(StepThread::IsExit() || IsBeingDeleted()) return;
 
-	while(m_packets.GetCount() > 200)
+	while(m_packets.GetCount() > 50)
 	{
-		if(StepThread::IsExit() || hided) return;
+		if(StepThread::IsExit() || IsBeingDeleted()) return;
 		Sleep(1);
 	}
 	m_packets.Add(new DbgPacket(ch, text));
@@ -48,6 +50,7 @@ void DbgConsole::Step()
 	const u32 max_lines_count = 500;
 	if(!DbgConsole::IsShown()) Show();
 
+	m_console->SetFocus();
 	m_console->Freeze();
 	while(m_packets.GetCount())
 	{
@@ -57,16 +60,15 @@ void DbgConsole::Step()
 		m_console->WriteText(m_packets[0].m_text);
 		m_packets.RemoveAt(0);
 		StepThread::SetCancelState(true);
+		ThreadAdv::TestCancel();
+		Sleep(1);
 	}
 	m_console->Thaw();
 
 	Sleep(1);
 }
 
-bool DbgConsole::Close(bool force)
+void DbgConsole::OnQuit(wxCloseEvent& event)
 {
-	StepThread::Exit();
-	m_packets.Clear();
-
-	return FrameBase::Close(force);
+	Hide();
 }

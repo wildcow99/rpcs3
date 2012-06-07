@@ -38,38 +38,69 @@ void PPUThread::DoReset()
 	reserve_addr = 0;
 }
 
-void PPUThread::SetBranch(const u32 pc)
+void PPUThread::SetBranch(const u64 pc)
 {
 	u64 fid, waddr;
 	if(Memory.MemFlags.IsFlag(pc, waddr, fid))
 	{
 		GPR[3] = SysCallsManager.DoFunc(fid, *this);
 
-		if((s32)GPR[3] < 0) ConLog.Write("Func[0x%llx] done with code [0x%x]! #pc: 0x%x", fid, (u32)GPR[3], PC);
+		if((s32)GPR[3] < 0 && fid != 0x72a577ce) ConLog.Write("Func[0x%llx] done with code [0x%x]! #pc: 0x%llx", fid, (u32)GPR[3], PC);
 #ifdef HLE_CALL_LOG
-		else ConLog.Write("Func[0xll%x] done with code [0x%llx]! #pc: 0x%x", fid, GPR[3], PC);
+		else ConLog.Warning("Func[0xll%x] done with code [0x%llx]! #pc: 0x%llx", fid, GPR[3], PC);
 #endif
 		//ConLog.Warning("Func waddr: 0x%llx", waddr);
-		Memory.Write32(waddr, Emu.GetTLSAddr());
-		Memory.Write32(Emu.GetTLSAddr(), PC + 4);
-		Memory.Write32(Emu.GetTLSAddr()+4, Emu.GetTLSMemsz());
+		const u64 addr = Emu.GetTLSAddr();
+		Memory.Write32(waddr, addr);
+		Memory.Write32(addr, PC + 4);
+		if(fid == 0x744680a2) Memory.Write32(addr+4, GPR[3]);
+		//Memory.Write32(addr+4, Emu.GetTLSMemsz());
+	}
+	else if(pc == Memory.VideoMem.GetStartAddr())
+	{
+		//ConLog.Warning("gcm: callback() #pc: 0x%llx", PC);
+
+		GPR[3] = 0;
+
+		PPCThread::SetBranch(PC + 4);
+		return;
 	}
 
 	PPCThread::SetBranch(pc);
 }
 
-void PPUThread::_InitStack()
+void PPUThread::AddArgv(const wxString& arg)
+{
+	stack_point -= arg.Len() + 1;
+	argv_addr.AddCpy(stack_point + 1);
+	Memory.WriteString(stack_point + 1, arg);
+}
+
+void PPUThread::InitRegs()
 {
 	const u32 entry = Memory.Read32(PC);
 	const u32 rtoc = Memory.Read32(PC + 4);
 
 	SetPc(entry);
 	
+	int argc = m_arg;
+	int argv = 0;
+
+	if(argv_addr.GetCount())
+	{
+		argc = argv_addr.GetCount();
+		stack_point -= 0xc + 4 * argc;
+		argv = stack_point;
+
+		mem64_t argv_list(argv);
+		for(int i=0; i<argc; ++i) argv_list += argv_addr[i];
+	}
+
 	GPR[1] = stack_point;
 	GPR[2] = rtoc;
-	GPR[3] = m_arg;
-	GPR[4] = stack_addr + stack_size - 0x40;
-	GPR[5] = stack_addr + stack_size - 0x50;
+	GPR[3] = argc;
+	GPR[4] = argv;
+	GPR[5] = argv ? argv - 0xc - 4 * argc : 0; //unk
 	GPR[7] = 0x80d90;
 	GPR[8] = entry;
 	GPR[10] = 0x131700;
@@ -83,8 +114,10 @@ void PPUThread::_InitStack()
 	//Memory.WriteString(GPR[4], "PATH1");
 	//Memory.WriteString(GPR[5], "PATH2");
 
-	Memory.Write32(GPR[4], Emu.GetTLSFilesz());
-	Memory.Write32(GPR[4]+4, Emu.GetTLSMemsz());
+	//Memory.Write32(GPR[4], Emu.GetTLSFilesz());
+	//Memory.Write32(GPR[4]+4, Emu.GetTLSMemsz());
+
+	//Memory.Write32(Memory.Read32(0x30e44), 0x12e464);
 }
 
 u64 PPUThread::GetFreeStackSize() const
@@ -159,28 +192,47 @@ bool FPRdouble::IsNaN(double d)
 
 bool FPRdouble::IsQNaN(double d)
 {
-	FPRdouble x(d);
-
 	return
-		((x.i & DOUBLE_EXP) == DOUBLE_EXP) &&
-		((x.i & 0x0007fffffffffffULL) == DOUBLE_ZERO) &&
-		((x.i & 0x000800000000000ULL) == 0x000800000000000ULL);
+		((To64(d) & DOUBLE_EXP) == DOUBLE_EXP) &&
+		((To64(d) & 0x0007fffffffffffULL) == DOUBLE_ZERO) &&
+		((To64(d) & 0x000800000000000ULL) == 0x000800000000000ULL);
 }
 
 bool FPRdouble::IsSNaN(double d)
 {
-	FPRdouble x(d);
-	
 	return
-		((x.i & DOUBLE_EXP) == DOUBLE_EXP) &&
-		((x.i & DOUBLE_FRAC) != DOUBLE_ZERO) &&
-		((x.i & 0x0008000000000000ULL) == DOUBLE_ZERO);
+		((*(u64*)&d & DOUBLE_EXP) == DOUBLE_EXP) &&
+		((*(u64*)&d & DOUBLE_FRAC) != DOUBLE_ZERO) &&
+		((*(u64*)&d & 0x0008000000000000ULL) == DOUBLE_ZERO);
 }
 
-int FPRdouble::Cmp(FPRdouble& f)
+u32 FPRdouble::To32(double d)
 {
-	if(d < f.d) return CR_LT;
-	if(d > f.d) return CR_GT;
-	if(d == f.d) return CR_EQ;
+	u64 i = To64(d);
+	
+	u32 exp = (i >> 52) && 0x7ff;
+	
+	if(exp > 896 || !(i & ~double_sign)) return ((i >> 32) & 0xc0000000) | ((i >> 29) & 0x3fffffff);
+	if(exp > 874)
+	{
+		u32 t = (u32)(0x80000000 | ((i & double_frac) >> 21));
+		t = t >> (905 - exp);
+		t |= (i >> 32) & 0x80000000;
+		return t;
+	}
+	
+	return ((i >> 32) & 0xc0000000) | ((i >> 29) & 0x3fffffff);
+}
+
+u64 FPRdouble::To64(double d)
+{
+	return *(u64*)&d;
+}
+
+int FPRdouble::Cmp(double a, double b)
+{
+	if(a < b) return CR_LT;
+	if(a > b) return CR_GT;
+	if(a == b) return CR_EQ;
 	return CR_SO;
 }

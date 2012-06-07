@@ -592,12 +592,12 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x0b4b62d5: FUNC_LOG_ERROR("TODO: cellGcmSetPrepareFlip");
 	case 0x0e6b0dae: FUNC_LOG_ERROR("TODO: cellGcmGetDisplayInfo");
 	case 0x107bf3a1: FUNC_LOG_ERROR("TODO: cellGcmInitCursor");
-	case 0x15bae46b: return cellGcmInit(SC_ARGS_3);//FUNC_LOG_ERROR("TODO: _cellGcmInitBody");
+	case 0x15bae46b: return cellGcmInit(SC_ARGS_4);//FUNC_LOG_ERROR("TODO: _cellGcmInitBody");
 	case 0x172c3197: FUNC_LOG_ERROR("TODO: cellGcmSetDefaultCommandBufferAndSegmentWordSize");
 	case 0x1a0de550: FUNC_LOG_ERROR("TODO: cellGcmSetCursorPosition");
 	case 0x1bd633f8: FUNC_LOG_ERROR("TODO: _cellGcmFunc3");
 	case 0x1f61b3ff: FUNC_LOG_ERROR("TODO: cellGcmDumpGraphicsError");
-	case 0x21397818: FUNC_LOG_ERROR("TODO: _cellGcmSetFlipCommand");
+	case 0x21397818: return cellGcmFlush(SC_ARGS_2); //FUNC_LOG_ERROR("TODO: _cellGcmSetFlipCommand");
 	case 0x21ac3697: return cellGcmAddressToOffset(SC_ARGS_2); //FUNC_LOG_ERROR("TODO: cellGcmAddressToOffset");
 	case 0x21cee035: FUNC_LOG_ERROR("TODO: cellGcmGetNotifyDataAddress");
 	case 0x23ae55a3: FUNC_LOG_ERROR("TODO: cellGcmGetLastSecondVTime");
@@ -624,7 +624,7 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x688b8ac9: FUNC_LOG_ERROR("TODO: _cellGcmFunc38");
 	case 0x69c6cc82: FUNC_LOG_ERROR("TODO: cellGcmSetCursorDisable");
 	case 0x723bbc7e: FUNC_LOG_ERROR("TODO: cellGcmGetVBlankCount");
-	case 0x72a577ce: FUNC_LOG_ERROR("TODO: cellGcmGetFlipStatus");
+	case 0x72a577ce: return cellGcmGetFlipStatus(); //FUNC_LOG_ERROR("TODO: cellGcmGetFlipStatus");
 	case 0x7fc034bc: FUNC_LOG_ERROR("TODO: _cellGcmFunc4");
 	case 0x8572bce2: FUNC_LOG_ERROR("TODO: cellGcmGetReportDataAddressLocation");
 	case 0x8bde5ebf: FUNC_LOG_ERROR("TODO: cellGcmSetUserCommand");
@@ -640,13 +640,13 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0xa41ef7e8: FUNC_LOG_ERROR("TODO: cellGcmSetFlipHandler");
 	case 0xa47c09ff: FUNC_LOG_ERROR("TODO: cellGcmSetFlipStatus");
 	case 0xa53d12ae: return cellGcmSetDisplayBuffer(SC_ARGS_5); //FUNC_LOG_ERROR("TODO: cellGcmSetDisplayBuffer");
-	case 0xa547adde: FUNC_LOG_ERROR("TODO: cellGcmGetControlRegister");
+	case 0xa547adde: return cellGcmGetControlRegister();//FUNC_LOG_ERROR("TODO: cellGcmGetControlRegister");
 	case 0xa6b180ac: FUNC_LOG_ERROR("TODO: cellGcmGetReportDataLocation");
 	case 0xa75640e8: FUNC_LOG_ERROR("TODO: cellGcmUnbindZcull");
 	case 0xa7ede268: FUNC_LOG_ERROR("TODO: cellGcmReserveIoMapSize");
 	case 0xa91b0402: FUNC_LOG_ERROR("TODO: cellGcmSetVBlankHandler");
 	case 0xacee8542: FUNC_LOG_ERROR("TODO: cellGcmSetFlipImmediate");
-	case 0xb2e761d4: FUNC_LOG_ERROR("TODO: cellGcmResetFlipStatus");
+	case 0xb2e761d4: return cellGcmResetFlipStatus(); //FUNC_LOG_ERROR("TODO: cellGcmResetFlipStatus");
 	case 0xbb42a9dd: FUNC_LOG_ERROR("TODO: _cellGcmFunc13");
 	case 0xbc982946: FUNC_LOG_ERROR("TODO: cellGcmSetDefaultCommandBuffer");
 	case 0xbd100dbc: FUNC_LOG_ERROR("TODO: cellGcmSetTileInfo");
@@ -656,7 +656,7 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0xc8f3bd09: FUNC_LOG_ERROR("TODO: cellGcmGetCurrentField");
 	case 0xcaabd992: FUNC_LOG_ERROR("TODO: cellGcmInitDefaultFifoMode");
 	case 0xd01b570d: FUNC_LOG_ERROR("TODO: cellGcmSetGraphicsHandler");
-	case 0xd0b1d189: FUNC_LOG_ERROR("TODO: cellGcmSetTile");
+	case 0xd0b1d189: return cellGcmSetTile(SC_ARGS_8);//FUNC_LOG_ERROR("TODO: cellGcmSetTile");
 	case 0xd34a420d: FUNC_LOG_ERROR("TODO: cellGcmSetZcull");
 	case 0xd8f88e1a: FUNC_LOG_ERROR("TODO: _cellGcmSetFlipCommandWithWaitLabel");
 	case 0xd9a0a879: FUNC_LOG_ERROR("TODO: cellGcmGetZcullInfo");
@@ -1282,9 +1282,9 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x516ee89e: FUNC_LOG_ERROR("TODO: cellRescInit");
 	case 0x5a338cdb: FUNC_LOG_ERROR("TODO: cellRescGetBufferSize");
 	case 0x66f5e388: FUNC_LOG_ERROR("TODO: cellRescGetLastFlipTime");
-	case 0x6cd0f95f: FUNC_LOG_ERROR("TODO: cellRescSetSrc");
+	case 0x6cd0f95f: return cellRescSetSrc(SC_ARGS_2);//FUNC_LOG_ERROR("TODO: cellRescSetSrc");
 	case 0x7af8a37f: FUNC_LOG_ERROR("TODO: cellRescSetRegisterCount");
-	case 0x8107277c: FUNC_LOG_ERROR("TODO: cellRescSetBufferAddress");
+	case 0x8107277c: return cellRescSetBufferAddress(SC_ARGS_3); //FUNC_LOG_ERROR("TODO: cellRescSetBufferAddress");
 	case 0xc47c5c22: FUNC_LOG_ERROR("TODO: cellRescGetFlipStatus");
 	case 0xd1ca0503: FUNC_LOG_ERROR("TODO: cellRescVideoOutResolutionId2RescBufferMode");
 	case 0xd3758645: FUNC_LOG_ERROR("TODO: cellRescSetVBlankHandler");
@@ -2786,7 +2786,7 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x718bf5f8: return cellFsOpen(SC_ARGS_5);//FUNC_LOG_ERROR("TODO: cellFsOpen");
 	case 0x75f16dc5: FUNC_LOG_ERROR("TODO: cellFsSetIoBufferFromDefaultContainer");
 	case 0x7a0329a1: FUNC_LOG_ERROR("TODO: cellFsAllocateFileAreaWithoutZeroFill");
-	case 0x7de6dced: FUNC_LOG_ERROR("TODO: cellFsStat");
+	case 0x7de6dced: return cellFsStat(SC_ARGS_2); //FUNC_LOG_ERROR("TODO: cellFsStat");
 	case 0x7f13fc8c: FUNC_LOG_ERROR("TODO: cellFsAioCancel");
 	case 0x7f4677a8: FUNC_LOG_ERROR("TODO: cellFsUnlink");
 	case 0x81f33783: FUNC_LOG_ERROR("TODO: cellFsStReadPutCurrentAddr");
@@ -2815,7 +2815,7 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0xdb869f20: FUNC_LOG_ERROR("TODO: cellFsAioInit");
 	case 0xe15939c3: FUNC_LOG_ERROR("TODO: cellFsChangeFileSizeByFdWithoutAllocation");
 	case 0xecdcf2ab: return cellFsWrite(SC_ARGS_4);//FUNC_LOG_ERROR("TODO: cellFsWrite");
-	case 0xef3efa34: FUNC_LOG_ERROR("TODO: cellFsFstat");
+	case 0xef3efa34: return cellFsFstat(SC_ARGS_2);//FUNC_LOG_ERROR("TODO: cellFsFstat");
 	case 0xf12eecc8: return cellFsRename(SC_ARGS_2);//FUNC_LOG_ERROR("TODO: cellFsRename");
 	case 0xf8e5d9a0: FUNC_LOG_ERROR("TODO: cellFsStReadStop");
 	case 0xf94baa80: FUNC_LOG_ERROR("TODO: cellFsUnregisterL10nCallbacks");
@@ -4606,12 +4606,15 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x27427742: FUNC_LOG_ERROR("TODO: _sys_memmove");
 	case 0x2a6d9d51: FUNC_LOG_ERROR("TODO: sys_lwcond_wait");
 	case 0x2c847572: FUNC_LOG_ERROR("TODO: _sys_process_atexitspawn");
-	case 0x2d36462b: FUNC_LOG_ERROR("TODO: _sys_strlen");
+	case 0x2d36462b:
+		//FUNC_LOG_ERROR("TODO: _sys_strlen");
+		ConLog.Write("sys_strlen(addr=0x%x)", SC_ARGS_1);
+		return Memory.ReadString(SC_ARGS_1).Len();
 	case 0x2f85c0ef: return Lv2LwmutexCreate(CPU);//FUNC_LOG_ERROR("TODO: sys_lwmutex_create");
 	case 0x3172759d: FUNC_LOG_ERROR("TODO: sys_game_get_temperature");
 	case 0x318f17e1: FUNC_LOG_ERROR("TODO: _sys_memalign");
 	case 0x350d454e: return lv2PPUThreadGetId(CPU);//FUNC_LOG_ERROR("TODO: sys_ppu_thread_get_id");
-	case 0x35168520: FUNC_LOG_ERROR("TODO: _sys_heap_malloc");
+	case 0x35168520: return sys_heap_malloc(SC_ARGS_2); //FUNC_LOG_ERROR("TODO: _sys_heap_malloc");
 	case 0x3bd53c7b: FUNC_LOG_ERROR("TODO: _sys_memchr");
 	case 0x3dd4a957: FUNC_LOG_ERROR("TODO: sys_ppu_thread_register_atexit");
 	case 0x409ad939: FUNC_LOG_ERROR("TODO: sys_mmapper_free_memory");
@@ -4629,7 +4632,12 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x608212fc: FUNC_LOG_ERROR("TODO: sys_mempool_free_block");
 	case 0x620e35a7: FUNC_LOG_ERROR("TODO: sys_game_get_system_sw_version");
 	case 0x67f9fedb: FUNC_LOG_ERROR("TODO: sys_game_process_exitspawn2");
-	case 0x68b9b011: FUNC_LOG_ERROR("TODO: _sys_memset");
+	case 0x68b9b011:
+		ConLog.Warning("_sys_memset(0x%llx, 0x%lld, 0x%lld)", SC_ARGS_3);
+		return 
+			(u32)memset(Memory.GetMemFromAddr(CPU.GPR[3]), CPU.GPR[4], CPU.GPR[5])
+			- Memory.GetMemByAddr(CPU.GPR[3]).GetStartAddr();
+		FUNC_LOG_ERROR("TODO: _sys_memset");
 	case 0x6bf66ea7: FUNC_LOG_ERROR("TODO: _sys_memcpy");
 	case 0x6e05231d: FUNC_LOG_ERROR("TODO: sys_game_watchdog_stop");
 	case 0x70258515: FUNC_LOG_ERROR("TODO: sys_mmapper_allocate_memory_from_container");
@@ -4639,10 +4647,9 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x744680a2:
 		// FUNC_LOG_ERROR("TODO: sys_initialize_tls");
 		ConLog.Warning("sys_initialize_tls()");
-		//CPU.GPR[4] = Emu.GetTLSAddr();
-		//CPU.GPR[5] = Emu.GetTLSFilesz();
-		//CPU.GPR[6] = Emu.GetTLSMemsz();
-	return CELL_OK;
+		CPU.GPR[4] = Emu.GetTLSFilesz();
+		CPU.GPR[5] = Emu.GetTLSMemsz();
+	return Emu.GetTLSAddr();
 	case 0x7498887b: FUNC_LOG_ERROR("TODO: _sys_strchr");
 	case 0x791b9219: FUNC_LOG_ERROR("TODO: _sys_vsprintf");
 	case 0x80fb0c19: FUNC_LOG_ERROR("TODO: sys_prx_stop_module");
@@ -4663,7 +4670,10 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x9f18429d: FUNC_LOG_ERROR("TODO: sys_prx_start_module");
 	case 0x9f950780: FUNC_LOG_ERROR("TODO: sys_game_get_rtc_status");
 	case 0xa146a143: FUNC_LOG_ERROR("TODO: sys_mempool_allocate_block");
-	case 0xa1f9eafe: FUNC_LOG_ERROR("TODO: _sys_sprintf");
+	case 0xa1f9eafe:
+		ConLog.Warning("_sys_sprintf(0x%llx, 0x%llx(%s), 0x%llx)", CPU.GPR[3], CPU.GPR[4], Memory.ReadString(CPU.GPR[4]), CPU.GPR[5]);
+		return vsprintf((char*)Memory.GetMemFromAddr(CPU.GPR[3]), Memory.ReadString(CPU.GPR[4]), (char*)Memory.GetMemFromAddr(CPU.GPR[5]));
+		FUNC_LOG_ERROR("TODO: _sys_sprintf");
 	case 0xa285139d: FUNC_LOG_ERROR("TODO: sys_spinlock_lock");
 	case 0xa2c7ba64: FUNC_LOG_ERROR("TODO: sys_prx_exitspawn_with_level");
 	case 0xa330ad84: FUNC_LOG_ERROR("TODO: sys_prx_load_module_on_memcontainer_by_fd");
@@ -4677,12 +4687,15 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0xaff080a4: return lv2PPUThreadExit(CPU);//FUNC_LOG_ERROR("TODO: sys_ppu_thread_exit");
 	case 0xb257540b: FUNC_LOG_ERROR("TODO: sys_mmapper_allocate_memory");
 	case 0xb27c8ae7: FUNC_LOG_ERROR("TODO: sys_prx_load_module_list");
-	case 0xb2fcf2c8: FUNC_LOG_ERROR("TODO: _sys_heap_create_heap");
+	case 0xb2fcf2c8: return sys_heap_create_heap(SC_ARGS_3);//FUNC_LOG_ERROR("TODO: _sys_heap_create_heap");
 	case 0xb3bbcf2a: FUNC_LOG_ERROR("TODO: _sys_spu_printf_detach_thread");
 	case 0xb6369393: FUNC_LOG_ERROR("TODO: _sys_heap_get_total_free_size");
 	case 0xb995662e: FUNC_LOG_ERROR("TODO: sys_raw_spu_image_load");
 	case 0xb9bf1078: FUNC_LOG_ERROR("TODO: _sys_heap_alloc_heap_memory");
-	case 0xbdb18f83: FUNC_LOG_ERROR("TODO: _sys_malloc");
+	case 0xbdb18f83:
+		ConLog.Warning("_sys_malloc(0x%llx)", SC_ARGS_1);
+		return Memory.Alloc(CPU.GPR[3], Emu.GetMallocPageSize());
+		FUNC_LOG_ERROR("TODO: _sys_malloc");
 	case 0xc3476d0c: return Lv2LwmutexDestroy(CPU);////FUNC_LOG_ERROR("TODO: sys_lwmutex_destroy");
 	case 0xc4fd6121: FUNC_LOG_ERROR("TODO: _sys_qsort");
 	case 0xca9a60bf: FUNC_LOG_ERROR("TODO: sys_mempool_create");

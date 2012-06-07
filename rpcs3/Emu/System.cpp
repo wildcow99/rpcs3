@@ -91,16 +91,16 @@ void Emulator::Run()
 
 	//SetTLSData(0, 0, 0);
 	//SetMallocPageSize(0x100000);
-
-	m_loader.Open(m_path);
-	if(!m_loader.Load())
+	
+	Loader l(m_path);
+	if(!l.Load())
 	{
 		Memory.Close();
 		Stop();
 		return;
 	}
 	
-	if(m_loader.GetMachine() == MACHINE_Unknown)
+	if(l.GetMachine() == MACHINE_Unknown)
 	{
 		ConLog.Error("Unknown machine type");
 		Memory.Close();
@@ -108,10 +108,13 @@ void Emulator::Run()
 		return;
 	}
 
-	PPCThread& thread = GetCPU().AddThread(m_loader.GetMachine() == MACHINE_PPC64);
+	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64);
 
-	thread.SetPc(m_loader.GetEntry());
+	thread.SetPc(l.GetEntry());
 	thread.SetArg(thread.GetId());
+	thread.InitStack();
+	thread.AddArgv(m_path);
+	thread.AddArgv("-emu");
 	thread.Run();
 
 	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
@@ -163,14 +166,13 @@ void Emulator::Stop()
 	wxGetApp().m_MainFrame->UpdateUI();
 
 	GetGSManager().Close();
-
 	GetCPU().Close();
 	SysCallsManager.Close();
-
-	Memory.Close();
-	CurGameInfo.Reset();
 	GetIdManager().Clear();
 	GetPadManager().Close();
+
+	CurGameInfo.Reset();
+	Memory.Close();
 
 	if(m_dbg_console){GetDbgCon().Close();m_dbg_console = NULL;}
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();

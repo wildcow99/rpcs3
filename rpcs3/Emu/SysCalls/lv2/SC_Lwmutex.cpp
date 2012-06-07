@@ -34,6 +34,7 @@ SysCallBase sc_lwmutex("Lwmutex");
 //TODO
 int SysCalls::Lv2LwmutexCreate(PPUThread& CPU)
 {
+	/*
 	//int sys_lwmutex_create(sys_lwmutex_t *lwmutex, sys_lwmutex_attribute_t *attr)
 	const u64 lwmutex_addr = CPU.GPR[3];
 	const u64 lwmutex_attr_addr = CPU.GPR[4];
@@ -45,6 +46,7 @@ int SysCalls::Lv2LwmutexCreate(PPUThread& CPU)
 
 	lmtx.lock_var.info.owner = CPU.GetId();
 	lmtx.attribute = Emu.GetIdManager().GetNewID(wxString::Format("Lwmutex[%s]", lmtx_attr.name), NULL, lwmutex_addr);
+	*/
 	/*
 	ConLog.Write("r3:");
 	ConLog.Write("*** lock_var[owner: 0x%x, waiter: 0x%x]", lmtx.lock_var.info.owner, lmtx.lock_var.info.waiter);
@@ -62,12 +64,14 @@ int SysCalls::Lv2LwmutexCreate(PPUThread& CPU)
 
 int SysCalls::Lv2LwmutexDestroy(PPUThread& CPU)
 {
+	/*
 	const u64 lwmutex_addr = CPU.GPR[3];
 	//ConLog.Write("Lv2LwmutexDestroy[r3: 0x%llx]", lwmutex_addr);
 
 	lwmutex& lmtx = *(lwmutex*)Memory.GetMemFromAddr(lwmutex_addr);
 	Emu.GetIdManager().RemoveID(lmtx.attribute);
-	memset(Memory.GetMemFromAddr(lwmutex_addr), 0, sizeof(lwmutex));
+	//memset(Memory.GetMemFromAddr(lwmutex_addr), 0, sizeof(lwmutex));
+	*/
 	return 0;
 }
 

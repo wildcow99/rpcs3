@@ -36,12 +36,10 @@ union SPU_GPR_hdr
 
 	void Reset()
 	{
-		memset(&_u128, 0, sizeof(_u128));
-		//_m128i = _mm_setzero_si128();
+		memset(this, 0, sizeof(*this));
 	}
 
 	operator __m128i() { __m128i ret; ret.m128i_u64[0]=_u128._u64[0]; ret.m128i_u64[1]=_u128._u64[1]; return ret; }
-	//operator __m128i() { return _m128i; }
 
 	SPU_GPR_hdr operator ^ (__m128i right)	{ return _mm_xor_si128(*this, right); }
 	SPU_GPR_hdr operator | (__m128i right)	{ return _mm_or_si128 (*this, right); }
@@ -91,7 +89,7 @@ public:
 	}
 
 public:
-	virtual void _InitStack(); 
+	virtual void InitRegs(); 
 	virtual u64 GetFreeStackSize() const;
 
 protected:

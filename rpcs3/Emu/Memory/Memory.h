@@ -42,15 +42,17 @@ public:
 class MemoryBase
 {
 	NullMemoryBlock NullMem;
-	ArrayF<MemoryBlock> MemoryBlocks;
 
 public:
+	ArrayF<MemoryBlock> MemoryBlocks;
+
 	MemoryBlock MainRam;
 	MemoryBlock UserMem;
 	MemoryBlock UnkMem;
-	MemoryBlock VideoMem; //used by psgl
-	//MemoryBlock Video_FrameBuffer;
-	//MemoryBlock Video_GPUdata;
+	MemoryBlock VideoMem;
+	MemoryBlock GcmReportIoAddressMem;
+	MemoryBlock GcmNotifyIoAddressMem;
+	MemoryBlock SpuRawMem;
 
 	struct UserMemInfo
 	{
@@ -142,6 +144,35 @@ public:
 		return GetMemByAddr(addr).GetMemFromAddr(addr);
 	}
 
+	void* VirtualToRealAddr(const u64 vaddr)
+	{
+		return GetMemFromAddr(vaddr);
+	}
+
+	u64 RealToVirtualAddr(const void* addr)
+	{
+		const u32 raddr = (u32)addr;
+		for(u32 i=0; i<MemoryBlocks.GetCount(); ++i)
+		{
+			MemoryBlock& b = MemoryBlocks[i];
+			const u32 baddr = (u32)b.GetMem();
+
+			if(raddr >= baddr && raddr < baddr + b.GetSize())
+			{
+				return b.GetStartAddr() + (raddr - baddr);
+			}
+		}
+
+		return 0;
+	}
+
+	bool InitSpuRawMem(const u32 max_spu_raw)
+	{
+		if(SpuRawMem.GetSize()) return false;
+		MemoryBlocks.Add(SpuRawMem.SetRange(0xe0000000, 0x100000 * max_spu_raw));
+		return true;
+	}
+
 	void Init()
 	{
 		if(m_inited) return;
@@ -149,18 +180,13 @@ public:
 
 		ConLog.Write("Initing memory...");
 
-		MainRam.SetRange(0x00000000, 0x10000000); //256 MB
-		UnkMem. SetRange(0x10000000, 0x00100000); //unk
-		UserMem.SetRange(0x2FFFFE00, 0x0D500000);
-		VideoMem.SetRange(0xe0040000, 0x01000000);
-		//Video_FrameBuffer.SetRange(MainRam.GetEndAddr(), 0x0FFFFFFF); //252 MB
-		//Video_GPUdata.SetRange(Video_FrameBuffer.GetEndAddr(), 0x003FFFFF); //4 MB
-		MemoryBlocks.Add(MainRam);
-		MemoryBlocks.Add(UnkMem);
-		MemoryBlocks.Add(UserMem);
-		MemoryBlocks.Add(VideoMem);
-		//MemoryBlocks.Add(Video_FrameBuffer);
-		//MemoryBlocks.Add(Video_GPUdata);
+		MemoryBlocks.Add(MainRam.SetRange(0x00000001, 0x10000000)); //256 MB
+		MemoryBlocks.Add(UnkMem. SetRange(0x10000000, 0x00100000)); //unk
+		MemoryBlocks.Add(UserMem.SetRange(0x2ffffe00, 0x0d500000));
+		MemoryBlocks.Add(VideoMem.SetRange(0x40000000, 0x01000000));
+		MemoryBlocks.Add(GcmReportIoAddressMem.SetRange(0x0e000000, 0x01000000)); //16 MB
+		MemoryBlocks.Add(GcmNotifyIoAddressMem.SetRange(0x0f100000, 0x00000200)); //512 B
+
 		m_mem_point = UserMem.GetStartAddr();
 	}
 
@@ -176,7 +202,13 @@ public:
 
 	bool IsGoodAddr(const u64 addr, const u32 size)
 	{
-		return IsGoodAddr(addr) && IsGoodAddr(addr + size - 1);
+		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
+		{
+			if( MemoryBlocks[i].IsMyAddress(addr) &&
+				MemoryBlocks[i].IsMyAddress(addr + size) ) return true;
+		}
+
+		return false;
 	}
 
 	void Close()
@@ -349,6 +381,106 @@ public:
 
 		return false;
 	}
+
+	u8& operator[] (const u64 vaddr) { return *GetMemFromAddr(vaddr); }
 };
 
 extern MemoryBase Memory;
+
+template<typename T> class mem_t
+{
+	u64 addr;
+	const u64 iaddr;
+
+public:
+	mem_t(u64 _addr)
+		: addr(_addr)
+		, iaddr(_addr)
+	{
+	}
+
+	void operator = (T right)
+	{
+		switch(sizeof(T))
+		{
+		case 1: Memory.Write8(addr, right); return;
+		case 2: Memory.Write16(addr, right); return;
+		case 4: Memory.Write32(addr, right); return;
+		case 8: Memory.Write64(addr, right); return;
+		}
+
+		ConLog.Error("Bad mem_t size! (%d : 0x%llx)", sizeof(T), addr);
+	}
+
+	operator u8() const { return Memory.Read8(addr); }
+	operator u16() const { return Memory.Read16(addr); }
+	operator u32() const { return Memory.Read32(addr); }
+	operator u64() const { return Memory.Read64(addr); }
+
+	/*
+	u64 operator += (u64 right)
+	{
+		addr += right;
+		return addr;
+	}
+	*/
+	u64 operator += (T right)
+	{
+		*this = right;
+		addr += sizeof(T);
+		return addr;
+	}
+
+	T operator [] (u64 i)
+	{
+		const u64 offset = i*sizeof(T);
+		addr += offset;
+		const T ret = *this;
+		addr -= offset;
+		return ret;
+	}
+
+	void Reset() { addr = iaddr; }
+	u64 GetCurAddr() const { return addr; }
+	u64 GetAddr() const { return iaddr; }
+	u64 SetOffset(const u32 offset) { return addr += offset; }
+};
+
+class mem_class_t
+{
+	u64 addr;
+	const u64 iaddr;
+
+public:
+	mem_class_t(u64 _addr)
+		: addr(_addr)
+		, iaddr(_addr)
+	{
+	}
+
+	template<typename T> u64 operator += (T right)
+	{
+		mem_t<T> m(addr);
+		m = right;
+		addr += sizeof(T);
+		return addr;
+	}
+
+	template<typename T> operator T()
+	{
+		mem_t<T> m(addr);
+		const T ret = m;
+		addr += sizeof(T);
+		return ret;
+	}
+
+	void Reset() { addr = iaddr; }
+	u64 GetCurAddr() const { return addr; }
+	u64 GetAddr() const { return iaddr; }
+	void SetAddr(const u64 _addr) { addr = _addr; }
+};
+
+typedef mem_t<u8> mem8_t;
+typedef mem_t<u16> mem16_t;
+typedef mem_t<u32> mem32_t;
+typedef mem_t<u64> mem64_t;

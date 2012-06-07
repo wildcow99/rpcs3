@@ -89,7 +89,7 @@ void DisAsmFrame::AddLine(const wxString line)
 		return;
 	}
 
-	m_disasm_list->SetItem(count, 0, wxString::Format("%x", CPU.PC));
+	m_disasm_list->SetItem(count, 0, wxString::Format("%llx", CPU.PC));
 	m_disasm_list->SetItem(count, 1, line);
 
 	++count;
@@ -100,7 +100,7 @@ void DisAsmFrame::Resume()
 	Emu.Resume();
 }
 
-#include "Thread.h"
+#include "Utilites/Thread.h"
 #include <Utilites/MTProgressDialog.h>
 #include "Loader/ELF.h"
 Array<Elf64_Shdr>* shdr_arr_64 = NULL;
@@ -425,11 +425,11 @@ void DisAsmFrame::SetPc(wxCommandEvent& WXUNUSED(event))
 
 	diag->SetSizerAndFit( s_panel );
 
-	p_pc->SetLabel(wxString::Format("%x", CPU.PC));
+	p_pc->SetLabel(wxString::Format("%llx", CPU.PC));
 
 	if(diag->ShowModal() == wxID_OK)
 	{
-		sscanf(p_pc->GetLabel(), "%x", &CPU.PC);
+		sscanf(p_pc->GetLabel(), "%llx", &CPU.PC);
 		Resume();
 	}
 }

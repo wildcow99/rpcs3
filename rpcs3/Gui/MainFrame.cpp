@@ -256,8 +256,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_cpu_decoder->Append("Interpreter");
 
 	cbox_gs_render->Append("Null");
+	cbox_gs_render->Append("OpenGL");
 	//cbox_gs_render->Append("Software");
-	//cbox_gs_render->Append("OpenGL");
 
 	cbox_pad_handler->Append("Null");
 	cbox_pad_handler->Append("Windows");
@@ -310,19 +310,57 @@ void MainFrame::OnQuit(wxCloseEvent& event)
 	TheApp->Exit();
 }
 
-void MainFrame::OnKeyDown(wxKeyEvent& event)
+struct state_hdr
 {
-	if(wxGetActiveWindow() != this || !event.ControlDown())
+	u32 magic;
+	u16 version;
+	u32 mem_count;
+	u32 mem_offset;
+	u32 mem_size;
+	u32 hle_count;
+	u32 hle_offset;
+};
+
+static const u32 state_magic = *(u32*)"R3SS";
+static const u32 state_version = 0x1000;
+
+void MakeSaveState(wxFile& f)
+{
+	const ArrayF<MemoryBlock>& mb = Memory.MemoryBlocks;
+	
+	state_hdr state;
+	memset(&state, 0, sizeof(state_hdr));
+	
+	state.magic = state_magic;
+	state.version = state_version;
+	state.mem_count = mb.GetCount();
+	//state.hle_count = mb.GetCount();
+	
+	state.mem_offset = sizeof(state_hdr) + 4;
+	
+	f.Seek(state.mem_offset);
+	for(u32 i=0; i<state.mem_count; ++i)
 	{
-		event.Skip();
-		return;
+		state.mem_size += mb[i].GetSize();
+		f.Write(mb[i].GetMem(), mb[i].GetSize());
 	}
 
-	switch(event.GetKeyCode())
+	state.hle_offset = state.mem_offset + state.mem_size + 4;
+
+	f.Seek(0);
+	f.Write(&state, sizeof(state_hdr));
+}
+
+void MainFrame::OnKeyDown(wxKeyEvent& event)
+{
+	if(wxGetActiveWindow() == this && event.ControlDown())
 	{
-	case 'C': case 'c': if(Emu.IsPaused()) Emu.Resume(); return;
-	case 'S': case 's': if(!Emu.IsStoped()) Emu.Stop(); return;
-	case 'R': case 'r': if(Emu.m_path.Len()) {Emu.Stop(); Emu.Run();} return;
+		switch(event.GetKeyCode())
+		{
+		case 'C': case 'c': if(Emu.IsPaused()) Emu.Resume(); return;
+		case 'S': case 's': if(!Emu.IsStoped()) Emu.Stop(); return;
+		case 'R': case 'r': if(Emu.m_path.Len()) {Emu.Stop(); Emu.Run();} return;
+		}
 	}
 
 	event.Skip();

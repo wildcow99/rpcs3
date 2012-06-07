@@ -50,6 +50,7 @@
     <OutDir>$(SolutionDir)bin\</OutDir>
     <LibraryPath>..\libs\$(Configuration)\;$(LibraryPath)</LibraryPath>
     <LinkIncremental>false</LinkIncremental>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -74,9 +75,11 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <ExceptionHandling>Sync</ExceptionHandling>
+      <EnablePREfast>false</EnablePREfast>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -95,17 +98,25 @@
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\DbgConsole.cpp" />
+    <ClCompile Include="Emu\GS\GL\FragmentProgram.cpp" />
+    <ClCompile Include="Emu\GS\GL\GLBuffers.cpp" />
+    <ClCompile Include="Emu\GS\GL\GLGSRender.cpp" />
+    <ClCompile Include="Emu\GS\GL\OpenGL.cpp" />
+    <ClCompile Include="Emu\GS\GL\Program.cpp" />
+    <ClCompile Include="Emu\GS\GL\VertexProgram.cpp" />
     <ClCompile Include="Emu\GS\GSManager.cpp" />
     <ClCompile Include="Emu\Io\Pad.cpp" />
     <ClCompile Include="Emu\Memory\Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\FuncList.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_FileSystem.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_GCM.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Heap.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Lwmutex.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Memory.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Pad.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_PPU_Thread.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_Process.cpp" />
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Resc.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil.cpp" />
     <ClCompile Include="Emu\SysCalls\lv2\SC_TTY.cpp" />
     <ClCompile Include="Emu\System.cpp" />
@@ -128,6 +139,53 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Emu\Cell\DisAsm.h" />
+    <ClInclude Include="Emu\Cell\PPCThread.h" />
+    <ClInclude Include="Emu\Cell\PPCThreadManager.h" />
+    <ClInclude Include="Emu\Cell\PPUDecoder.h" />
+    <ClInclude Include="Emu\Cell\PPUDisAsm.h" />
+    <ClInclude Include="Emu\Cell\PPUInterpreter.h" />
+    <ClInclude Include="Emu\Cell\PPUOpcodes.h" />
+    <ClInclude Include="Emu\Cell\PPUThread.h" />
+    <ClInclude Include="Emu\Cell\SPUDecoder.h" />
+    <ClInclude Include="Emu\Cell\SPUDisAsm.h" />
+    <ClInclude Include="Emu\Cell\SPUInterpreter.h" />
+    <ClInclude Include="Emu\Cell\SPUOpcodes.h" />
+    <ClInclude Include="Emu\Cell\SPUThread.h" />
+    <ClInclude Include="Emu\DbgConsole.h" />
+    <ClInclude Include="Emu\GameInfo.h" />
+    <ClInclude Include="Emu\GS\GCM.h" />
+    <ClInclude Include="Emu\GS\GL\GLGSRender.h" />
+    <ClInclude Include="Emu\GS\GSManager.h" />
+    <ClInclude Include="Emu\GS\GSRender.h" />
+    <ClInclude Include="Emu\GS\Null\NullGSRender.h" />
+    <ClInclude Include="Emu\Io\Null\NullPadHandler.h" />
+    <ClInclude Include="Emu\Io\Pad.h" />
+    <ClInclude Include="Emu\Io\PadHandler.h" />
+    <ClInclude Include="Emu\Memory\Memory.h" />
+    <ClInclude Include="Emu\Memory\MemoryBlock.h" />
+    <ClInclude Include="Emu\SysCalls\ErrorCodes.h" />
+    <ClInclude Include="Emu\SysCalls\SysCalls.h" />
+    <ClInclude Include="Emu\System.h" />
+    <ClInclude Include="Gui\CompilerELF.h" />
+    <ClInclude Include="Gui\ConLog.h" />
+    <ClInclude Include="Gui\DisAsmFrame.h" />
+    <ClInclude Include="Gui\FrameBase.h" />
+    <ClInclude Include="Gui\GameViewer.h" />
+    <ClInclude Include="Gui\InterpreterDisAsm.h" />
+    <ClInclude Include="Gui\MainFrame.h" />
+    <ClInclude Include="Gui\MemoryViewer.h" />
+    <ClInclude Include="Ini.h" />
+    <ClInclude Include="Loader\ELF.h" />
+    <ClInclude Include="Loader\ELF32.h" />
+    <ClInclude Include="Loader\ELF64.h" />
+    <ClInclude Include="Loader\Loader.h" />
+    <ClInclude Include="Loader\PSF.h" />
+    <ClInclude Include="Loader\SELF.h" />
+    <ClInclude Include="rpcs3.h" />
+    <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

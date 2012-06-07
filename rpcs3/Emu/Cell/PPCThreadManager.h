@@ -1,6 +1,6 @@
 #pragma once
 #include "Utilites/IdManager.h"
-#include "Thread.h"
+#include "Utilites/Thread.h"
 #include "PPCThread.h"
 
 class PPCThreadManager : public StepThread

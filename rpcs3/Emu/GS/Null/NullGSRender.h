@@ -1,75 +1,103 @@
 #pragma once
 #include "Emu/GS/GSRender.h"
 
-struct NullGSFrame : public wxFrame
+struct NullGSFrame : public GSFrame
 {
-	NullGSFrame() : wxFrame(NULL, wxID_ANY, "GSFrame[Null]")
+	NullGSFrame() : GSFrame(NULL, "GSFrame[Null]")
 	{
 	}
 
-	virtual void OnPaint(wxPaintEvent& event)
-	{
-		wxPaintDC dc(this);
-		Draw(dc);
-	}
+	void Draw() { Draw(wxClientDC(this)); }
 
+private:
+	virtual void OnPaint(wxPaintEvent& event) { Draw(wxPaintDC(this)); }
 	virtual void OnSize(wxSizeEvent& event)
 	{
+		GSFrame::OnSize(event);
 		Draw();
-	}
-
-	void Draw()
-	{
-		wxClientDC dc(this);
-		Draw(dc);
 	}
 
 	void Draw(wxDC& dc)
 	{
 		dc.DrawText("Null GS output", 0, 0);
 	}
-
-private:
-	DECLARE_EVENT_TABLE();
 };
 
-BEGIN_EVENT_TABLE(NullGSFrame, wxFrame)
-    EVT_PAINT(NullGSFrame::OnPaint)
-	EVT_SIZE(NullGSFrame::OnSize)
-END_EVENT_TABLE()
-
-class NullGSRender : public GSRender
+class NullGSRender
+	: public wxWindow
+	, public GSRender
 {
 private:
-	NullGSFrame* frame;
+	NullGSFrame* m_frame;
+	wxTimer* m_update_timer;
 
 public:
-	NullGSRender() : frame(NULL)
+	NullGSRender() : m_frame(NULL)
 	{
+		m_update_timer = new wxTimer(this);
+		Connect(m_update_timer->GetId(), wxEVT_TIMER, wxTimerEventHandler(NullGSRender::OnTimer));
+		m_frame = new NullGSFrame();
+	}
+
+	~NullGSRender()
+	{
+		Close();
+		m_frame->Close();
 	}
 
 private:
-	virtual void SetData(u8* pixels, const u32 width, const u32 height)
+	virtual void Init(const u32 ioAddress, const u32 ctrlAddress)
 	{
+		if(m_frame->IsShown()) return;
+		
+		m_frame->SetSize(740, 480);
+		m_frame->Show();
+
+		m_ioAddress = ioAddress;
+		m_ctrlAddress = ctrlAddress;
+		m_ctrl = (CellGcmControl*)Memory.GetMemFromAddr(m_ctrlAddress);
+
+		m_update_timer->Start(1);
 	}
 
-	virtual void Init(const u32 width, const u32 height)
+	void OnTimer(wxTimerEvent&)
 	{
-		if(frame) return;
-		frame = new NullGSFrame();
-		frame->SetSize(width, height);
-		frame->Show();
-		Draw();
+		while(m_ctrl->get != m_ctrl->put)
+		{
+			const u32 get = re(m_ctrl->get);
+			const u32 cmd = Memory.Read32(m_ioAddress + get);
+			const u32 count = (cmd >> 18) & 0x7ff;
+			mem32_t data(m_ioAddress + get + 4);
+
+			m_ctrl->get = re32(get + (count + 1) * 4);
+			DoCmd(cmd, cmd & 0x3ffff, data, count);
+			memset(Memory.GetMemFromAddr(m_ioAddress + get), 0, (count + 1) * 4);
+		}
+	}
+
+	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count)
+	{
+		switch(cmd)
+		{
+		case NV406E_SET_REFERENCE:
+			m_ctrl->ref = re32(args[0]);
+		break;
+
+		case NV4097_SET_BEGIN_END:
+			if(!args[0]) m_flip_status = 0;
+		break;
+		}
 	}
 
 	virtual void Draw()
 	{
-		if(frame) frame->Draw();
+		//if(m_frame && !m_frame->IsBeingDeleted()) m_frame->Draw();
 	}
 
 	virtual void Close()
 	{
-		if(frame) frame->Close();
-		frame = NULL;
+		m_update_timer->Stop();
+		if(m_frame->IsShown()) m_frame->Hide();
+		m_ctrl = NULL;
 	}
 };

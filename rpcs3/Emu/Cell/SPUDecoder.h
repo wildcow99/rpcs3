@@ -32,20 +32,20 @@ class SPU_Decoder : public Decoder
 	OP_REG RB()			const { return GetField(11, 17); }
 
 	OP_sIMM i7()		const { return GetField(11, 17); }
-	OP_sIMM i10()		const { return GetField( 8, 17); }
-	OP_sIMM i16()		const { return GetField( 9, 24); }
-	OP_sIMM i18()		const { return GetField( 7, 24); }
+	OP_sIMM i10()		const { return GetField(8, 17); }
+	OP_sIMM i16()		const { return GetField(9, 24); }
+	OP_sIMM i18()		const { return GetField(7, 24); }
 
 	OP_sIMM ROH()		const { return GetField(16, 17); }
 	OP_sIMM ROL()		const { return GetField(25, 31); }
 	OP_sIMM RO()		const { return ROL()/* | (ROH() << 8)*/; }
 
-	OP_REG RR()			const { return GetField(0, 10); }
-	OP_REG RRR()		const { return GetField(0, 3); }
-	OP_REG RI7()		const { return GetField(0, 10); }
-	OP_REG RI10()		const { return GetField(0, 7); }
-	OP_REG RI16()		const { return GetField(0, 8); }
-	OP_REG RI18()		const { return GetField(0, 6); }
+	OP_uIMM RR()		const { return GetField(0, 10); }
+	OP_uIMM RRR()		const { return GetField(0, 3); }
+	OP_uIMM RI7()		const { return GetField(0, 10); }
+	OP_uIMM RI10()		const { return GetField(0, 7); }
+	OP_uIMM RI16()		const { return GetField(0, 8); }
+	OP_uIMM RI18()		const { return GetField(0, 6); }
 	
 	__forceinline u32 GetField(const u32 p) const
 	{
@@ -94,110 +94,68 @@ public:
 	{
 		m_code = code;
 
+		switch(RR()) //& RI7 //0 - 10
 		{
-			const u32 opcode = GetField(0, 10);
-			switch(opcode)
-			{
-			ADD_OPCODE(STOP,(GetField(18, 31)));
-			ADD_OPCODE(LNOP,());
-			ADD_OPCODE(RDCH,(RT(), RA()));
-			ADD_OPCODE(RCHCNT,(RT(), RA()));
-			ADD_OPCODE(SF,(RT(), RA(), RB()));
-			ADD_OPCODE(SHLI,(RT(), RA(), i7()));
-			ADD_OPCODE(A,(RT(), RA(), RB()));
-			ADD_OPCODE(SPU_AND,(RT(), RA(), RB()));
-			ADD_OPCODE(LQX,(RT(), RA(), RB()));
-			ADD_OPCODE(WRCH,(RA(), RT()));
-			ADD_OPCODE(STQX,(RT(), RA(), RB()));
-			ADD_OPCODE(BI,(RA()));
-			ADD_OPCODE(BISL,(RT(), RA()));
-			ADD_OPCODE(HBR,(GetField(11), RO(), RA()));
-			ADD_OPCODE(CWX,(RT(), RA(), RB()));
-			ADD_OPCODE(ROTQBY,(RT(), RA(), RB()));
-			ADD_OPCODE(ROTQBYI,(RT(), RA(), i7()));
-			ADD_OPCODE(SHLQBYI,(RT(), RA(), i7()));
-			ADD_OPCODE(SPU_NOP,(RT()));
-			ADD_OPCODE(CLGT,(RT(), RA(), RB()));
-			default: break;
-			}
+		ADD_OPCODE(STOP,(GetField(18, 31)));
+		ADD_OPCODE(LNOP,());
+		ADD_OPCODE(RDCH,(RT(), RA()));
+		ADD_OPCODE(RCHCNT,(RT(), RA()));
+		ADD_OPCODE(SF,(RT(), RA(), RB()));
+		ADD_OPCODE(SHLI,(RT(), RA(), i7()));
+		ADD_OPCODE(A,(RT(), RA(), RB()));
+		ADD_OPCODE(SPU_AND,(RT(), RA(), RB()));
+		ADD_OPCODE(LQX,(RT(), RA(), RB()));
+		ADD_OPCODE(WRCH,(RA(), RT()));
+		ADD_OPCODE(STQX,(RT(), RA(), RB()));
+		ADD_OPCODE(BI,(RA()));
+		ADD_OPCODE(BISL,(RT(), RA()));
+		ADD_OPCODE(HBR,(GetField(11), RO(), RA()));
+		ADD_OPCODE(CWX,(RT(), RA(), RB()));
+		ADD_OPCODE(ROTQBY,(RT(), RA(), RB()));
+		ADD_OPCODE(ROTQBYI,(RT(), RA(), i7()));
+		ADD_OPCODE(SHLQBYI,(RT(), RA(), i7()));
+		ADD_OPCODE(SPU_NOP,(RT()));
+		ADD_OPCODE(CLGT,(RT(), RA(), RB()));
 		}
 
+		switch(RI16()) //0 - 8
 		{
-			const u32 opcode = GetField(0, 8);
-			switch(opcode)
-			{
-			ADD_OPCODE(BRZ,(RT(), exts16(i16())));
-			ADD_OPCODE(BRHZ,(RT(), exts16(i16())));
-			ADD_OPCODE(BRHNZ,(RT(), exts16(i16())));
-			ADD_OPCODE(STQR,(RT(), i16()));
-			ADD_OPCODE(BR,(exts16(i16())));
-			ADD_OPCODE(FSMBI,(RT(), i16()));
-			ADD_OPCODE(BRSL,(RT(), exts16(i16())));
-			ADD_OPCODE(IL,(RT(), exts16(i16())));
-			ADD_OPCODE(LQR,(RT(), exts16(i16())));
-			default: break;
-			}
+		ADD_OPCODE(BRZ,(RT(), exts16(i16())));
+		ADD_OPCODE(BRHZ,(RT(), exts16(i16())));
+		ADD_OPCODE(BRHNZ,(RT(), exts16(i16())));
+		ADD_OPCODE(STQR,(RT(), i16()));
+		ADD_OPCODE(BR,(exts16(i16())));
+		ADD_OPCODE(FSMBI,(RT(), i16()));
+		ADD_OPCODE(BRSL,(RT(), exts16(i16())));
+		ADD_OPCODE(IL,(RT(), exts16(i16())));
+		ADD_OPCODE(LQR,(RT(), exts16(i16())));
 		}
 
+		switch(RI10()) //0 - 7
 		{
-			const u32 opcode = GetField(0, 7);
-			switch(opcode)
-			{
-			ADD_OPCODE(SPU_ORI,(RT(), RA(), exts10(i10())));
-			ADD_OPCODE(AI,(RT(), RA(), exts10(i10())));
-			ADD_OPCODE(AHI,(RT(), RA(), exts10(i10())));
-			ADD_OPCODE(STQD,(RT(), exts10(i10()) << 4, RA()));
-			ADD_OPCODE(LQD,(RT(), exts10(i10()) << 4, RA()));
-			ADD_OPCODE(CLGTI,(RT(), RA(), i10()));
-			ADD_OPCODE(CLGTHI,(RT(), RA(), i10()));
-			ADD_OPCODE(CEQI,(RT(), RA(), i10()));
-			default: break;
-			}
+		ADD_OPCODE(SPU_ORI,(RT(), RA(), exts10(i10())));
+		ADD_OPCODE(AI,(RT(), RA(), exts10(i10())));
+		ADD_OPCODE(AHI,(RT(), RA(), exts10(i10())));
+		ADD_OPCODE(STQD,(RT(), exts10(i10()) << 4, RA()));
+		ADD_OPCODE(LQD,(RT(), exts10(i10()) << 4, RA()));
+		ADD_OPCODE(CLGTI,(RT(), RA(), i10()));
+		ADD_OPCODE(CLGTHI,(RT(), RA(), i10()));
+		ADD_OPCODE(CEQI,(RT(), RA(), i10()));
 		}
 
+		switch(RI18()) //0 - 6
 		{
-			const u32 opcode = GetField(0, 6);
-			switch(opcode)
-			{
-			ADD_OPCODE(HBRR,(RO(), exts16(i16())));
-			ADD_OPCODE(ILA,(RT(), i18()));
-			default: break;
-			}
+		ADD_OPCODE(HBRR,(RO(), exts16(i16())));
+		ADD_OPCODE(ILA,(RT(), i18()));
 		}
 
+		switch(RRR()) //0 - 3
 		{
-			const u32 opcode = GetField(0, 3);
-			switch(opcode)
-			{
-			ADD_OPCODE(SELB,(RC(), RA(), RB(), RT()));
-			ADD_OPCODE(SHUFB,(RC(), RA(), RB(), RT()));
-			default: break;
-			}
+		ADD_OPCODE(SELB,(RC(), RA(), RB(), RT()));
+		ADD_OPCODE(SHUFB,(RC(), RA(), RB(), RT()));
 		}
 		
 		m_op.UNK(m_code, 0, 0);
-/*
-		const u32 opcode = GetField(0, 3);
-
-		u32 temp;
-		switch(opcode)
-		{
-		START_OPCODES_GROUP(SPU_G_01, RI10)
-			ADD_OPCODE(HBRR,(RO(), exts16(i16())));
-			ADD_OPCODE(AHI,(RT(), RA(), exts10(i10())));
-		END_OPCODES_GROUP(G_01);
-
-		START_OPCODES_GROUP(SPU_G_03, RI16)
-			ADD_OPCODE(BR,(exts16(i16())));
-		END_OPCODES_GROUP(G_03);
-
-		START_OPCODES_GROUP(SPU_G_04, RI18)
-			ADD_OPCODE(ILA,(RT(), i18()));
-		END_OPCODES_GROUP(G_04);
-		//ADD_OPCODE(AI,(RT(), RA(), simm16()));
-		default: m_op.UNK(m_code, opcode, opcode); break;
-		}
-*/
 	}
 };
 

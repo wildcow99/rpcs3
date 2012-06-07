@@ -1,5 +1,5 @@
 #pragma once
-#include "Thread.h"
+#include "Utilites/Thread.h"
 #include "Emu/Memory/MemoryBlock.h"
 //#include "Emu/System.h"
 
@@ -24,13 +24,14 @@ protected:
 	wxString m_name;
 	bool m_joinable;
 	bool m_joining;
+	Array<u64> argv_addr;
 
 public:
 	u64 stack_size;
 	u64 stack_addr;
 	u64 stack_point;
 
-	virtual void _InitStack()=0;
+	virtual void InitRegs()=0;
 
 	virtual void InitStack();
 	virtual void CloseStack();
@@ -46,13 +47,21 @@ public:
 
 	u64 GetPrio() const { return m_prio; }
 	wxString GetName() const { return m_name; }
-	wxString GetFName() const { return wxString::Format("%s[%d] Thread: %s", (isSPU ? "SPU" : "PPU"), m_id, GetName()); }
+	wxString GetFName() const
+	{
+		return 
+			wxString::Format("%s[%d] Thread%s", 
+				(isSPU ? "SPU" : "PPU"),
+				m_id,
+				(GetName().IsEmpty() ? "" : " (" + GetName() + ")")
+			);
+	}
 
 public:
 	bool isBranch;
 
-	u32 PC;
-	u32 nPC;
+	u64 PC;
+	u64 nPC;
 	u64 cycle;
 
 protected:
@@ -63,8 +72,8 @@ public:
 	void NextPc();
 	void NextBranchPc();
 	void PrevPc();
-	void SetBranch(const u32 pc);
-	void SetPc(const u32 pc);
+	void SetBranch(const u64 pc);
+	void SetPc(const u64 pc);
 
 	void SetError(const u32 error);
 
@@ -95,6 +104,8 @@ public:
 	virtual wxString RegsToString() { return wxEmptyString; }
 
 	virtual void Exec();
+
+	virtual void AddArgv(const wxString& arg) {}
 	
 protected:
 	virtual void DoReset()=0;

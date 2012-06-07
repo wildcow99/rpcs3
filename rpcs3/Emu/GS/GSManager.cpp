@@ -1,9 +1,12 @@
 #include "stdafx.h"
 #include "GSManager.h"
 #include "Null/NullGSRender.h"
+#include "GL/GLGSRender.h"
 
-//#pragma comment(lib, "opengl32.lib")
-//#pragma comment(lib, "gl.lib")
+BEGIN_EVENT_TABLE(GSFrame, wxFrame)
+    EVT_PAINT(GSFrame::OnPaint)
+	EVT_SIZE(GSFrame::OnSize)
+END_EVENT_TABLE()
 
 GSManager::GSManager() : m_render(NULL)
 {
@@ -16,14 +19,18 @@ void GSManager::Init()
 	{
 	default:
 	case 0: m_render = new NullGSRender(); break;
+	case 1: m_render = new GLGSRender(); break;
 	}
-	m_render = new NullGSRender();
-	m_render->Init(GetInfo().outresolution.width, GetInfo().outresolution.height);
+	//m_render->Init(GetInfo().outresolution.width, GetInfo().outresolution.height);
 }
 
 void GSManager::Close()
 {
-	if(m_render) m_render->Close();
+	if(m_render)
+	{
+		m_render->Close();
+		//free(m_render);
+	}
 	m_render = NULL;
 }
 

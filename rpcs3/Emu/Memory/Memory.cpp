@@ -37,7 +37,7 @@ void MemoryBlock::Delete()
 	Init();
 }
 
-u32 MemoryBlock::FixAddr(const u64 addr) const
+u64 MemoryBlock::FixAddr(const u64 addr) const
 {
 	return addr - GetStartAddr();
 }
@@ -72,13 +72,14 @@ u8* MemoryBlock::GetMemFromAddr(const u64 addr)
 	return &mem[FixAddr(addr)];
 }
 
-void MemoryBlock::SetRange(const u64 start, const u32 size)
+MemoryBlock* MemoryBlock::SetRange(const u64 start, const u32 size)
 {
 	range_start = start;
 	range_size = size;
 	range_end = start + size - 1;
 
 	InitMemory();
+	return this;
 }
 
 bool MemoryBlock::IsMyAddress(const u64 addr)
@@ -266,7 +267,7 @@ bool NullMemoryBlock::Read32(const u64 addr, u32* WXUNUSED(value))
 		return false;
 	}
 	ConLog.Error("Read32 from null block: [%08llx]", addr);
-	//ConLog.Error("pc: 0x%x", (*(PPCThread*)Emu.GetCPU().GetIDs().GetIDData(1).m_data).PC);
+	//ConLog.Error("pc: 0x%llx", (*(PPCThread*)Emu.GetCPU().GetIDs().GetIDData(1).m_data).PC);
 	Emu.Pause();
 	return false;
 }
