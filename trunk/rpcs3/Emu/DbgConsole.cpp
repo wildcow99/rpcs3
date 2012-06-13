@@ -27,11 +27,11 @@ DbgConsole::~DbgConsole()
 
 void DbgConsole::Write(int ch, const wxString& text)
 {
-	if(StepThread::IsExit() || IsBeingDeleted()) return;
+	if(!StepThread::IsAlive() || IsBeingDeleted()) return;
 
 	while(m_packets.GetCount() > 50)
 	{
-		if(StepThread::IsExit() || IsBeingDeleted()) return;
+		if(!StepThread::IsAlive() || IsBeingDeleted()) return;
 		Sleep(1);
 	}
 	m_packets.Add(new DbgPacket(ch, text));
@@ -54,13 +54,11 @@ void DbgConsole::Step()
 	m_console->Freeze();
 	while(m_packets.GetCount())
 	{
-		StepThread::SetCancelState(false);
 		m_console->SetDefaultStyle(m_packets[0].m_ch == 1 ? *m_color_red : *m_color_white);
 		m_console->SetInsertionPointEnd();
 		m_console->WriteText(m_packets[0].m_text);
+		m_packets[0].Clear();
 		m_packets.RemoveAt(0);
-		StepThread::SetCancelState(true);
-		ThreadAdv::TestCancel();
 		Sleep(1);
 	}
 	m_console->Thaw();

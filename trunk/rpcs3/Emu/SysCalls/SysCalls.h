@@ -4,7 +4,7 @@
 #include "Utilites/IdManager.h"
 #include "ErrorCodes.h"
 
-#define SYSCALLS_DEBUG
+//#define SYSCALLS_DEBUG
 
 class SysCallBase
 {
@@ -267,9 +267,9 @@ public:
 			case 98: return Lv2LwmutexTrylock(CPU);
 			case 99: return Lv2LwmutexUnlock(CPU);
 			//time
-			case 141: /*Sleep(Emu.GetCPU().GetThreads().GetCount() > 1 ? 1 : SC_ARGS_1);*/ Sleep(1); return 0;
-			case 146: ConLog.Write("sys_time_get_system_time()"); return CPU.TB / (timebase_frequency / 1000000);
-			case 147: ConLog.Write("sys_get_timebase_frequency()"); return timebase_frequency; //get timebase frequency
+			case 141: Sleep(Emu.GetCPU().GetThreads().GetCount() > 1 ? 1 : /*SC_ARGS_1 / 1000*/1); return 0;
+			case 146: /*ConLog.Write("sys_time_get_system_time()");*/ return CPU.TB /*/ (timebase_frequency / 1000000)*/;
+			case 147: /*ConLog.Write("sys_time_get_timebase_frequency()");*/ return timebase_frequency; //get timebase frequency
 			//memory
 			case 324: return sys_memory_container_create(SC_ARGS_2);
 			case 325: return sys_memory_container_destroy(SC_ARGS_1);

@@ -11,7 +11,7 @@ struct DbgPacket
 	{
 	}
 
-	~DbgPacket()
+	void Clear()
 	{
 		m_text.Clear();
 	}

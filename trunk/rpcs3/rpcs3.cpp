@@ -10,7 +10,7 @@ Rpcs3App* TheApp;
 bool Rpcs3App::OnInit()
 {
 	TheApp = this;
-	SetAppName("rpcs3");
+	SetAppName(_PRGNAME_);
 	wxInitAllImageHandlers();
 
 	Ini.Load();
@@ -27,10 +27,10 @@ bool Rpcs3App::OnInit()
 
 void Rpcs3App::Exit()
 {
+	if(ConLogFrame && ConLogFrame->IsShown()) ConLogFrame->Close();
+
 	Ini.Save();
 	Emu.Stop();
-
-	if(ConLogFrame && ConLogFrame->IsShown()) ConLogFrame->Close();
 
 	wxApp::Exit();
 }

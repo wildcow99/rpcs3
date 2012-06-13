@@ -183,5 +183,5 @@ static void safe_realloc(T* ptr, uint new_size)
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 
-#define _PRGNAME_ "rpcs3"
-#define _PRGVER_ "0.0.0.1 Beta"
+#define _PRGNAME_ "RPCS3"
+#define _PRGVER_ "0.0.0.2"

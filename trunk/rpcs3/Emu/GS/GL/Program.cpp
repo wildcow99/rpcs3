@@ -2,8 +2,18 @@
 #include "Program.h"
 #include "GLGSRender.h"
 
+Program::Program() : id(0)
+{
+}
+
+bool Program::IsCreated() const
+{
+	return id > 0;
+}
+
 void Program::Create(const u32 vp, const u32 fp)
 {
+	if(IsCreated()) Delete();
 	id = glCreateProgram();
 
 	glAttachShader(id, vp);
@@ -37,14 +47,14 @@ void Program::Create(const u32 vp, const u32 fp)
 
 		if (bufLength)
 		{
-			char* buf = new char[bufLength];
-			memset(buf, 0, bufLength);
+			char* buf = new char[bufLength+1];
+			memset(buf, 0, bufLength+1);
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
 			ConLog.Error("Could not link program: %s", buf);
 			free(buf);
 		}
 	}
-	else ConLog.Write("program linked!");
+	//else ConLog.Write("program linked!");
 
 	glGetProgramiv(id, GL_VALIDATE_STATUS, &linkStatus);
 	if(linkStatus != GL_TRUE)
@@ -77,5 +87,7 @@ void Program::SetTex(u32 index)
 
 void Program::Delete()
 {
+	if(!IsCreated()) return;
 	glDeleteProgram(id);
+	id = 0;
 }

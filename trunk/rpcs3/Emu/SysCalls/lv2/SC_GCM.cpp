@@ -6,26 +6,28 @@ SysCallBase sc_gcm("cellGcm");
 
 CellGcmConfig current_config;
 CellGcmContextData current_context;
-
-struct gcmInfo
-{
-	u32 config_addr;
-	u32 context_addr;
-	u32 control_addr;
-} gcm_info;
+gcmInfo gcm_info;
 
 int cellGcmInit(const u32 context_addr, const u32 cmdSize, const u32 ioSize, const u32 ioAddress)
 {
 	sc_gcm.Log("cellGcmInit(context_addr=0x%x,cmdSize=0x%x,ioSize=0x%x,ioAddress=0x%x)", context_addr, cmdSize, ioSize, ioAddress);
-	current_config.ioSize = re(ioSize);
-	current_config.ioAddress = re(ioAddress);
-	current_config.localSize = current_config.ioSize;
-	current_config.localAddress = current_config.ioAddress;
-	current_config.memoryFrequency = 650000000;
-	current_config.memoryFrequency = 500000000;
+
+	const u32 local_addr = Memory.Alloc(cmdSize, 0x100);
+
+	current_config.ioSize = re32(ioSize);
+	current_config.ioAddress = re32(ioAddress);
+	current_config.localSize = re32(cmdSize);
+	current_config.localAddress = re32(local_addr);
+	current_config.memoryFrequency = re32(650000000);
+	current_config.memoryFrequency = re32(500000000);
 
 	gcm_info.context_addr = Memory.VideoMem.GetStartAddr() + 4;
 
+	current_context.begin = re(ioAddress);
+	current_context.end = re(ioAddress + ioSize);
+	current_context.current = current_context.begin;
+
+	/*
 	if(wxFile::Access("gcm.dump", wxFile::read))
 	{
 		wxFile f("gcm.dump");
@@ -42,11 +44,11 @@ int cellGcmInit(const u32 context_addr, const u32 cmdSize, const u32 ioSize, con
 	}
 	else
 	{
-		current_context.begin = re32(ioAddress);
-		current_context.end = re32(ioAddress + ioSize);
+		current_context.begin = addr;
+		current_context.end = addr + re(ioSize);
 		current_context.current = current_context.begin;
 	}
-
+	*/
 	current_context.callback = re32(gcm_info.context_addr + sizeof(current_context));
 	Memory.WriteData(gcm_info.context_addr, current_context);
 
@@ -56,11 +58,11 @@ int cellGcmInit(const u32 context_addr, const u32 cmdSize, const u32 ioSize, con
 	gcm_info.control_addr = re32(current_context.callback) + sizeof(current_context.callback);
 
 	CellGcmControl& ctrl = *(CellGcmControl*)Memory.GetMemFromAddr(gcm_info.control_addr);
-	ctrl.put = re(current_context.current) - ioAddress;
-	ctrl.get = ctrl.put;
+	ctrl.put = 0;
+	ctrl.get = 0;
 	ctrl.ref = -1;
 
-	Emu.GetGSManager().GetRender().Init(ioAddress, gcm_info.control_addr);
+	Emu.GetGSManager().GetRender().Init(ioAddress, ioSize, gcm_info.control_addr, local_addr);
 
 	return 0;
 }
@@ -98,7 +100,6 @@ int cellGcmGetControlRegister()
 {
 	sc_gcm.Log("cellGcmGetControlRegister()");
 
-	//Emu.Pause();
 	return gcm_info.control_addr;
 }
 
@@ -106,6 +107,8 @@ int cellGcmFlush(const u32 ctx, const u8 id)
 {
 	sc_gcm.Log("cellGcmFlush(ctx=0x%x, id=0x%x)", ctx, id);
 	if(id > 1) return CELL_EINVAL;
+
+	Emu.GetGSManager().GetRender().Draw();
 
 	return 0;
 }
@@ -126,6 +129,6 @@ int cellGcmGetFlipStatus()
 
 int cellGcmResetFlipStatus()
 {
-	Emu.GetGSManager().GetRender().m_flip_status = -1;
+	Emu.GetGSManager().GetRender().m_flip_status = 1;
 	return 0;
 }

@@ -850,21 +850,21 @@ private:
 	{
 		DisAsm_R2_IMM("stmw", rs, ra, d);
 	}
-	virtual void LFS(OP_REG frt, OP_REG ra, OP_sIMM d)
+	virtual void LFS(OP_REG frd, OP_REG ra, OP_sIMM d)
 	{
-		DisAsm_F1_IMM_R1("lfs", frt, d, ra);
+		DisAsm_F1_IMM_R1("lfs", frd, d, ra);
 	}
-	virtual void LFSU(OP_REG frt, OP_REG ra, OP_sIMM ds)
+	virtual void LFSU(OP_REG frd, OP_REG ra, OP_sIMM ds)
 	{
-		DisAsm_F1_IMM_R1("lfsu", frt, ds, ra);
+		DisAsm_F1_IMM_R1("lfsu", frd, ds, ra);
 	}
-	virtual void LFD(OP_REG frt, OP_REG ra, OP_sIMM d)
+	virtual void LFD(OP_REG frd, OP_REG ra, OP_sIMM d)
 	{
-		DisAsm_F1_IMM_R1("lfd", frt, d, ra);
+		DisAsm_F1_IMM_R1("lfd", frd, d, ra);
 	}
-	virtual void LFDU(OP_REG frt, OP_REG ra, OP_sIMM ds)
+	virtual void LFDU(OP_REG frd, OP_REG ra, OP_sIMM ds)
 	{
-		DisAsm_F1_IMM_R1("lfdu", frt, ds, ra);
+		DisAsm_F1_IMM_R1("lfdu", frd, ds, ra);
 	}
 	virtual void STFS(OP_REG frs, OP_REG ra, OP_sIMM d)
 	{
@@ -895,45 +895,45 @@ private:
 	END_OPCODES_GROUP(G_3a);
 
 	START_OPCODES_GROUP(G_3b)
-		virtual void FDIVS(OP_REG frt, OP_REG fra, OP_REG frb, bool rc)
+		virtual void FDIVS(OP_REG frd, OP_REG fra, OP_REG frb, bool rc)
 		{
-			DisAsm_F3_RC("fdivs", frt, fra, frb, rc);
+			DisAsm_F3_RC("fdivs", frd, fra, frb, rc);
 		}
-		virtual void FSUBS(OP_REG frt, OP_REG fra, OP_REG frb, bool rc)
+		virtual void FSUBS(OP_REG frd, OP_REG fra, OP_REG frb, bool rc)
 		{
-			DisAsm_F3_RC("fsubs", frt, fra, frb, rc);
+			DisAsm_F3_RC("fsubs", frd, fra, frb, rc);
 		}
-		virtual void FADDS(OP_REG frt, OP_REG fra, OP_REG frb, bool rc)
+		virtual void FADDS(OP_REG frd, OP_REG fra, OP_REG frb, bool rc)
 		{
-			DisAsm_F3_RC("fadds", frt, fra, frb, rc);
+			DisAsm_F3_RC("fadds", frd, fra, frb, rc);
 		}
-		virtual void FSQRTS(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FSQRTS(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fsqrts", frt, frb, rc);
+			DisAsm_F2_RC("fsqrts", frd, frb, rc);
 		}
-		virtual void FRES(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FRES(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fres", frt, frb, rc);
+			DisAsm_F2_RC("fres", frd, frb, rc);
 		}
-		virtual void FMULS(OP_REG frt, OP_REG fra, OP_REG frc, bool rc)
+		virtual void FMULS(OP_REG frd, OP_REG fra, OP_REG frc, bool rc)
 		{
-			DisAsm_F3_RC("fmuls", frt, fra, frc, rc);
+			DisAsm_F3_RC("fmuls", frd, fra, frc, rc);
 		}
-		virtual void FMADDS(OP_REG frt, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
+		virtual void FMADDS(OP_REG frd, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
 		{
-			DisAsm_F4_RC("fmadds", frt, fra, frc, frb, rc);
+			DisAsm_F4_RC("fmadds", frd, fra, frc, frb, rc);
 		}
-		virtual void FMSUBS(OP_REG frt, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
+		virtual void FMSUBS(OP_REG frd, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
 		{
-			DisAsm_F4_RC("fmsubs", frt, fra, frc, frb, rc);
+			DisAsm_F4_RC("fmsubs", frd, fra, frc, frb, rc);
 		}
-		virtual void FNMSUBS(OP_REG frt, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
+		virtual void FNMSUBS(OP_REG frd, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
 		{
-			DisAsm_F4_RC("fnmsubs", frt, fra, frc, frb, rc);
+			DisAsm_F4_RC("fnmsubs", frd, fra, frc, frb, rc);
 		}
-		virtual void FNMADDS(OP_REG frt, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
+		virtual void FNMADDS(OP_REG frd, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
 		{
-			DisAsm_F4_RC("fnmadds", frt, fra, frc, frb, rc);
+			DisAsm_F4_RC("fnmadds", frd, fra, frc, frb, rc);
 		}
 	END_OPCODES_GROUP(G_3b);
 	
@@ -965,9 +965,9 @@ private:
 		{
 			DisAsm_F2_RC("mtfsfi", crfd, i, rc);
 		}
-		virtual void MFFS(OP_REG frt, bool rc)
+		virtual void MFFS(OP_REG frd, bool rc)
 		{
-			DisAsm_F1_RC("mffs", frt, rc);
+			DisAsm_F1_RC("mffs", frd, rc);
 		}
 		virtual void MTFSF(OP_REG flm, OP_REG frb, bool rc)
 		{
@@ -977,93 +977,93 @@ private:
 		{
 			DisAsm_CR1_F2("fcmpu", crfd, fra, frb);
 		}
-		virtual void FRSP(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FRSP(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("frsp", frt, frb, rc);
+			DisAsm_F2_RC("frsp", frd, frb, rc);
 		}
-		virtual void FCTIW(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FCTIW(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fctiw", frt, frb, rc);
+			DisAsm_F2_RC("fctiw", frd, frb, rc);
 		}
-		virtual void FCTIWZ(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FCTIWZ(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fctiwz", frt, frb, rc);
+			DisAsm_F2_RC("fctiwz", frd, frb, rc);
 		}
-		virtual void FDIV(OP_REG frt, OP_REG fra, OP_REG frb, bool rc)
+		virtual void FDIV(OP_REG frd, OP_REG fra, OP_REG frb, bool rc)
 		{
-			DisAsm_F3_RC("fdiv", frt, fra, frb, rc);
+			DisAsm_F3_RC("fdiv", frd, fra, frb, rc);
 		}
-		virtual void FSUB(OP_REG frt, OP_REG fra, OP_REG frb, bool rc)
+		virtual void FSUB(OP_REG frd, OP_REG fra, OP_REG frb, bool rc)
 		{
-			DisAsm_F3_RC("fsub", frt, fra, frb, rc);
+			DisAsm_F3_RC("fsub", frd, fra, frb, rc);
 		}
-		virtual void FADD(OP_REG frt, OP_REG fra, OP_REG frb, bool rc)
+		virtual void FADD(OP_REG frd, OP_REG fra, OP_REG frb, bool rc)
 		{
-			DisAsm_F3_RC("fadd", frt, fra, frb, rc);
+			DisAsm_F3_RC("fadd", frd, fra, frb, rc);
 		}
-		virtual void FSQRT(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FSQRT(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fsqrt", frt, frb, rc);
+			DisAsm_F2_RC("fsqrt", frd, frb, rc);
 		}
-		virtual void FSEL(OP_REG frt, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
+		virtual void FSEL(OP_REG frd, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
 		{
-			DisAsm_F4_RC("fsel", frt, fra, frc, frb, rc);
+			DisAsm_F4_RC("fsel", frd, fra, frc, frb, rc);
 		}
-		virtual void FMUL(OP_REG frt, OP_REG fra, OP_REG frc, bool rc)
+		virtual void FMUL(OP_REG frd, OP_REG fra, OP_REG frc, bool rc)
 		{
-			DisAsm_F3_RC("fmul", frt, fra, frc, rc);
+			DisAsm_F3_RC("fmul", frd, fra, frc, rc);
 		}
-		virtual void FRSQRTE(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FRSQRTE(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("frsqrte", frt, frb, rc);
+			DisAsm_F2_RC("frsqrte", frd, frb, rc);
 		}
-		virtual void FMSUB(OP_REG frt, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
+		virtual void FMSUB(OP_REG frd, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
 		{
-			DisAsm_F4_RC("fmsub", frt, fra, frc, frb, rc);
+			DisAsm_F4_RC("fmsub", frd, fra, frc, frb, rc);
 		}
-		virtual void FMADD(OP_REG frt, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
+		virtual void FMADD(OP_REG frd, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
 		{
-			DisAsm_F4_RC("fmadd", frt, fra, frc, frb, rc);
+			DisAsm_F4_RC("fmadd", frd, fra, frc, frb, rc);
 		}
-		virtual void FNMSUB(OP_REG frt, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
+		virtual void FNMSUB(OP_REG frd, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
 		{
-			DisAsm_F4_RC("fnmsub", frt, fra, frc, frb, rc);
+			DisAsm_F4_RC("fnmsub", frd, fra, frc, frb, rc);
 		}
-		virtual void FNMADD(OP_REG frt, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
+		virtual void FNMADD(OP_REG frd, OP_REG fra, OP_REG frc, OP_REG frb, bool rc)
 		{
-			DisAsm_F4_RC("fnmadd", frt, fra, frc, frb, rc);
+			DisAsm_F4_RC("fnmadd", frd, fra, frc, frb, rc);
 		}
 		virtual void FCMPO(OP_REG crfd, OP_REG fra, OP_REG frb)
 		{
 			DisAsm_F3("fcmpo", crfd, fra, frb);
 		}
-		virtual void FNEG(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FNEG(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fneg", frt, frb, rc);
+			DisAsm_F2_RC("fneg", frd, frb, rc);
 		}
-		virtual void FMR(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FMR(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fmr", frt, frb, rc);
+			DisAsm_F2_RC("fmr", frd, frb, rc);
 		}
-		virtual void FNABS(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FNABS(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fnabs", frt, frb, rc);
+			DisAsm_F2_RC("fnabs", frd, frb, rc);
 		}
 		virtual void FABS(OP_REG frd, OP_REG frb, bool rc)
 		{
 			DisAsm_F2_RC("fabs", frd, frb, rc);
 		}
-		virtual void FCTID(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FCTID(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fctid", frt, frb, rc);
+			DisAsm_F2_RC("fctid", frd, frb, rc);
 		}
-		virtual void FCTIDZ(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FCTIDZ(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fctidz", frt, frb, rc);
+			DisAsm_F2_RC("fctidz", frd, frb, rc);
 		}
-		virtual void FCFID(OP_REG frt, OP_REG frb, bool rc)
+		virtual void FCFID(OP_REG frd, OP_REG frb, bool rc)
 		{
-			DisAsm_F2_RC("fcfid", frt, frb, rc);
+			DisAsm_F2_RC("fcfid", frd, frb, rc);
 		}
 	END_OPCODES_GROUP(G_3f);
 

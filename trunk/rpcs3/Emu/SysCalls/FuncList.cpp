@@ -1887,7 +1887,7 @@ u64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x15b0b0cd: FUNC_LOG_ERROR("TODO: cellVideoOutGetConfiguration");
 	case 0x15df71ed: FUNC_LOG_ERROR("TODO: cellSysutilAvcLoadAsync");
 	case 0x17dbe8b3: FUNC_LOG_ERROR("TODO: cellSysutilAvcJoinRequest");
-	case 0x189a74da: FUNC_LOG_ERROR("TODO: cellSysutilCheckCallback");
+	case 0x189a74da: return 0; //FUNC_LOG_ERROR("TODO: cellSysutilCheckCallback");
 	case 0x1a91874b: FUNC_LOG_ERROR("TODO: cellWebBrowserConfigSetFullScreen2");
 	case 0x1d99c3ee: FUNC_LOG_ERROR("TODO: cellOskDialogGetInputText");
 	case 0x1dfbfdd6: FUNC_LOG_ERROR("TODO: cellSaveDataListLoad2");

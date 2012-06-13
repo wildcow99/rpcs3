@@ -48,6 +48,7 @@ struct Elf64_Ehdr
 
 	void Show()
 	{
+#ifdef LOADER_DEBUG
 		ConLog.Write("Magic: %08x",								e_magic);
 		ConLog.Write("Class: %s",								"ELF64");
 		ConLog.Write("Data: %s",								Ehdr_DataToString(e_data));
@@ -67,6 +68,7 @@ struct Elf64_Ehdr
 		ConLog.Write("Size of section headers: %d",				e_shentsize);
 		ConLog.Write("Number of section headers: %d",			e_shnum);
 		ConLog.Write("Section header string table index: %d",	e_shstrndx);
+#endif
 	}
 
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
@@ -102,6 +104,7 @@ struct Elf64_Shdr
 
 	void Show()
 	{
+#ifdef LOADER_DEBUG
 		ConLog.Write("Name offset: %x",		sh_name);
 		ConLog.Write("Type: %d",			sh_type);
 		ConLog.Write("Addr: %llx",			sh_addr);
@@ -112,6 +115,7 @@ struct Elf64_Shdr
 		ConLog.Write("Link: %x",			sh_link);
 		ConLog.Write("Info: %x",			sh_info);
 		ConLog.Write("Address align: %llx",	sh_addralign);
+#endif
 	}
 };
 
@@ -140,6 +144,7 @@ struct Elf64_Phdr
 
 	void Show()
 	{
+#ifdef LOADER_DEBUG
 		ConLog.Write("Type: %s",					Phdr_TypeToString(p_type));
 		ConLog.Write("Offset: 0x%08llx",			p_offset);
 		ConLog.Write("Virtual address: 0x%08llx",	p_vaddr);
@@ -148,6 +153,7 @@ struct Elf64_Phdr
 		ConLog.Write("Memory size: 0x%08llx",		p_memsz);
 		ConLog.Write("Flags: %s",					Phdr_FlagsToString(p_flags));
 		ConLog.Write("Align: 0x%llx",				p_align);
+#endif
 	}
 };
 

@@ -25,6 +25,13 @@ struct CellGcmContextData
 	u32 callback;
 };
 
+struct gcmInfo
+{
+	u32 config_addr;
+	u32 context_addr;
+	u32 control_addr;
+};
+
 enum
 {
 	CELL_GCM_LOCATION_LOCAL,

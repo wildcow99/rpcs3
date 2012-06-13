@@ -125,9 +125,11 @@ bool ELF32Loader::LoadShdrInfo()
 
 bool ELF32Loader::LoadEhdrData()
 {
+#ifdef LOADER_DEBUG
 	ConLog.SkipLn();
 	ehdr.Show();
 	ConLog.SkipLn();
+#endif
 	return true;
 }
 
@@ -151,8 +153,9 @@ bool ELF32Loader::LoadPhdrData()
 			elf32_f.Seek(phdr_arr[i].p_offset);
 			elf32_f.Read(Memory.GetMemFromAddr(phdr_arr[i].p_paddr), phdr_arr[i].p_filesz);
 		}
-
+#ifdef LOADER_DEBUG
 		ConLog.SkipLn();
+#endif
 	}
 
 	return true;
@@ -166,10 +169,10 @@ bool ELF32Loader::LoadShdrData()
 	{
 		Elf32_Shdr& shdr = shdr_arr[i];
 		if(i < shdr_name_arr.GetCount()) ConLog.Write("Name: %s", shdr_name_arr[i]);
-
+#ifdef LOADER_DEBUG
 		shdr.Show();
 		ConLog.SkipLn();
-
+#endif
 		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;
 
 		const s64 addr = shdr.sh_addr;

@@ -147,10 +147,11 @@ bool ELF64Loader::LoadShdrInfo()
 
 bool ELF64Loader::LoadEhdrData()
 {
+#ifdef LOADER_DEBUG
 	ConLog.SkipLn();
 	ehdr.Show();
 	ConLog.SkipLn();
-
+#endif
 	return true;
 }
 
@@ -181,8 +182,9 @@ bool ELF64Loader::LoadPhdrData()
 				Emu.SetTLSData(phdr_arr[i].p_paddr, phdr_arr[i].p_filesz, phdr_arr[i].p_memsz);
 			break;
 		}
-
+#ifdef LOADER_DEBUG
 		ConLog.SkipLn();
+#endif
 	}
 
 	return true;
@@ -202,7 +204,10 @@ bool ELF64Loader::LoadShdrData()
 		if(i < shdr_name_arr.GetCount())
 		{
 			const wxString& name = shdr_name_arr[i];
+
+#ifdef LOADER_DEBUG
 			ConLog.Write("Name: %s", shdr_name_arr[i]);
+#endif
 
 			if(!name.CmpNoCase(".sys_proc_param"))
 			{
@@ -219,9 +224,10 @@ bool ELF64Loader::LoadShdrData()
 			//TODO
 		}
 
+#ifdef LOADER_DEBUG
 		shdr.Show();
 		ConLog.SkipLn();
-	
+#endif
 		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;
 
 		const s64 addr = shdr.sh_addr;
@@ -260,10 +266,11 @@ bool ELF64Loader::LoadShdrData()
 		Elf64_Shdr& shdr = *proc_param_shdr;
 		const sys_process_param& proc_param = *(sys_process_param*)&Memory[shdr.sh_addr];
 
-		if(re(proc_param.size) != sizeof(sys_process_param))
+		if(re(proc_param.size) < sizeof(sys_process_param))
 		{
 			ConLog.Warning("Bad proc param size! [0x%x : 0x%x]", proc_param.size, sizeof(sys_process_param));
 		}
+	
 		if(re(proc_param.magic) != 0x13bcc5f6)
 		{
 			ConLog.Error("Bad magic! [0x%x]", Memory.Reverse32(proc_param.magic));
@@ -277,13 +284,14 @@ bool ELF64Loader::LoadShdrData()
 			info.malloc_pagesize = re(proc_param.info.malloc_pagesize);
 			info.ppc_seg = re(proc_param.info.ppc_seg);
 			info.crash_dump_param_addr = re(proc_param.info.crash_dump_param_addr);
-
+#ifdef LOADER_DEBUG
 			ConLog.Write("*** sdk version: 0x%x", info.sdk_version);
 			ConLog.Write("*** primary prio: %d", info.primary_prio);
 			ConLog.Write("*** primary stacksize: 0x%x", info.primary_stacksize);
 			ConLog.Write("*** malloc pagesize: 0x%x", info.malloc_pagesize);
 			ConLog.Write("*** ppc seg: 0x%x", info.ppc_seg);
 			ConLog.Write("*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
+#endif
 		}
 	}
 
@@ -329,6 +337,7 @@ bool ELF64Loader::LoadShdrData()
 		proc_prx_param.libstubend = re(proc_prx_param.libstubend);
 		proc_prx_param.ver = re(proc_prx_param.ver);
 
+#ifdef LOADER_DEBUG
 		ConLog.Write("*** size: 0x%x", proc_prx_param.size);
 		ConLog.Write("*** magic: 0x%x", proc_prx_param.magic);
 		ConLog.Write("*** version: 0x%x", proc_prx_param.version);
@@ -337,6 +346,7 @@ bool ELF64Loader::LoadShdrData()
 		ConLog.Write("*** libstubstart: 0x%x", proc_prx_param.libstubstart);
 		ConLog.Write("*** libstubend: 0x%x", proc_prx_param.libstubend);
 		ConLog.Write("*** ver: 0x%x", proc_prx_param.ver);
+#endif
 
 		if(proc_prx_param.magic != 0x1b434cec)
 		{
@@ -365,7 +375,7 @@ bool ELF64Loader::LoadShdrData()
 			for(u32 s=proc_prx_param.libstubstart; s<proc_prx_param.libstubend; s+=sizeof(_StubHeader))
 			{
 				_StubHeader stub = *(_StubHeader*)Memory.GetMemFromAddr(s);
-				ConLog.SkipLn();
+
 				stub.s_size = re(stub.s_size);
 				stub.s_version = re(stub.s_version);
 				stub.s_unk0 = re(stub.s_unk0);
@@ -375,6 +385,8 @@ bool ELF64Loader::LoadShdrData()
 				stub.s_nid = re(stub.s_nid);
 				stub.s_text = re(stub.s_text);
 
+#ifdef LOADER_DEBUG
+				ConLog.SkipLn();
 				ConLog.Write("*** size: 0x%x", stub.s_size);
 				ConLog.Write("*** version: 0x%x", stub.s_version);
 				ConLog.Write("*** unk0: 0x%x", stub.s_unk0);
@@ -383,19 +395,23 @@ bool ELF64Loader::LoadShdrData()
 				ConLog.Write("*** module name: %s [0x%x]", Memory.ReadString(stub.s_modulename), stub.s_modulename);
 				ConLog.Write("*** nid: 0x%x", stub.s_nid);
 				ConLog.Write("*** text: 0x%x [0x%x]", Memory.Read32(stub.s_text), stub.s_text);
+#endif
 
 				for(u32 i=0; i<stub.s_imports; ++i)
 				{
 					const u32 nid = Memory.Read32(stub.s_nid + i*4);
 					const u32 text = Memory.Read32(stub.s_text + i*4);
+#ifdef LOADER_DEBUG
 					ConLog.Write("import %d:", i+1);
 					ConLog.Write("*** nid: 0x%x", nid);
 					ConLog.Write("*** text: 0x%x", text);
-
+#endif
 					Memory.MemFlags.Add(text, stub.s_text + i*4, nid);
 				}
 			}
+#ifdef LOADER_DEBUG
 			ConLog.SkipLn();
+#endif
 		}
 	}
 

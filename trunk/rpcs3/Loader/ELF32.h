@@ -25,6 +25,7 @@ struct Elf32_Ehdr
 
 	void Show()
 	{
+#ifdef LOADER_DEBUG
 		ConLog.Write("Magic: %08x",								e_magic);
 		ConLog.Write("Class: %s",								"ELF32");
 		ConLog.Write("Data: %s",								Ehdr_DataToString(e_data));
@@ -44,6 +45,7 @@ struct Elf32_Ehdr
 		ConLog.Write("Size of section headers: %d",				e_shentsize);
 		ConLog.Write("Number of section headers: %d",			e_shnum);
 		ConLog.Write("Section header string table index: %d",	e_shstrndx);
+#endif
 	}
 
 	void Load(wxFile& f)
@@ -102,6 +104,7 @@ struct Elf32_Shdr
 
 	void Show()
 	{
+#ifdef LOADER_DEBUG
 		ConLog.Write("Name offset: %x",		sh_name);
 		ConLog.Write("Type: %d",			sh_type);
 		ConLog.Write("Addr: %x",			sh_addr);
@@ -112,6 +115,7 @@ struct Elf32_Shdr
 		ConLog.Write("Link: %x",			sh_link);
 		ConLog.Write("Info: %d",			sh_info);
 		ConLog.Write("Address align: %x",	sh_addralign);
+#endif
 	}
 };
 
@@ -140,6 +144,7 @@ struct Elf32_Phdr
 
 	void Show()
 	{
+#ifdef LOADER_DEBUG
 		ConLog.Write("Type: %s",					Phdr_TypeToString(p_type));
 		ConLog.Write("Offset: 0x%08x",				p_offset);
 		ConLog.Write("Virtual address: 0x%08x",		p_vaddr);
@@ -148,6 +153,7 @@ struct Elf32_Phdr
 		ConLog.Write("Memory size: 0x%08x",			p_memsz);
 		ConLog.Write("Flags: %s",					Phdr_FlagsToString(p_flags));
 		ConLog.Write("Align: 0x%x",					p_align);
+#endif
 	}
 };
 

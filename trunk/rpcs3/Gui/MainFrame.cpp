@@ -251,7 +251,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	wxComboBox* cbox_gs_render = new wxComboBox(diag, wxID_ANY);
 	wxComboBox* cbox_pad_handler = new wxComboBox(diag, wxID_ANY);
 
-	cbox_cpu_decoder->Append("DisAsm");
+	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
 	cbox_cpu_decoder->Append("Interpreter");
 
@@ -263,7 +263,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	cbox_pad_handler->Append("Windows");
 	//cbox_pad_handler->Append("DirectInput");
 
-	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue());
+	cbox_cpu_decoder->SetSelection(Ini.CPUDecoderMode.GetValue() ? Ini.CPUDecoderMode.GetValue() - 1 : 0);
 	cbox_gs_render->SetSelection(Ini.GSRenderMode.GetValue());
 	cbox_pad_handler->SetSelection(Ini.PadHandlerMode.GetValue());
 
@@ -294,7 +294,7 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	
 	if(diag->ShowModal() == wxID_OK)
 	{
-		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection());
+		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection() + 1);
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
 		Ini.PadHandlerMode.SetValue(cbox_pad_handler->GetSelection());
 		Ini.Save();

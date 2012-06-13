@@ -149,7 +149,7 @@ struct VertexProgram
 	Array<u32> data;
 	ParamArray parr;
 
-	void Wait() { m_decompiler_thread->Wait(); }
+	void Wait() { if(m_decompiler_thread && m_decompiler_thread->IsRunning()) m_decompiler_thread->Wait(); }
 	void Decompile();
 	void Compile();
 	void Delete();

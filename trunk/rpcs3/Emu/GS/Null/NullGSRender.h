@@ -46,7 +46,7 @@ public:
 	}
 
 private:
-	virtual void Init(const u32 ioAddress, const u32 ctrlAddress)
+	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
 	{
 		if(m_frame->IsShown()) return;
 		
@@ -55,6 +55,8 @@ private:
 
 		m_ioAddress = ioAddress;
 		m_ctrlAddress = ctrlAddress;
+		m_ioSize = ioSize;
+		m_localAddress = localAddress;
 		m_ctrl = (CellGcmControl*)Memory.GetMemFromAddr(m_ctrlAddress);
 
 		m_update_timer->Start(1);
