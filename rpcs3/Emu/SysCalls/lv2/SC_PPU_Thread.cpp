@@ -18,12 +18,12 @@ int SysCalls::lv2PPUThreadCreate(PPUThread& CPU)
 
 	PPCThread& new_thread = Emu.GetCPU().AddThread(true);
 
-	CPU.GPR[3] = new_thread.GetId();
+	Memory.Write32(CPU.GPR[3], new_thread.GetId());
 	new_thread.SetPc(CPU.GPR[4]);
 	new_thread.SetArg(CPU.GPR[5]);
 	new_thread.SetPrio(CPU.GPR[6]);
 	new_thread.stack_size = CPU.GPR[7];
-	//CPU.GPR[8];
+	//new_thread.flags = CPU.GPR[8];
 	new_thread.SetName(Memory.ReadString(CPU.GPR[9]));
 	new_thread.Run();
 	return CELL_OK;

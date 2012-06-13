@@ -165,51 +165,56 @@ struct GLGSFrame : public GSFrame
 {
 	wxGLCanvas* canvas;
 	GLTexture m_textures[16];
+	u32 m_frames;
 
 	GLGSFrame();
 	~GLGSFrame() {}
 
-	void Flip() { canvas->SwapBuffers(); }
+	void Flip();
 
 	wxGLCanvas* GetCanvas() const { return canvas; }
 	GLTexture& GetTexture(const u32 index) { return m_textures[index]; }
 
+	virtual void SetViewport(int x, int y, u32 w, u32 h);
+
 private:
 	virtual void OnSize(wxSizeEvent& event);
-	virtual void SetViewport(wxPoint pos, wxSize size);
 };
 
 extern gcmBuffer gcmBuffers[2];
+
+struct GLRSXThread : public wxThread
+{
+	wxWindow* m_parent;
+	Array<u32> call_stack;
+
+	GLRSXThread(wxWindow* parent);
+
+	virtual void OnExit();
+	void Start();
+
+	ExitCode Entry();
+};
 
 class GLGSRender
 	: public wxWindow
 	, public GSRender
 {
 private:
-	GLGSFrame* m_frame;
-	wxTimer* m_update_timer;
-	/*
-	VBO m_vbo;
-	u32 m_vao_id;
-
-	ShaderProgram m_shader_prog;
-	VertexData m_vertex_data[16];
-	VertexProgram m_vertex_progs[16];
-	VertexProgram* m_cur_vertex_prog;
-	Program m_program;
-	*/
+	GLRSXThread* m_rsx_thread;
 
 public:
+	GLGSFrame* m_frame;
+	volatile bool m_draw;
+
 	GLGSRender();
 	~GLGSRender();
 
 private:
 	void Enable(bool enable, const u32 cap);
-	virtual void Init(const u32 ioAddress, const u32 ctrlAddress);
+	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
 	virtual void Draw();
 	virtual void Close();
-
-	void OnTimer(wxTimerEvent&);
 
 public:
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count);

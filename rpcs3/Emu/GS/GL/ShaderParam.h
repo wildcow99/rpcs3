@@ -12,7 +12,7 @@ enum ParamFlag
 struct ParamType
 {
 	const ParamFlag flag;
-	const wxString type;
+	wxString type;
 	wxArrayString names;
 
 	ParamType(const ParamFlag _flag, const wxString& _type)

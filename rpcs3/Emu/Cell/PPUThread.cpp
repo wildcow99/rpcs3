@@ -6,6 +6,8 @@
 
 #include "Emu/SysCalls/SysCalls.h"
 
+extern gcmInfo gcm_info;
+
 PPUThread::PPUThread() : PPCThread(false)
 {
 	Reset();
@@ -58,7 +60,18 @@ void PPUThread::SetBranch(const u64 pc)
 	}
 	else if(pc == Memory.VideoMem.GetStartAddr())
 	{
-		//ConLog.Warning("gcm: callback() #pc: 0x%llx", PC);
+		ConLog.Warning("gcm: callback(context=0x%llx, count=0x%llx) #pc: 0x%llx", GPR[3], GPR[4], PC);
+
+		CellGcmContextData& ctx = *(CellGcmContextData*)Memory.GetMemFromAddr(GPR[3]);
+		CellGcmControl& ctrl = *(CellGcmControl*)Memory.GetMemFromAddr(gcm_info.control_addr);
+
+		while(ctrl.put != ctrl.get) Sleep(0);
+
+		const u32 reserve = GPR[4] * 4;
+		ctx.current = ctx.begin;
+
+		ctrl.put = 0/*re32(reserve)*/;
+		ctrl.get = 0;
 
 		GPR[3] = 0;
 
@@ -98,9 +111,16 @@ void PPUThread::InitRegs()
 
 	GPR[1] = stack_point;
 	GPR[2] = rtoc;
-	GPR[3] = argc;
-	GPR[4] = argv;
-	GPR[5] = argv ? argv - 0xc - 4 * argc : 0; //unk
+	if(argc)
+	{
+		GPR[3] = argc;
+		GPR[4] = argv;
+		GPR[5] = argv ? argv - 0xc - 4 * argc : 0; //unk
+	}
+	else
+	{
+		GPR[3] = m_arg;
+	}
 	GPR[7] = 0x80d90;
 	GPR[8] = entry;
 	GPR[10] = 0x131700;
@@ -171,11 +191,14 @@ void PPUThread::DoCode(const s32 code)
 		f.Write(disasm.last_opcode);
 	}
 
+	TB++;
+	/*
 	if(++cycle > 220)
 	{
 		cycle = 0;
 		TB++;
 	}
+	*/
 
 	(*(PPU_Decoder*)m_dec).Decode(code);
 }
@@ -193,9 +216,9 @@ bool FPRdouble::IsNaN(double d)
 bool FPRdouble::IsQNaN(double d)
 {
 	return
-		((To64(d) & DOUBLE_EXP) == DOUBLE_EXP) &&
-		((To64(d) & 0x0007fffffffffffULL) == DOUBLE_ZERO) &&
-		((To64(d) & 0x000800000000000ULL) == 0x000800000000000ULL);
+		((*(u64*)&d & DOUBLE_EXP) == DOUBLE_EXP) &&
+		((*(u64*)&d & 0x0007fffffffffffULL) == DOUBLE_ZERO) &&
+		((*(u64*)&d & 0x000800000000000ULL) == 0x000800000000000ULL);
 }
 
 bool FPRdouble::IsSNaN(double d)
@@ -204,29 +227,6 @@ bool FPRdouble::IsSNaN(double d)
 		((*(u64*)&d & DOUBLE_EXP) == DOUBLE_EXP) &&
 		((*(u64*)&d & DOUBLE_FRAC) != DOUBLE_ZERO) &&
 		((*(u64*)&d & 0x0008000000000000ULL) == DOUBLE_ZERO);
-}
-
-u32 FPRdouble::To32(double d)
-{
-	u64 i = To64(d);
-	
-	u32 exp = (i >> 52) && 0x7ff;
-	
-	if(exp > 896 || !(i & ~double_sign)) return ((i >> 32) & 0xc0000000) | ((i >> 29) & 0x3fffffff);
-	if(exp > 874)
-	{
-		u32 t = (u32)(0x80000000 | ((i & double_frac) >> 21));
-		t = t >> (905 - exp);
-		t |= (i >> 32) & 0x80000000;
-		return t;
-	}
-	
-	return ((i >> 32) & 0xc0000000) | ((i >> 29) & 0x3fffffff);
-}
-
-u64 FPRdouble::To64(double d)
-{
-	return *(u64*)&d;
 }
 
 int FPRdouble::Cmp(double a, double b)

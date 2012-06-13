@@ -1,5 +1,7 @@
 #pragma once
 
+//#define LOADER_DEBUG
+
 enum Elf_Machine
 {
 	MACHINE_Unknown,

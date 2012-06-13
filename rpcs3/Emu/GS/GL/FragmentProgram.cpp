@@ -184,26 +184,46 @@ wxThread::ExitCode FragmentDecompilerThread::Entry()
 	return (ExitCode)0;
 }
 
-ShaderProgram::ShaderProgram() : m_decompiler_thread(NULL)
+ShaderProgram::ShaderProgram() 
+	: m_decompiler_thread(NULL)
+	, id(0)
 {
 }
 
 ShaderProgram::~ShaderProgram()
 {
-	safe_delete(m_decompiler_thread);
+	if(m_decompiler_thread)
+	{
+		Wait();
+		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
+		safe_delete(m_decompiler_thread);
+	}
+
+	Delete();
 }
 
 void ShaderProgram::Decompile()
 {
-	safe_delete(m_decompiler_thread);
+#if 0
+	FragmentDecompilerThread(shader, parr, addr).Entry();
+#else
+	if(m_decompiler_thread)
+	{
+		Wait();
+		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
+		safe_delete(m_decompiler_thread);
+	}
 
 	m_decompiler_thread = new FragmentDecompilerThread(shader, parr, addr);
 	m_decompiler_thread->Create();
 	m_decompiler_thread->Run();
+#endif
 }
 
 void ShaderProgram::Compile()
 {
+	if(id) glDeleteShader(id);
+
 	id = glCreateShader(GL_FRAGMENT_SHADER);
 
 	const char* str = shader.c_str();
@@ -211,28 +231,40 @@ void ShaderProgram::Compile()
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);
-
-	GLint r;
-	glGetShaderiv(id, GL_COMPILE_STATUS, &r);
-	char buf[0x1000];
-	GLsizei len;
-	memset(buf, 0, 0x1000);
-	glGetShaderInfoLog(id, 0x1000, &len, buf);
-	buf[0xfff] = 0;
-
-	if (r != GL_TRUE)
+	/*
+	GLint r = GL_FALSE;
+	glGetProgramiv(id, GL_COMPILE_STATUS, &r);
+	if(r != GL_TRUE)
 	{
-		ConLog.Write("Failed to compile shader! (%s)", buf);
-		Emu.Pause();
-		return;
-	}
+		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &r);
 
-	ConLog.Write("Shader compiled successfully! %s", buf);
+		if(r)
+		{
+			char* buf = new char[r+1];
+			GLsizei len;
+			memset(buf, 0, r+1);
+			glGetProgramInfoLog(id, r, &len, buf);
+			ConLog.Error("Failed to compile shader: %s", buf);
+			free(buf);
+		}
+
+		ConLog.Write(shader);
+		Emu.Pause();
+	}
+	//else ConLog.Write("Shader compiled successfully!");
+	*/
 }
 
 void ShaderProgram::Delete()
 {
+	for(u32 i=0; i<parr.params.GetCount(); ++i)
+	{
+		parr.params[i].names.Clear();
+		parr.params[i].type.Clear();
+	}
 	parr.params.Clear();
 	shader.Clear();
+
 	glDeleteShader(id);
+	id = 0;
 }

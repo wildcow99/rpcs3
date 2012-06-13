@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Emu/Cell/PPCThread.h"
 
 enum
@@ -121,8 +121,373 @@ union XERhdr
 	};
 };
 
+enum FPRType
+{
+	FPR_NORM,
+	FPR_ZERO,
+	FPR_SNAN,
+	//FPR_QNAN,
+	FPR_INF,
+	FPR_PZ   = 0x2,
+	FPR_PN   = 0x4,
+	FPR_PINF = 0x5,
+	FPR_NN   = 0x8,
+	FPR_NINF = 0x9,
+	FPR_QNAN = 0x11,
+	FPR_NZ   = 0x12,
+	FPR_PD   = 0x14,
+	FPR_ND   = 0x18,
+};
+
+struct PPCdouble
+{
+	union
+	{
+		double _double;
+		u64 _u64;
+
+		struct
+		{
+			u64 frac	: 52;
+			u64 exp		: 11;
+			u64 sign	: 1;
+		};
+
+		struct
+		{
+			u64		: 51;
+			u64 nan : 1;
+			u64		: 12;
+		};
+	};
+
+	FPRType type;
+
+	u32 GetType()
+	{
+		if(exp > 0 && exp < 0x7ff) return sign ? FPR_NN : FPR_PN;
+
+		if(frac)
+		{
+			if(exp) return FPR_QNAN;
+
+			return sign ? FPR_INF : FPR_PINF;
+		}
+
+		return sign ? FPR_NZ : FPR_PZ;
+	}
+
+	u32 To32()
+	{
+		if (exp > 896 || (!frac && !exp))
+		{
+			return ((_u64 >> 32) & 0xc0000000) | ((_u64 >> 29) & 0x3fffffff);
+		}
+
+		if (exp >= 874)
+		{
+			return ((0x80000000 | (frac >> 21)) >> (905 - exp)) | (_u64 >> 32) & 0x80000000;
+		}
+
+		//?
+		return ((_u64 >> 32) & 0xc0000000) | ((_u64 >> 29) & 0x3fffffff);
+	}
+
+	u32 GetZerosCount()
+	{
+		u32 ret;
+		u32 dd = frac >> 32;
+		if(dd)
+		{
+			ret = 31;
+		}
+		else
+		{
+			dd = frac;
+			ret = 63;
+		}
+
+		if(dd > 0xffff)
+		{
+			ret -= 16;
+			dd >>= 16;
+		}
+		if(dd > 0xff)
+		{
+			ret -= 8;
+			dd >>= 8;
+		}
+		if(dd & 0xf0)
+		{
+			ret -= 4;
+			dd >>= 4;
+		}
+		if(dd & 0xc)
+		{
+			ret -= 2;
+			dd >>= 2;
+		}
+		if(dd & 0x2) ret--;
+
+		return ret;
+	}
+
+	PPCdouble() : _u64(0)
+	{
+	}
+
+	PPCdouble(double val) : _double(val)
+	{
+	}
+
+	PPCdouble(u64 val) : _u64(val)
+	{
+	}
+
+	PPCdouble(u32 val) : _u64(val)
+	{
+	}
+};
+
 struct FPRdouble
 {
+	static PPCdouble ConvertToIntegerMode(const PPCdouble& d, FPSCRhdr& fpscr, bool is_64, u32 round_mode)
+	{
+		PPCdouble ret;
+
+		if(d.exp == 2047)
+		{
+			if (d.frac == 0)
+			{
+				ret.type = FPR_INF;
+
+				fpscr.FI = 0;
+				fpscr.FR = 0;
+				fpscr.VXCVI = 1;
+
+				if(fpscr.VE == 0)
+				{
+					if(is_64)
+					{
+						return d.sign ? 0x8000000000000000 : 0x7FFFFFFFFFFFFFFF;
+					}
+					else
+					{
+						return d.sign ? 0x80000000 : 0x7FFFFFFF;
+					}
+
+					fpscr.FPRF = 0;
+				}
+			}
+			else if(d.nan == 0)
+			{
+				ret.type = FPR_SNAN;
+
+				fpscr.FI = 0;
+				fpscr.FR = 0;
+				fpscr.VXCVI = 1;
+				fpscr.VXSNAN = 1;
+
+				if(fpscr.VE == 0)
+				{
+					return is_64 ? 0x8000000000000000 : 0x80000000;
+					fpscr.FPRF = 0;
+				}
+			}
+			else
+			{
+				ret.type = FPR_QNAN;
+
+				fpscr.FI = 0;
+				fpscr.FR = 0;
+				fpscr.VXCVI = 1;
+
+				if(fpscr.VE == 0)
+				{
+					return is_64 ? 0x8000000000000000 : 0x80000000;
+					fpscr.FPRF = 0;
+				}
+			}
+		}
+		else if(d.exp > 1054)
+		{
+			fpscr.FI = 0;
+			fpscr.FR = 0;
+			fpscr.VXCVI = 1;
+
+			if(fpscr.VE == 0)
+			{
+				if(is_64)
+				{
+					return d.sign ? 0x8000000000000000 : 0x7FFFFFFFFFFFFFFF;
+				}
+				else
+				{
+					return d.sign ? 0x80000000 : 0x7FFFFFFF;
+				}
+
+				fpscr.FPRF = 0;
+			}
+		}
+
+		ret.sign = d.sign;
+
+		if(d.exp > 0)
+		{
+			ret.exp = d.exp - 1023;
+			ret.frac = 1 | d.frac;
+		}
+		else if(d.exp == 0)
+		{
+			ret.exp = -1022;
+			ret.frac = d.frac;
+		}
+		/*
+		if(d.exp == 0)
+		{
+			if (d.frac == 0)
+			{
+				d.type = FPR_ZERO;
+			}
+			else
+			{
+				const u32 z = d.GetZerosCount() - 8;
+				d.frac <<= z + 3;
+				d.exp -= 1023 - 1 + z;
+				d.type = FPR_NORM;
+			}
+		}
+		else
+		{
+			d.exp -= 1023;
+			d.type = FPR_NORM;
+			d.nan = 1;
+			d.frac <<= 3;
+		}
+		*/
+
+		return ret;
+	}
+
+	static u32 ConvertToFloatMode(PPCdouble& d, u32 RN)
+	{
+	/*
+		u32 fpscr = 0;
+		switch (d.type)
+		{
+		case FPR_NORM:
+			d.exp += 1023;
+			if (d.exp > 0)
+			{
+				fpscr |= Round(d, RN);
+				if(d.nan)
+				{
+					d.exp++;
+					d.frac >>= 4;
+				}
+				else
+				{
+					d.frac >>= 3;
+				}
+
+				if(d.exp >= 2047)
+				{
+					d.exp = 2047;
+					d.frac = 0;
+					fpscr |= FPSCR_OX;
+				}
+			}
+			else
+			{
+				d.exp = -(s64)d.exp + 1;
+
+				if(d.exp <= 56)
+				{
+					d.frac >>= d.exp;
+					fpscr |= Round(d, RN);
+					d.frac <<= 1;
+					if(d.nan)
+					{
+						d.exp = 1;
+						d.frac = 0;
+					}
+					else
+					{
+						d.exp = 0;
+						d.frac >>= 4;
+						fpscr |= FPSCR_UX;
+					}
+				}
+				else
+				{
+					d.exp = 0;
+					d.frac = 0;
+					fpscr |= FPSCR_UX;
+				}
+			}
+		break;
+
+		case FPR_ZERO:
+			d.exp = 0;
+			d.frac = 0;
+		break;
+
+		case FPR_NAN:
+			d.exp = 2047;
+			d.frac = 1;		
+		break;
+
+		case FPR_INF:
+			d.exp = 2047;
+			d.frac = 0;
+		break;
+		}
+
+		return fpscr;
+		*/
+		return 0;
+	}
+
+	static u32 Round(PPCdouble& d, u32 RN)
+	{
+		switch(RN)
+		{
+		case FPSCR_RN_NEAR:
+			if(d.frac & 0x7)
+			{
+				if((d.frac & 0x7) != 4 || d.frac & 0x8)
+				{
+					d.frac += 4;
+				}
+
+				return FPSCR_XX;
+			}
+		return 0;
+
+		case FPSCR_RN_ZERO:
+			if(d.frac & 0x7) return FPSCR_XX;
+		return 0;
+
+		case FPSCR_RN_PINF:
+			if(!d.sign && (d.frac & 0x7))
+			{
+				d.frac += 8;
+				return FPSCR_XX;
+			}
+		return 0;
+
+		case FPSCR_RN_MINF:
+			if(d.sign && (d.frac & 0x7))
+			{
+				d.frac += 8;
+				return FPSCR_XX;
+			}
+		return 0;
+		}
+
+		return 0;
+	}
+
 	static const u64 double_sign = 0x8000000000000000ULL;
 	static const u64 double_frac = 0x000FFFFFFFFFFFFFULL;
 	
@@ -130,9 +495,6 @@ struct FPRdouble
 	static bool IsNaN(double d);
 	static bool IsQNaN(double d);
 	static bool IsSNaN(double d);
-	
-	static u32 To32(double d);
-	static u64 To64(double d);
 
 	static int Cmp(double a, double b);
 };
@@ -415,7 +777,7 @@ public:
 	{
 		wxString ret = PPCThread::RegsToString();
 		for(uint i=0; i<32; ++i) ret += wxString::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
-		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = %llf\n", i, FPR[i]);
+		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = 0x%llx\n", i, FPR[i]);
 		ret += wxString::Format("CR = 0x%08x\n", CR);
 		ret += wxString::Format("LR = 0x%llx\n", LR);
 		ret += wxString::Format("CTR = 0x%llx\n", CTR);

@@ -131,16 +131,13 @@ struct ShaderProgram
 	ParamArray parr;
 
 	u32 addr;
-	u32 insn_count;
 	wxString shader;
 
 	u32 id;
 	
-	void Wait() { m_decompiler_thread->Wait(); }
+	void Wait() { if(m_decompiler_thread && m_decompiler_thread->IsRunning()) m_decompiler_thread->Wait(); }
 	void Decompile();
 	void Compile();
-
-	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
 
 	void Delete();
 };

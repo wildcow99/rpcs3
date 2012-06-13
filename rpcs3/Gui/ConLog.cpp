@@ -7,8 +7,9 @@
 
 LogWriter ConLog;
 LogFrame* ConLogFrame;
+wxMutex mtx_wait;
 
-static const uint max_item_count = 500;
+static const uint max_item_count = 200;
 
 struct LogData
 {
@@ -23,7 +24,7 @@ struct LogData
 	{
 	}
 
-	~LogData()
+	void Clear()
 	{
 		m_prefix.Clear();
 		m_text.Clear();
@@ -46,11 +47,20 @@ void LogWriter::WriteToLog(wxString prefix, wxString value, wxString colour/*, w
 	if(m_logfile.IsOpened())
 		m_logfile.Write((prefix.IsEmpty() ? wxEmptyString : "[" + prefix + "]: ") + value + "\n");
 
-	if(!ConLogFrame || ConLogFrame->IsBeingDeleted() || !ConLogFrame->IsShown()) return;
-	
-	if(ConLogData.GetCount() > max_item_count) ConLogData.RemoveAt(0, ConLogData.GetCount()-max_item_count);
-	ConLogData.Add(new LogData(prefix, value, colour));
+	wxMutexLocker locker(mtx_wait);
 
+	if(!ConLogFrame || ConLogFrame->IsBeingDeleted() ||
+		!ConLogFrame->IsShown() || !ConLogFrame->IsAlive()) return;
+
+	if(!wxIsMainThread()) while(ConLogData.GetCount() > max_item_count)
+	{
+		Sleep(1);
+
+		if(!ConLogFrame || ConLogFrame->IsBeingDeleted() ||
+			!ConLogFrame->IsShown() || !ConLogFrame->IsAlive()) return;
+	}
+
+	ConLogData.Add(new LogData(prefix, value, colour));
 	ConLogFrame->DoStep();
 }
 
@@ -118,7 +128,7 @@ END_EVENT_TABLE()
 
 LogFrame::LogFrame()
 	: FrameBase(NULL, wxID_ANY, "Log Console", wxEmptyString, wxSize(600, 450), wxDefaultPosition)
-	, StepThread()
+	, StepThread(true, "LogThread")
 	, m_log(*new wxListView(this))
 {
 	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
@@ -137,12 +147,12 @@ LogFrame::LogFrame()
 	Connect( m_log.GetId(), wxEVT_COMMAND_LIST_COL_BEGIN_DRAG, wxListEventHandler( LogFrame::OnColBeginDrag ));
 
 	Show();
-	StepThread::Start(true);
-	StepThread::DoStep();
+	StepThread::Start();
 }
 
 LogFrame::~LogFrame()
 {
+	StepThread::Exit();
 }
 
 bool LogFrame::Close(bool force)
@@ -150,25 +160,26 @@ bool LogFrame::Close(bool force)
 	ConLogFrame = NULL;
 	StepThread::Exit();
 	ConLogData.Clear();
+	return true;
 
 	return FrameBase::Close(force);
 }
 
 void LogFrame::Step()
 {
-	if(ConLogData.GetCount() == 0) return;
-	
-	while(ConLogData.GetCount())
+	while(ConLogData.GetCount() && !TestDestroy())
 	{
-		StepThread::SetCancelState(false);
 		if(ConLogData.GetCount() > max_item_count)
 		{
-			ConLogData.RemoveAt(0, ConLogData.GetCount() - max_item_count);
+			u32 count = ConLogData.GetCount() - max_item_count;
+			for(u32 i=0; i<count; ++i) ConLogData[i].Clear();
+			ConLogData.RemoveAt(0, count);
 		}
 
 		const wxColour colour = wxColour(ConLogData[0].m_colour);
 		const wxString prefix = ConLogData[0].m_prefix;
 		const wxString text = ConLogData[0].m_text;
+		ConLogData[0].Clear();
 		ConLogData.RemoveAt(0);
 
 		int cur_item = m_log.GetItemCount();
@@ -182,11 +193,8 @@ void LogFrame::Step()
 		m_log.SetItem(cur_item, 1, text);
 		m_log.SetItemTextColour(cur_item, colour);
 		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_PAGEDOWN, 0);
-		StepThread::SetCancelState(true);
-		ThreadAdv::TestCancel();
 		Sleep(1);
 	}
-	Sleep(1);
 }
 
 void LogFrame::OnColBeginDrag(wxListEvent& event)

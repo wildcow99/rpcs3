@@ -66,7 +66,7 @@ void PPCThreadManager::Exec()
 
 void PPCThreadManager::Step()
 {
-	for(;;)
+	while(!TestDestroy())
 	{
 		//emulation
 		for(u32 i=0; i<m_threads.GetCount() && Emu.IsRunned(); ++i)

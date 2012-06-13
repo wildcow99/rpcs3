@@ -93,7 +93,7 @@ wxString VertexDecompilerThread::GetSRC(const u32 n)
 	break;
 	}
 
-	static const wxString f[4] = {"x", "y", "z", "w"};
+	static const wxString f[4] = {"x", "z", "w", "y"};
 
 	wxString swizzle = wxEmptyString;
 	swizzle += f[src[n].swz_x];
@@ -153,7 +153,6 @@ wxString VertexDecompilerThread::BuildCode()
 
 wxThread::ExitCode VertexDecompilerThread::Entry()
 {
-	ConLog.Warning("VertexDecompilerThread::Entry()");
 	for(u32 i=0;;)
 	{
 		d0.HEX = m_data[i++];
@@ -198,11 +197,14 @@ wxThread::ExitCode VertexDecompilerThread::Entry()
 	}
 
 	m_shader = BuildCode();
+	main.Clear();
 
 	return (ExitCode)0;
 }
 
-VertexProgram::VertexProgram() : m_decompiler_thread(NULL)
+VertexProgram::VertexProgram()
+	: m_decompiler_thread(NULL)
+	, id(0)
 {
 }
 
@@ -210,26 +212,36 @@ VertexProgram::~VertexProgram()
 {
 	if(m_decompiler_thread)
 	{
-		//m_decompiler_thread->Delete();
+		Wait();
+		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
 		safe_delete(m_decompiler_thread);
 	}
+
+	Delete();
 }
 
 void VertexProgram::Decompile()
 {
+#if 0
+	VertexDecompilerThread(data, shader, parr).Entry();
+#else
 	if(m_decompiler_thread)
 	{
-		//m_decompiler_thread->Delete();
+		Wait();
+		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
 		safe_delete(m_decompiler_thread);
 	}
 
 	m_decompiler_thread = new VertexDecompilerThread(data, shader, parr);
 	m_decompiler_thread->Create();
 	m_decompiler_thread->Run();
+#endif
 }
 
 void VertexProgram::Compile()
 {
+	if(id) glDeleteShader(id);
+
 	id = glCreateShader(GL_VERTEX_SHADER);
 
 	const char* str = shader.c_str();
@@ -237,32 +249,45 @@ void VertexProgram::Compile()
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);
-
-	GLint r;
-	glGetShaderiv(id, GL_COMPILE_STATUS, &r);
-	char buf[0x1000];
-	GLsizei len;
-	memset(buf, 0, 0x1000);
-	glGetShaderInfoLog(id, 0x1000, &len, buf);
-	buf[0xfff] = 0;
-
-	if (r != GL_TRUE)
+	/*
+	GLint r = GL_FALSE;
+	glGetProgramiv(id, GL_COMPILE_STATUS, &r);
+	if(r != GL_TRUE)
 	{
-		ConLog.Write("Failed to compile shader! (%s)", buf);
-		Emu.Pause();
-		return;
-	}
+		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &r);
 
-	ConLog.Write("Shader compiled successfully! %s", buf);
+		if(r)
+		{
+			char* buf = new char[r+1];
+			GLsizei len;
+			memset(buf, 0, r+1);
+			glGetProgramInfoLog(id, r, &len, buf);
+			ConLog.Error("Failed to compile vertex shader: %s", buf);
+			free(buf);
+		}
+
+		ConLog.Write(shader);
+		Emu.Pause();
+	}
+	//else ConLog.Write("Vertex shader compiled successfully!");
+	*/
+
 }
 
 void VertexProgram::Delete()
 {
 	data.Clear();
+	for(u32 i=0; i<parr.params.GetCount(); ++i)
+	{
+		parr.params[i].names.Clear();
+		parr.params[i].type.Clear();
+	}
 	parr.params.Clear();
 	constants4.Clear();
 	shader.Clear();
+
 	glDeleteShader(id);
+	id = 0;
 }
 
 void VertexData::Load(u32 start, u32 count)
@@ -279,9 +304,7 @@ void VertexData::Load(u32 start, u32 count)
 		{
 		case 1:
 		{
-			const u8* c_src = (const u8*)src;
-			u8* c_dst = (u8*)dst;
-			for(u32 j=0; j<size; ++j) *c_dst++ = re(*c_src++);
+			memcpy(dst, src, size);
 		}
 		break;
 

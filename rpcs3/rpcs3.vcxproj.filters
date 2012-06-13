@@ -166,6 +166,9 @@
     <ClCompile Include="Emu\GS\GL\OpenGL.cpp">
       <Filter>Emu\GS\GL</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\GS\GSRender.cpp">
+      <Filter>Emu\GS</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
