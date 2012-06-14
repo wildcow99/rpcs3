@@ -98,12 +98,14 @@ struct FragmentDecompilerThread : public wxThread
 	wxString& m_shader;
 	ParamArray& m_parr;
 	u32 m_addr;
+	u32& m_size;
 
-	FragmentDecompilerThread(wxString& shader, ParamArray& parr, u32 addr)
+	FragmentDecompilerThread(wxString& shader, ParamArray& parr, u32 addr, u32& size)
 		: wxThread(wxTHREAD_JOINABLE)
 		, m_shader(shader)
 		, m_parr(parr)
 		, m_addr(addr)
+		, m_size(size) 
 	{
 	}
 
@@ -130,6 +132,7 @@ struct ShaderProgram
 
 	ParamArray parr;
 
+	u32 size;
 	u32 addr;
 	wxString shader;
 

@@ -5,7 +5,9 @@
 #include "Emu/Cell/SPUDecoder.h"
 #include "Emu/Cell/SPUDisAsm.h"
 
-class InterpreterDisAsmFrame : public FrameBase
+class InterpreterDisAsmFrame
+	: public FrameBase
+	, public StepThread
 {
 	wxListView* m_list;
 	wxPanel& m_main_panel;
@@ -16,6 +18,9 @@ class InterpreterDisAsmFrame : public FrameBase
 	wxTextCtrl* m_regs;
 	bool exit;
 	Array<u64> m_break_points;
+	wxButton* m_btn_step;
+	wxButton* m_btn_run;
+	wxButton* m_btn_pause;
 
 public:
 	InterpreterDisAsmFrame(const wxString& title, PPCThread* cpu);
@@ -29,6 +34,7 @@ public:
 	virtual void Show_Val(wxCommandEvent& event);
 	virtual void Show_PC(wxCommandEvent& event);
 	virtual void DoRun(wxCommandEvent& event);
+	virtual void DoPause(wxCommandEvent& event);
 	virtual void DoStep(wxCommandEvent& event);
 	virtual void DClick(wxListEvent& event);
 	void OnResize(wxSizeEvent& event);
@@ -36,4 +42,6 @@ public:
 	bool IsBreakPoint(u64 pc);
 	void AddBreakPoint(u64 pc);
 	bool RemoveBreakPoint(u64 pc);
+
+	virtual void Step();
 };

@@ -30,8 +30,16 @@ public:
 	void Start()
 	{
 		if(IsAlive()) return;
-		Create();
-		Run();
+
+		if(IsPaused())
+		{
+			Resume();
+		}
+		else
+		{
+			Create();
+			Run();
+		}
 	}
 };
 

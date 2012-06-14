@@ -154,7 +154,7 @@ void Emulator::Resume()
 	wxGetApp().m_MainFrame->UpdateUI();
 
 	CheckStatus();
-	if(IsRunned()) GetCPU().Exec();
+	if(IsRunned() && Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
 }
 
 void Emulator::Stop()
@@ -174,7 +174,11 @@ void Emulator::Stop()
 	CurGameInfo.Reset();
 	Memory.Close();
 
-	if(m_dbg_console){GetDbgCon().Close();m_dbg_console = NULL;}
+	if(m_dbg_console)
+	{
+		GetDbgCon().Close();
+		m_dbg_console = NULL;
+	}
 	//if(m_memory_viewer && m_memory_viewer->IsShown()) m_memory_viewer->Hide();
 }
 

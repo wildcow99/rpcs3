@@ -92,7 +92,7 @@ public:
 	void SetJoining(bool joining) { m_joining = joining; }
 
 	u32 GetError() const { return m_error; }
-	u16 GetId() const { return m_id; }
+	u32 GetId() const { return m_id; }
 
 	void Reset();
 	void Close();

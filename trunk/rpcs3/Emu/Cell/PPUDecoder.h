@@ -368,7 +368,7 @@ public:
 			/*0x1d6*///DCBI
 			/*0x1e9*/ADD_OPCODE(DIVD,	RD(), RA(), RB(), OE(), RC());
 			/*0x1eb*/ADD_OPCODE(DIVW,	RD(), RA(), RB(), OE(), RC());
-			///*0x217*/ADD_OPCODE(LFSX,	FRD(), RA(), RB());
+			/*0x217*/ADD_OPCODE(LFSX,	FRD(), RA(), RB());
 			/*0x218*/ADD_OPCODE(SRW,	RA(), RS(), RB(), RC());
 			/*0x21b*/ADD_OPCODE(SRD,	RA(), RS(), RB(), RC());
 			/*0x237*///LFSUX
@@ -376,7 +376,7 @@ public:
 			/*0x257*///LFDX
 			/*0x28a*///LDUX
 			/*0x277*///LFDUX
-			///*0x297*/ADD_OPCODE(STFSX,	RS(), RA(), RB());
+			/*0x297*/ADD_OPCODE(STFSX,	RS(), RA(), RB());
 			/*0x316*///LHBRX
 			/*0x318*/ADD_OPCODE(SRAW,	RA(), RS(), RB(), RC());
 			/*0x31A*/ADD_OPCODE(SRAD,	RA(), RS(), RB(), RC());
@@ -440,13 +440,13 @@ public:
 
 		START_OPCODES_GROUP(G_3f, GetField(26, 30))
 			
-			//ADD_OPCODE(FDIV,	FRD(), FRA(), FRB(), RC());
+			ADD_OPCODE(FDIV,	FRD(), FRA(), FRB(), RC());
 			ADD_OPCODE(FSUB,	FRD(), FRA(), FRB(), RC());
 			ADD_OPCODE(FADD,	FRD(), FRA(), FRB(), RC());
-			//ADD_OPCODE(FSQRT,	FRD(), FRB(), RC());
+			ADD_OPCODE(FSQRT,	FRD(), FRB(), RC());
 			ADD_OPCODE(FSEL,	FRD(), FRA(), FRC(), FRB(), RC());
 			ADD_OPCODE(FMUL,	FRD(), FRA(), FRC(), RC());
-			//ADD_OPCODE(FRSQRTE,	FRD(), FRB(), RC());
+			ADD_OPCODE(FRSQRTE,	FRD(), FRB(), RC());
 			ADD_OPCODE(FMSUB,	FRD(), FRA(), FRC(), FRB(), RC());
 			ADD_OPCODE(FMADD,	FRD(), FRA(), FRC(), FRB(), RC());
 			ADD_OPCODE(FNMSUB,	FRD(), FRA(), FRC(), FRB(), RC());
