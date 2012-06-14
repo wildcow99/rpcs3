@@ -286,8 +286,11 @@ void VertexProgram::Delete()
 	constants4.Clear();
 	shader.Clear();
 
-	glDeleteShader(id);
-	id = 0;
+	if(id)
+	{
+		glDeleteShader(id);
+		id = 0;
+	}
 }
 
 void VertexData::Load(u32 start, u32 count)

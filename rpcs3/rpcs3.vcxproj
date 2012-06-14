@@ -103,6 +103,7 @@
     <ClCompile Include="Emu\GS\GL\GLGSRender.cpp" />
     <ClCompile Include="Emu\GS\GL\OpenGL.cpp" />
     <ClCompile Include="Emu\GS\GL\Program.cpp" />
+    <ClCompile Include="Emu\GS\GL\ProgramBuffer.cpp" />
     <ClCompile Include="Emu\GS\GL\VertexProgram.cpp" />
     <ClCompile Include="Emu\GS\GSManager.cpp" />
     <ClCompile Include="Emu\GS\GSRender.cpp" />

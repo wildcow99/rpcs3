@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
 #include "Utilites/Timer.h"
+#include "ProgramBuffer.h"
 
 #define CMD_DEBUG 0
 
@@ -21,6 +22,9 @@ static Array<u8> m_vdata;
 static VertexProgram m_vertex_progs[16];
 static VertexProgram* m_cur_vertex_prog;
 static Program m_program;
+static int m_fp_buf_num = -1;
+static int m_vp_buf_num = -1;
+static ProgramBuffer m_prog_buffer;
 
 void checkForGlError(const char* situation)
 {
@@ -203,16 +207,6 @@ wxThread::ExitCode GLRSXThread::Entry()
 
 		p.m_ctrl->get = re32(get + (count + 1) * 4);
 		memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
-
-		/*
-		if(p.m_ctrl->put == p.m_ctrl->get && re(p.m_ctrl->put) >= p.m_ioSize)
-		{
-			//p.m_ctrl->put = 0;
-			//p.m_ctrl->get = 0;
-			current_context.current = current_context.begin;
-			ConLog.Warning("put >= ioSize");
-		}
-		*/
 	}
 
 	ConLog.Write("GL RSX thread exit...");
@@ -224,6 +218,8 @@ wxThread::ExitCode GLRSXThread::Entry()
 	m_shader_prog.Delete();
 
 	for(u32 i=0; i<16; ++i) m_vertex_progs[i].Delete();
+
+	m_prog_buffer.Clear();
 
 	return (ExitCode)0;
 }
@@ -277,14 +273,16 @@ void EnableVertexData()
 	glBindVertexArray(m_vao_id);
 	m_vbo.SetData(&m_vdata[0], m_vdata.GetCount());
 
+#if	CMD_DEBUG
 	wxFile dump("VertexDataArray.dump", wxFile::write);
-				
+#endif
+
 	for(u32 i=0; i<16; ++i)
 	{
 		if(!m_vertex_data[i].IsEnabled()) continue;
-
+#if	CMD_DEBUG
 		dump.Write(wxString::Format("VertexData[%d]:\n", i));
-
+#endif
 		u32 gltype;
 		bool normalized = false;
 
@@ -292,56 +290,68 @@ void EnableVertexData()
 		{
 		case 1:
 			gltype = GL_SHORT; normalized = true;
+#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
+#endif
 		break;
 
 		case 2:
 			gltype = GL_FLOAT;
+#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=4)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
 				if(!(((j+4) / 4) % m_vertex_data[i].size)) dump.Write("\n");
 			}
+#endif
 		break;
 
 		case 3:
 			gltype = GL_HALF_FLOAT;
+#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=2)
 			{
 				dump.Write(wxString::Format("%.01f\n", *(float*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
+#endif
 		break;
 
 		case 4:
 			gltype = GL_UNSIGNED_BYTE; normalized = true;
+#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
 				if(!((j+1) % m_vertex_data[i].size)) dump.Write("\n");
 			}
+#endif
 		break;
 
 		case 5:
 			gltype = GL_SHORT;
+#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); j+=2)
 			{
 				dump.Write(wxString::Format("%d\n", *(u16*)&m_vertex_data[i].data[j]));
 				if(!(((j+2) / 2) % m_vertex_data[i].size)) dump.Write("\n");
 			}
+#endif
 		break;
 
 		case 7:
 			gltype = GL_UNSIGNED_BYTE;
+#if	CMD_DEBUG
 			for(u32 j = 0; j<m_vertex_data[i].data.GetCount(); ++j)
 			{
 				dump.Write(wxString::Format("%d\n", m_vertex_data[i].data[j]));
 				if(!((j+1) % m_vertex_data[i].size)) dump.Write("\n");
 			}
+#endif
 		break;
 
 		default:
@@ -354,8 +364,9 @@ void EnableVertexData()
 		checkForGlError("glVertexAttribPointer");
 		glEnableVertexAttribArray(i);
 		checkForGlError("glEnableVertexAttribArray");
-
+#if	CMD_DEBUG
 		dump.Write("\n");
+#endif
 	}
 }
 
@@ -640,8 +651,15 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		if(!m_program.IsCreated())
 		{
 			//ConLog.Write("Create program");
-			m_cur_vertex_prog->Decompile();
+			m_vp_buf_num = m_prog_buffer.SearchVp(*m_cur_vertex_prog);
 
+			if(m_vp_buf_num == -1) 
+			{
+				ConLog.Warning("VP not found in buffer!");
+				m_cur_vertex_prog->Decompile();
+			}
+
+			if(m_fp_buf_num == -1)
 			{
 				m_shader_prog.Wait();
 				m_shader_prog.Compile();
@@ -649,6 +667,8 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 				wxFile f(wxGetCwd() + "/FragmentProgram.txt", wxFile::write);
 				f.Write(m_shader_prog.shader);
 			}
+
+			if(m_vp_buf_num == -1)
 			{
 				m_cur_vertex_prog->Wait();
 				m_cur_vertex_prog->Compile();
@@ -657,7 +677,16 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 				f.Write(m_cur_vertex_prog->shader);
 			}
 
-			m_program.Create(m_cur_vertex_prog->id, m_shader_prog.id);
+			if(m_fp_buf_num != -1 && m_vp_buf_num != -1)
+			{
+				m_program.id = m_prog_buffer.GetProg(m_fp_buf_num, m_vp_buf_num);
+			}
+
+			if(!m_program.id)
+			{
+				m_program.Create(m_cur_vertex_prog->id, m_shader_prog.id);
+				m_prog_buffer.Add(m_program, m_shader_prog, *m_cur_vertex_prog);
+			}
 		}
 
 		m_program.Use();
@@ -681,6 +710,10 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 			DisableVertexData();
 			draw_array_count = 0;
 		}
+
+		m_program.id = 0;
+		m_shader_prog.id = 0;
+		m_cur_vertex_prog->id = 0;
 
 		memset(m_vertex_data, 0, sizeof(VertexData) * 16);
 
@@ -708,12 +741,10 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		m_shader_prog.Delete();
 		m_shader_prog.addr = GetAddress(args[0] & ~0x3, (args[0] & 0x3) - 1);
 		m_program.Delete();
-		if(m_shader_prog.shader.Len())
-		{
-			m_shader_prog.Delete();
-		}
 
-		m_shader_prog.Decompile();
+		m_fp_buf_num = m_prog_buffer.SearchFp(m_shader_prog);
+
+		if(m_fp_buf_num == -1) m_shader_prog.Decompile();
 	}
 	break;
 
@@ -738,7 +769,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	{
 		m_program.Delete();
 		m_cur_vertex_prog = &m_vertex_progs[args[0]];
-		if(m_cur_vertex_prog->id) m_cur_vertex_prog->Delete();
+		m_cur_vertex_prog->Delete();
 
 		if(count == 2)
 		{
@@ -804,6 +835,84 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 			m_cur_vertex_prog->constants4.AddCpy(c);
 		}
+	}
+	break;
+
+	case NV4097_SET_LOGIC_OP_ENABLE:
+		Enable(args[0] ? true : false, GL_LOGIC_OP);
+	break;
+
+	case NV4097_SET_CULL_FACE_ENABLE:
+		Enable(args[0] ? true : false, GL_CULL_FACE);
+	break;
+
+	case NV4097_SET_DITHER_ENABLE:
+		Enable(args[0] ? true : false, GL_DITHER);
+	break;
+
+	case NV4097_SET_STENCIL_TEST_ENABLE:
+		Enable(args[0] ? true : false, GL_STENCIL_TEST);
+	break;
+
+	case NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE:
+		if(args[0]) ConLog.Error("NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE");
+	break;
+
+	case NV4097_SET_POLY_OFFSET_FILL_ENABLE:
+		if(args[0]) ConLog.Error("NV4097_SET_POLY_OFFSET_FILL_ENABLE");
+	break;
+
+	case NV4097_SET_RESTART_INDEX_ENABLE:
+		if(args[0]) ConLog.Error("NV4097_SET_RESTART_INDEX_ENABLE");
+	break;
+
+	case NV4097_SET_POINT_PARAMS_ENABLE:
+		if(args[0]) ConLog.Error("NV4097_SET_POINT_PARAMS_ENABLE");
+	break;
+
+	case NV4097_SET_POINT_SPRITE_CONTROL:
+		if(args[0] & 0x1)
+		{
+			ConLog.Error("NV4097_SET_POINT_SPRITE_CONTROL enable");
+		}
+	break;
+
+	case NV4097_SET_POLY_SMOOTH_ENABLE:
+		if(args[0]) ConLog.Error("NV4097_SET_POLY_SMOOTH_ENABLE");
+	break;
+
+	case NV4097_SET_BLEND_COLOR:
+		glBlendColor(args[0] & 0xff, (args[0] >> 8) & 0xff, 
+			(args[0] >> 16) & 0xff, (args[0] >> 24) & 0xff);
+	break;
+
+	case NV4097_SET_BLEND_COLOR2:
+		if(args[0]) ConLog.Error("NV4097_SET_BLEND_COLOR2");
+	break;
+
+	case NV4097_SET_BLEND_EQUATION:
+		glBlendEquationSeparate(args[0] & 0xffff, args[0] >> 16);
+		//glBlendEquation
+	break;
+
+	case NV4097_SET_REDUCE_DST_COLOR:
+		if(args[0]) ConLog.Error("NV4097_SET_REDUCE_DST_COLOR");
+	break;
+
+	case NV4097_SET_DEPTH_MASK:
+		glDepthMask(args[0]);
+	break;
+
+	case NV4097_SET_SCISSOR_HORIZONTAL:
+	{
+		const u16 x = args[0] & 0xffff;
+		const u16 w = args[0] >> 16;
+		const u16 y = args[1] & 0xffff;
+		const u16 h = args[1] >> 16;
+		
+		CMD_LOG("x=%d, y=%d, w=%d, h=%d", x, y, w, h);
+
+		glScissor(x, y, w, h);
 	}
 	break;
 

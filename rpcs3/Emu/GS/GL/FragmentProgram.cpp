@@ -173,6 +173,8 @@ wxThread::ExitCode FragmentDecompilerThread::Entry()
 		break;
 		}
 
+		m_size += 4 * 4;
+
 		if(dst.end) break;
 
 		data.SetOffset(4 * 4);
@@ -214,7 +216,7 @@ void ShaderProgram::Decompile()
 		safe_delete(m_decompiler_thread);
 	}
 
-	m_decompiler_thread = new FragmentDecompilerThread(shader, parr, addr);
+	m_decompiler_thread = new FragmentDecompilerThread(shader, parr, addr, size);
 	m_decompiler_thread->Create();
 	m_decompiler_thread->Run();
 #endif
@@ -265,6 +267,9 @@ void ShaderProgram::Delete()
 	parr.params.Clear();
 	shader.Clear();
 
-	glDeleteShader(id);
-	id = 0;
+	if(id)
+	{
+		glDeleteShader(id);
+		id = 0;
+	}
 }
