@@ -76,7 +76,7 @@ int cellPadGetData(u32 port_no, u32 data_addr)
 	u16 d1 = 0;
 	u16 d2 = 0;
 
-	const Array<Button>& buttons = Emu.GetPadManager().GetButtons(port_no);
+	const Array<Button>& buttons = pads[port_no].m_buttons;
 	s32 len = 0;
 	for(uint i=0; i<buttons.GetCount(); ++i)
 	{

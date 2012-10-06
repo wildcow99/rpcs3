@@ -1,6 +1,7 @@
 #pragma once
 #include "Utilites/Thread.h"
 #include "Emu/Memory/MemoryBlock.h"
+#include "Emu/Cell/Decoder.h"
 //#include "Emu/System.h"
 
 class PPCThread// : public StepThread
@@ -15,7 +16,7 @@ class PPCThread// : public StepThread
 protected:
 	u32 m_status;
 	u32 m_error;
-	void* m_dec;
+	Decoder* m_dec;
 	void* DisAsmFrame;
 	u32 m_id;
 	bool isSPU;
@@ -25,6 +26,7 @@ protected:
 	bool m_joinable;
 	bool m_joining;
 	Array<u64> argv_addr;
+	u64 m_offset;
 
 public:
 	u64 stack_size;
@@ -44,6 +46,7 @@ public:
 	void SetId(const u32 id);
 	void SetName(const wxString& name);
 	void SetPrio(const u64 prio) { m_prio = prio; }
+	void SetOffset(const u64 offset) { m_offset = offset; }
 
 	u64 GetPrio() const { return m_prio; }
 	wxString GetName() const { return m_name; }

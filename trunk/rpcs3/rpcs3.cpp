@@ -27,10 +27,10 @@ bool Rpcs3App::OnInit()
 
 void Rpcs3App::Exit()
 {
-	if(ConLogFrame && ConLogFrame->IsShown()) ConLogFrame->Close();
-
+	//Emu.Stop();
 	Ini.Save();
-	Emu.Stop();
+
+	//if(ConLogFrame && !ConLogFrame->IsBeingDeleted()) ConLogFrame->Close();
 
 	wxApp::Exit();
 }

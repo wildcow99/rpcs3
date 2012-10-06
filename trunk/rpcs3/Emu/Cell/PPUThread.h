@@ -59,36 +59,154 @@ union FPSCRhdr
 {
 	struct
 	{
-		u32 RN		:2;
-		u32 NI		:1;
-		u32 XE		:1;
-		u32 ZE		:1;
-		u32 UE		:1;
-		u32 OE		:1;
-		u32 VE		:1;
-		u32 VXCVI	:1;
-		u32 VXSQRT	:1;
-		u32 VXSOFT	:1;
-		u32			:1;
-		u32 FPRF	:5;
-		u32 FI		:1;
-		u32 FR		:1;
-		u32 VXVC	:1;
-		u32 VXIMZ	:1;
-		u32 VXZDZ	:1;
-		u32 VXIDI	:1;
-		u32 VXISI	:1;
-		u32 VXSNAN	:1;
-		u32 XX		:1;
-		u32 ZX		:1;
-		u32 UX		:1;
-		u32 OX		:1;
-		u32 VX		:1;
-		u32 FEX		:1;
-		u32 FX		:1;
+		u32 RN		:2; //Floating-point rounding control
+		u32 NI		:1; //Floating-point non-IEEE mode
+		u32 XE		:1; //Floating-point inexact exception enable
+		u32 ZE		:1; //IEEE ﬂoating-point zero divide exception enable
+		u32 UE		:1; //IEEE ﬂoating-point underﬂow exception enable
+		u32 OE		:1; //IEEE ﬂoating-point overﬂow exception enable
+		u32 VE		:1; //Floating-point invalid operation exception enable
+		u32 VXCVI	:1; //Floating-point invalid operation exception for invalid integer convert
+		u32 VXSQRT	:1; //Floating-point invalid operation exception for invalid square root
+		u32 VXSOFT	:1; //Floating-point invalid operation exception for software request
+		u32			:1; //Reserved
+		u32 FPRF	:5; //Floating-point result ﬂags
+		u32 FI		:1; //Floating-point fraction inexact
+		u32 FR		:1; //Floating-point fraction rounded
+		u32 VXVC	:1; //Floating-point invalid operation exception for invalid compare
+		u32 VXIMZ	:1; //Floating-point invalid operation exception for * * 0
+		u32 VXZDZ	:1; //Floating-point invalid operation exception for 0 / 0
+		u32 VXIDI	:1; //Floating-point invalid operation exception for * + *
+		u32 VXISI	:1; //Floating-point invalid operation exception for * - *
+		u32 VXSNAN	:1; //Floating-point invalid operation exception for SNaN
+		u32 XX		:1; //Floating-point inexact exception
+		u32 ZX		:1; //Floating-point zero divide exception
+		u32 UX		:1; //Floating-point underﬂow exception
+		u32 OX		:1; //Floating-point overﬂow exception
+		u32 VX		:1; //Floating-point invalid operation exception summary
+		u32 FEX		:1; //Floating-point enabled exception summary
+		u32 FX		:1; //Floating-point exception summary
 	};
 
 	u32 FPSCR;
+};
+
+union MSRhdr
+{
+	struct
+	{
+		//Little-endian mode enable
+		//0      The processor runs in big-endian mode. 
+		//1      The processor runs in little-endian mode.
+		u64 LE	: 1;
+		
+		//Recoverable exception (for system reset and machine check exceptions).
+		//0      Exception is not recoverable. 
+		//1      Exception is recoverable.
+		u64 RI	: 1;
+		
+		//Reserved
+		u64		: 2;
+		
+		//Data address translation   
+		//0      Data address translation is disabled. 
+		//1      Data address translation is enabled.
+		u64	DR	: 1;
+		
+		//Instruction address translation   
+		//0      Instruction address translation is disabled. 
+		//1      Instruction address translation is enabled.
+		u64	IR	: 1;
+
+		//Exception preﬁx. The setting of this bit speciﬁes whether an exception vector offset 
+		//is prepended with Fs or 0s. In the following description, nnnnn is the offset of the 
+		//exception.
+		//0      Exceptions are vectored to the physical address 0x0000_0000_000n_nnnn in 64-bit implementations.
+		//1      Exceptions are vectored to the physical address 0xFFFF_FFFF_FFFn_nnnn in 64-bit implementations.
+		u64	IP	: 1;
+
+		//Reserved
+		u64		: 1;
+		
+		//Floating-point exception mode 1
+		u64	FE1	: 1;
+
+		//Branch trace enable (Optional)
+		//0      The processor executes branch instructions normally. 
+		//1      The processor generates a branch trace exception after completing the 
+		//execution of a branch instruction, regardless of whether or not the branch was 
+		//taken. 
+		//Note: If the function is not implemented, this bit is treated as reserved.
+		u64	BE	: 1;
+
+		//Single-step trace enable (Optional)
+		//0      The processor executes instructions normally. 
+		//1      The processor generates a single-step trace exception upon the successful 
+		//execution of the next instruction.
+		//Note: If the function is not implemented, this bit is treated as reserved.
+		u64	SE	: 1;
+
+		//Floating-point exception mode 0
+		u64	FE0	: 1;
+
+		//Machine check enable 
+		//0      Machine check exceptions are disabled. 
+		//1      Machine check exceptions are enabled.
+		u64	ME	: 1;
+
+		//Floating-point available 
+		//0      The processor prevents dispatch of ﬂoating-point instructions, including 
+		//ﬂoating-point loads, stores, and moves.
+		//1      The processor can execute ﬂoating-point instructions.
+		u64	FP	: 1;
+
+		//Privilege level 
+		//0      The processor can execute both user- and supervisor-level instructions.
+		//1      The processor can only execute user-level instructions.
+		u64	PR	: 1;
+
+		//External interrupt enable 
+		//0      While the bit is cleared the processor delays recognition of external interrupts 
+		//and decrementer exception conditions. 
+		//1      The processor is enabled to take an external interrupt or the decrementer 
+		//exception.
+		u64	EE	: 1;
+
+		//Exception little-endian mode. When an exception occurs, this bit is copied into 
+		//MSR[LE] to select the endian mode for the context established by the exception
+		u64	ILE	: 1;
+
+		//Reserved
+		u64		: 1;
+		
+		//Power management enable
+		//0      Power management disabled (normal operation mode).
+		//1      Power management enabled (reduced power mode).
+		//Note: Power management functions are implementation-dependent. If the function 
+		//is not implemented, this bit is treated as reserved.
+		u64	POW	: 1;
+
+		//Reserved
+		u64		: 44;
+		
+		//Sixty-four bit mode
+		//0      The 64-bit processor runs in 32-bit mode.
+		//1      The 64-bit processor runs in 64-bit mode. Note that this is the default setting.
+		u64	SF	: 1;
+	};
+
+	u64 MSR;
+};
+
+union PVRhdr
+{
+	struct
+	{
+		u16 revision;
+		u16 version;
+	};
+
+	u32 PVR;
 };
 
 union CRhdr
@@ -628,7 +746,7 @@ public:
 	// 2 : EQ - Zero (is zero)
 	// : 0 - Result is not equal to zero
 	// : 1 - Result is equal to zero
-	// 3 : SO - Summary overflow (copy of the final state xer[S0])
+	// 3 : SO - Summary overflow (copy of the final state XER[S0])
 	// : 0 - No overflow occurred
 	// : 1 - Overflow occurred
 
@@ -662,6 +780,9 @@ public:
 	// 25 - 31 : TBC
 	// Transfer-byte count
 
+	MSRhdr MSR; //Machine State Register
+	PVRhdr PVR; //Processor Version Register
+
 	u64 LR;		//SPR 0x008 : Link Register
 	u64 CTR;	//SPR 0x009 : Count Register
 
@@ -670,7 +791,16 @@ public:
 	s32 SPRG[8]; //SPR 0x100 - 0x107 : SPR General-Purpose Registers
 
 	//TBR : Time-Base Registers
-	u64 TB;	//TBR 0x10C - 0x10D
+	union
+	{
+		u64 TB;	//TBR 0x10C - 0x10D
+
+		struct
+		{
+			u32 TBH;
+			u32 TBL;
+		};
+	};
 
 	u64 reserve_addr;
 	bool reserve;
@@ -751,13 +881,20 @@ public:
 		UpdateCRn<T>(0, val, 0);
 	}
 
+	template<typename T> void UpdateCR1()
+	{
+		SetCR_LT(1, FPSCR.FX);
+		SetCR_GT(1, FPSCR.FEX);
+		SetCR_EQ(1, FPSCR.VX);
+		SetCR_SO(1, FPSCR.OX);
+	}
+
 	const u8 GetCRBit(const u32 bit) const { return 1 << (3 - (bit % 4)); }
 
-	void SetCRBit(const u32 bit, bool set) { SetCRBit(bit >> 2, GetCRBit(bit), set); }
-
+	void SetCRBit (const u32 bit, bool set) { SetCRBit(bit >> 2, GetCRBit(bit), set); }
 	void SetCRBit2(const u32 bit, bool set) { SetCRBit(bit >> 2, 0x8 >> (bit & 3), set); }
 
-	const u8 IsCR(const u32 bit) const { return (GetCR(bit/4) & GetCRBit(bit)) ? 1 : 0; }
+	const u8 IsCR(const u32 bit) const { return (GetCR(bit >> 2) & GetCRBit(bit)) ? 1 : 0; }
 
 	bool IsCarry(const u64 a, const u64 b) { return a > (~b); }
 

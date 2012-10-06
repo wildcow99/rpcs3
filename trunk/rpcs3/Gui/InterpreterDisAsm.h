@@ -7,7 +7,7 @@
 
 class InterpreterDisAsmFrame
 	: public FrameBase
-	, public StepThread
+	, public ThreadBase
 {
 	wxListView* m_list;
 	wxPanel& m_main_panel;
@@ -16,16 +16,15 @@ class InterpreterDisAsmFrame
 	Decoder* decoder;
 	u64 PC;
 	wxTextCtrl* m_regs;
-	bool exit;
 	Array<u64> m_break_points;
 	wxButton* m_btn_step;
 	wxButton* m_btn_run;
 	wxButton* m_btn_pause;
+	volatile bool m_exec;
 
 public:
 	InterpreterDisAsmFrame(const wxString& title, PPCThread* cpu);
 
-	virtual void Close(bool force = false);
 	virtual void OnKeyDown(wxKeyEvent& event);
 	void DoUpdate();
 	void ShowPc(const u64 pc);
@@ -43,5 +42,5 @@ public:
 	void AddBreakPoint(u64 pc);
 	bool RemoveBreakPoint(u64 pc);
 
-	virtual void Step();
+	virtual void Task();
 };

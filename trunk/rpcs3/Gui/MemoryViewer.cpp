@@ -59,11 +59,13 @@ MemoryViewerPanel::MemoryViewerPanel(wxWindow* parent)
 	Connect(b_fnext.GetId(), wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(MemoryViewerPanel::fNext));
 };
 
-void MemoryViewerPanel::OnResize(wxSizeEvent& WXUNUSED(event))
+void MemoryViewerPanel::OnResize(wxSizeEvent& event)
 {
 	const wxSize size(GetClientSize());
 	hex_wind->SetSize( size.GetWidth(), size.GetHeight() - 25);
 	hex_wind->SetColumnWidth(COL_COUNT, size.GetWidth() - m_colsize - 4);
+
+	event.Skip();
 }
 
 void MemoryViewerPanel::ShowPC()

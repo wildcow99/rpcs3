@@ -9,7 +9,16 @@ struct PsfHeader
 	u32 psf_offset_values_table;
 	u32 psf_entries_num;
 
-	bool CheckMagic() const { return psf_magic == 0x46535000; }
+	bool CheckMagic() const { return psf_magic == *(u32*)"\0PSF"; }
+};
+
+struct PsfDefTbl
+{
+	u16 psf_name_tbl_offset;
+	u16 psf_data_type;
+	u32 psf_data_size;
+	u32 psf_data_fsize;
+	u32 psf_data_tbl_offset;
 };
 
 class PSFLoader

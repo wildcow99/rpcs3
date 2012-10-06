@@ -168,8 +168,8 @@ bool ELF32Loader::LoadShdrData()
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		Elf32_Shdr& shdr = shdr_arr[i];
-		if(i < shdr_name_arr.GetCount()) ConLog.Write("Name: %s", shdr_name_arr[i]);
 #ifdef LOADER_DEBUG
+		if(i < shdr_name_arr.GetCount()) ConLog.Write("Name: %s", shdr_name_arr[i]);
 		shdr.Show();
 		ConLog.SkipLn();
 #endif
@@ -179,17 +179,16 @@ bool ELF32Loader::LoadShdrData()
 		const s64 size = shdr.sh_size;
 		MemoryBlock* mem = NULL;
 
+		/*
 		switch(shdr.sh_type)
 		{
 		case SHT_NOBITS:
 			if(size == 0) continue;
-			mem = &Memory.GetMemByAddr(addr);
-
-			memset(&((u8*)mem->GetMem())[addr - mem->GetStartAddr()], 0, size);
-
+			memset(&Memory[addr], 0, size);
 		case SHT_PROGBITS:
 		break;
 		}
+		*/
 	}
 
 	//TODO

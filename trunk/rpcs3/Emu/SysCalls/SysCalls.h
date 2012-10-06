@@ -161,6 +161,12 @@ extern int cellRescSetBufferAddress(const u32 colorBuffers_addr, const u32 verte
 extern int sys_heap_create_heap(const u32 heap_addr, const u32 start_addr, const u32 size);
 extern int sys_heap_malloc(const u32 heap_addr, const u32 size);
 
+//sys_spu
+extern int sys_spu_thread_group_create(u64 id_addr, u32 num, int prio, u64 attr_addr);
+extern int sys_spu_thread_create(u64 thread_id_addr, u64 entry_addr, u64 arg, int prio, u32 stacksize, u64 flags, u64 threadname_addr);
+extern int sys_raw_spu_create(u32 id_addr, u32 attr_addr);
+extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
+
 #define SC_ARGS_1 CPU.GPR[3]
 #define SC_ARGS_2 SC_ARGS_1,CPU.GPR[4]
 #define SC_ARGS_3 SC_ARGS_2,CPU.GPR[5]
@@ -214,9 +220,12 @@ public:
 	int lv2TtyRead(PPUThread& CPU);
 	int lv2TtyWrite(PPUThread& CPU);
 
+	LARGE_INTEGER frequency;
+
 public:
 	SysCalls()// : CPU(cpu)
 	{
+		QueryPerformanceFrequency(&frequency);
 	}
 
 	~SysCalls()
@@ -228,7 +237,7 @@ public:
 	{
 	}
 
-	u64 DoSyscall(int code, PPUThread& CPU)
+	u64 DoSyscall(u32 code, PPUThread& CPU)
 	{
 		static const u64 timebase_frequency = 79800000;
 		switch(code)
@@ -267,9 +276,26 @@ public:
 			case 98: return Lv2LwmutexTrylock(CPU);
 			case 99: return Lv2LwmutexUnlock(CPU);
 			//time
-			case 141: Sleep(Emu.GetCPU().GetThreads().GetCount() > 1 ? 1 : /*SC_ARGS_1 / 1000*/1); return 0;
-			case 146: /*ConLog.Write("sys_time_get_system_time()");*/ return CPU.TB /*/ (timebase_frequency / 1000000)*/;
-			case 147: /*ConLog.Write("sys_time_get_timebase_frequency()");*/ return timebase_frequency; //get timebase frequency
+			case 141:
+			case 142:
+				Sleep(Emu.GetCPU().GetThreads().GetCount() > 1 ? 1 : /*SC_ARGS_1 / 1000*/1);
+			return 0;
+			case 146:
+			{
+				/*ConLog.Write("sys_time_get_system_time()");*/
+				LARGE_INTEGER cycle;
+				QueryPerformanceCounter(&cycle);
+				return cycle.QuadPart;
+				return CPU.TB /*/ (timebase_frequency / 1000000)*/;
+			}
+			case 147:
+				/*ConLog.Write("sys_time_get_timebase_frequency()");*/
+				return frequency.QuadPart;
+				return timebase_frequency;
+			//sys_spu
+			case 160: return sys_raw_spu_create(SC_ARGS_2);
+			case 169: return sys_spu_initialize(SC_ARGS_2);
+			case 170: return sys_spu_thread_group_create(SC_ARGS_4);
 			//memory
 			case 324: return sys_memory_container_create(SC_ARGS_2);
 			case 325: return sys_memory_container_destroy(SC_ARGS_1);

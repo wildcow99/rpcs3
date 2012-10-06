@@ -67,9 +67,10 @@ MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_, "Main
 	(new CompilerELF(NULL))->Show();
 }
 
-void MainFrame::OnResize(wxSizeEvent& WXUNUSED(event))
+void MainFrame::OnResize(wxSizeEvent& event)
 {
 	m_game_viewer->DoResize(GetClientSize());
+	event.Skip();
 }
 
 void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))

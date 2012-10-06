@@ -145,11 +145,9 @@ struct PsfHelper
 
 		for(uint i=0; i<name.Length(); ++i)
 		{
-			switch(name[i])
+			switch((u8)name[i])
 			{
-				case 0xFFFFFFE2: case 0xFFFFFFA2: case 0xFFFFFF84:
-				continue;
-
+				case 0xE2: case 0xA2: case 0x84: continue;
 				default: ret += name[i]; break;
 			};
 		}

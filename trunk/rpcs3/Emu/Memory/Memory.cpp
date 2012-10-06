@@ -18,7 +18,6 @@ MemoryBlock::~MemoryBlock()
 void MemoryBlock::Init()
 {
 	range_start = 0;
-	range_end = 0;
 	range_size = 0;
 
 	mem = NULL;
@@ -76,7 +75,6 @@ MemoryBlock* MemoryBlock::SetRange(const u64 start, const u32 size)
 {
 	range_start = start;
 	range_size = size;
-	range_end = start + size - 1;
 
 	InitMemory();
 	return this;
@@ -261,13 +259,7 @@ bool NullMemoryBlock::Read16(const u64 addr, u16* WXUNUSED(value))
 
 bool NullMemoryBlock::Read32(const u64 addr, u32* WXUNUSED(value))
 {
-	if(addr == 0x10000064) //used by printf
-	{
-		ConLog.Warning("Read32 from unknown block: [%08llx]", addr);
-		return false;
-	}
 	ConLog.Error("Read32 from null block: [%08llx]", addr);
-	//ConLog.Error("pc: 0x%llx", (*(PPCThread*)Emu.GetCPU().GetIDs().GetIDData(1).m_data).PC);
 	Emu.Pause();
 	return false;
 }
@@ -345,6 +337,41 @@ void MemoryBase::Write64(u64 addr, const u64 data)
 void MemoryBase::Write128(u64 addr, const u128 data)
 {
 	GetMemByAddr(addr).Write128(addr, data);
+}
+
+bool MemoryBase::Write8NN(u64 addr, const u8 data)
+{
+	if(!IsGoodAddr(addr)) return false;
+	Write8(addr, data);
+	return true;
+}
+
+bool MemoryBase::Write16NN(u64 addr, const u16 data)
+{
+	if(!IsGoodAddr(addr, 2)) return false;
+	Write16(addr, data);
+	return true;
+}
+
+bool MemoryBase::Write32NN(u64 addr, const u32 data)
+{
+	if(!IsGoodAddr(addr, 4)) return false;
+	Write32(addr, data);
+	return true;
+}
+
+bool MemoryBase::Write64NN(u64 addr, const u64 data)
+{
+	if(!IsGoodAddr(addr, 8)) return false;
+	Write64(addr, data);
+	return true;
+}
+
+bool MemoryBase::Write128NN(u64 addr, const u128 data)
+{
+	if(!IsGoodAddr(addr, 16)) return false;
+	Write128(addr, data);
+	return true;
 }
 
 u8 MemoryBase::Read8(u64 addr)

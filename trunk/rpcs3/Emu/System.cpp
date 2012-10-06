@@ -20,6 +20,7 @@ Emulator::Emulator()
 
 void Emulator::Init()
 {
+	GetCPU().Start();
 	//if(m_memory_viewer) m_memory_viewer->Close();
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
@@ -131,7 +132,7 @@ void Emulator::Run()
 
 	if(Ini.CPUDecoderMode.GetValue() != 1)
 	{
-		GetCPU().Start();
+		//GetCPU().Start();
 		GetCPU().Exec();
 	}
 }

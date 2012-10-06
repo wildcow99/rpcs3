@@ -5,7 +5,6 @@ class MemoryBlock
 private:
 	u8* mem;
 	u64 range_start;
-	u64 range_end;
 	u64 range_size;
 
 public:
@@ -56,7 +55,7 @@ public:
 	virtual bool Write128(const u64 addr, const u128 value);
 
 	const u64 GetStartAddr() const { return range_start; }
-	const u64 GetEndAddr() const { return range_end; }
+	const u64 GetEndAddr() const { return range_start + range_size - 1; }
 	const u32 GetSize() const { return range_size; }
 	void* GetMem() const { return mem; }
 };

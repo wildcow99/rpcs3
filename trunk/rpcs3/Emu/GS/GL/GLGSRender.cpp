@@ -42,9 +42,6 @@ GLGSFrame::GLGSFrame()
 {
 	canvas = new wxGLCanvas(this, wxID_ANY, NULL);
 	canvas->SetSize(GetClientSize());
-	canvas->SetCurrent();
-
-	glEnable(GL_TEXTURE_2D);
 
 	Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GLGSFrame::OnLeftDclick));
 
@@ -111,16 +108,8 @@ void GLGSRender::Enable(bool enable, const u32 cap)
 	else glDisable(cap);
 }
 
-enum Method
-{
-	CELL_GCM_METHOD_FLAG_NON_INCREMENT	= 0x40000000,
-	CELL_GCM_METHOD_FLAG_JUMP			= 0x20000000,
-	CELL_GCM_METHOD_FLAG_CALL			= 0x00000002,
-	CELL_GCM_METHOD_FLAG_RETURN			= 0x00020000,
-};
-
 GLRSXThread::GLRSXThread(wxWindow* parent)
-	: wxThread()
+	: wxThread(wxTHREAD_JOINABLE)
 	, m_parent(parent)
 {
 }
@@ -138,6 +127,14 @@ void GLRSXThread::Start()
 
 extern CellGcmContextData current_context;
 
+enum Method
+{
+	CELL_GCM_METHOD_FLAG_NON_INCREMENT	= 0x40000000,
+	CELL_GCM_METHOD_FLAG_JUMP			= 0x20000000,
+	CELL_GCM_METHOD_FLAG_CALL			= 0x00000002,
+	CELL_GCM_METHOD_FLAG_RETURN			= 0x00020000,
+};
+
 wxThread::ExitCode GLRSXThread::Entry()
 {
 	ConLog.Write("GL RSX thread entry");
@@ -145,13 +142,12 @@ wxThread::ExitCode GLRSXThread::Entry()
 	GLGSRender& p = *(GLGSRender*)m_parent;
 	wxGLContext cntxt(p.m_frame->GetCanvas());
 	p.m_frame->GetCanvas()->SetCurrent(cntxt);
-
 	InitProcTable();
+
+	glEnable(GL_TEXTURE_2D);
 
 	m_vbo.Create();
 	if(!m_vao_id) glGenVertexArrays(1, &m_vao_id);
-
-	Array<u32> call_stack;
 
 	while(!TestDestroy() && p.m_frame && !p.m_frame->IsBeingDeleted())
 	{
@@ -180,15 +176,13 @@ wxThread::ExitCode GLRSXThread::Entry()
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
 		{
-			call_stack.AddCpy(get + 4);
+			call_stack.Push(get + 4);
 			p.m_ctrl->get = re32(cmd & ~CELL_GCM_METHOD_FLAG_CALL);
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_RETURN)
 		{
-			const u32 pos = call_stack.GetCount() - 1;
-			p.m_ctrl->get = re32(call_stack[pos]);
-			call_stack.RemoveAt(pos);
+			p.m_ctrl->get = re32(call_stack.Pop());
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)

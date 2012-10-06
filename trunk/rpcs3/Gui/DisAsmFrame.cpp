@@ -70,6 +70,8 @@ void DisAsmFrame::OnResize(wxSizeEvent& event)
 	const wxSize size(GetClientSize());
 	m_disasm_list->SetSize( size.GetWidth(), size.GetHeight() - 25 );
 	m_disasm_list->SetColumnWidth( 1, size.GetWidth() - (m_disasm_list->GetColumnWidth(0) + 8) );
+
+	event.Skip();
 }
 
 void DisAsmFrame::AddLine(const wxString line)

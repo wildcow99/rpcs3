@@ -236,7 +236,7 @@ public:
 	{
 		if(code == 0)
 		{
-			m_op.NOP();
+			m_op.NULL_OP();
 			return;
 		}
 
@@ -343,19 +343,16 @@ public:
 			/*0x0ea*/ADD_OPCODE(ADDME,	RD(), RA(), OE(), RC());
 			/*0x0eb*/ADD_OPCODE(MULLW,	RD(), RA(), RB(), OE(), RC());
 			/*0x0f6*/ADD_OPCODE(DCBTST,	TH(), RA(), RB());
-			/*0x108*///DOZ
 			/*0x10a*/ADD_OPCODE(ADD,	RD(), RA(), RB(), OE(), RC());
 			/*0x116*/ADD_OPCODE(DCBT,	RA(), RB(), TH());
 			/*0x117*/ADD_OPCODE(LHZX,	RD(), RA(), RB());
 			/*0x11c*/ADD_OPCODE(EQV,	RA(), RS(), RB(), RC());
 			/*0x136*/ADD_OPCODE(ECIWX,	RD(), RA(), RB());
-			/*0x14b*/ADD_OPCODE(DIV,	RD(), RA(), RB(), OE(), RC());
 			/*0x137*/ADD_OPCODE(LHZUX,	RD(), RA(), RB());
 			/*0x13c*/ADD_OPCODE(XOR,	RA(), RS(), RB(), RC());
 			/*0x153*/ADD_OPCODE(MFSPR,	RD(), SPR());
 			/*0x157*/ADD_OPCODE(LHAX,	RD(), RA(), RB());
 			/*0x168*/ADD_OPCODE(ABS,	RD(), RA(), OE(), RC());
-			/*0x16b*///DIVS
 			/*0x173*/ADD_OPCODE(MFTB,	RD(), SPR());
 			/*0x177*/ADD_OPCODE(LHAUX,	RD(), RA(), RB());
 			/*0x197*/ADD_OPCODE(STHX,	RS(), RA(), RB());
@@ -368,16 +365,16 @@ public:
 			/*0x1d6*///DCBI
 			/*0x1e9*/ADD_OPCODE(DIVD,	RD(), RA(), RB(), OE(), RC());
 			/*0x1eb*/ADD_OPCODE(DIVW,	RD(), RA(), RB(), OE(), RC());
+			/*0x216*/ADD_OPCODE(LWBRX,	RD(), RA(), RB());
 			/*0x217*/ADD_OPCODE(LFSX,	FRD(), RA(), RB());
 			/*0x218*/ADD_OPCODE(SRW,	RA(), RS(), RB(), RC());
 			/*0x21b*/ADD_OPCODE(SRD,	RA(), RS(), RB(), RC());
-			/*0x237*///LFSUX
+			/*0x237*/ADD_OPCODE(LFSUX,	FRD(), RA(), RB());
 			/*0x256*/ADD_OPCODE(SYNC,	GetField(9, 10));
-			/*0x257*///LFDX
-			/*0x28a*///LDUX
-			/*0x277*///LFDUX
+			/*0x257*/ADD_OPCODE(LFDX,	FRD(), RA(), RB());
+			/*0x277*/ADD_OPCODE(LFDUX,	FRD(), RA(), RB());
 			/*0x297*/ADD_OPCODE(STFSX,	RS(), RA(), RB());
-			/*0x316*///LHBRX
+			/*0x316*/ADD_OPCODE(LHBRX,	RD(), RA(), RB());
 			/*0x318*/ADD_OPCODE(SRAW,	RA(), RS(), RB(), RC());
 			/*0x31A*/ADD_OPCODE(SRAD,	RA(), RS(), RB(), RC());
 			/*0x338*/ADD_OPCODE(SRAWI,	RA(), RS(), sh(), RC());
