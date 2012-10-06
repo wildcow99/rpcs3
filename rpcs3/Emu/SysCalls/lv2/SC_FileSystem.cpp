@@ -99,8 +99,6 @@ int cellFsOpen(const u32 path_addr, const int flags, const u32 fd_addr, const u3
 	const wxString& ppath = GetWinPath(path);
 	//ConLog.Warning("path: %s [%s]", ppath, path);
 
-	wxFile::OpenMode o_mode;
-
 	s32 _oflags = flags;
 	if(flags & LV2_O_CREAT)
 	{
@@ -128,18 +126,16 @@ int cellFsOpen(const u32 path_addr, const int flags, const u32 fd_addr, const u3
 		}
 	}
 
-	if(flags & LV2_O_RDONLY)
+	wxFile::OpenMode o_mode;
+
+	switch(flags & LV2_O_ACCMODE)
 	{
+	case LV2_O_RDONLY:
 		_oflags &= ~LV2_O_RDONLY;
 		o_mode = wxFile::read;
-	}
-	else if(flags & LV2_O_RDWR)
-	{
-		_oflags &= ~LV2_O_RDWR;
-		o_mode = wxFile::read_write;
-	}
-	else if(flags & LV2_O_WRONLY)
-	{
+	break;
+
+	case LV2_O_WRONLY:
 		_oflags &= ~LV2_O_WRONLY;
 
 		if(flags & LV2_O_APPEND)
@@ -147,10 +143,22 @@ int cellFsOpen(const u32 path_addr, const int flags, const u32 fd_addr, const u3
 			_oflags &= ~LV2_O_APPEND;
 			o_mode = wxFile::write_append;
 		}
-		else
+		else if(flags & LV2_O_EXCL)
 		{
+			_oflags &= ~LV2_O_EXCL;
+			o_mode = wxFile::write_excl;
+		}
+		else //if(flags & LV2_O_TRUNC)
+		{
+			_oflags &= ~LV2_O_TRUNC;
 			o_mode = wxFile::write;
 		}
+	break;
+
+	case LV2_O_RDWR:
+		_oflags &= ~LV2_O_RDWR;
+		o_mode = wxFile::read_write;
+	break;
 	}
 
 	if(_oflags != 0)
@@ -159,7 +167,11 @@ int cellFsOpen(const u32 path_addr, const int flags, const u32 fd_addr, const u3
 		return CELL_EINVAL;
 	}
 
-	if(/*o_mode == wxFile::read && */!wxFile::Access(ppath, o_mode)) return CELL_ENOENT;
+	if(!wxFile::Access(ppath, o_mode))
+	{
+		sc_log.Error("'%s' not found! flags: 0x%08x", ppath, flags);
+		return CELL_ENOENT;
+	}
 
 	Memory.Write32(fd_addr, 
 		Emu.GetIdManager().GetNewID(sc_log.GetName(), new wxFile(ppath, o_mode), flags));
@@ -176,7 +188,7 @@ int cellFsRead(const u32 fd, const u32 buf_addr, const u64 nbytes, const u32 nre
 	if(!!id.m_name.Cmp(sc_log.GetName())) return CELL_ESRCH;
 	wxFile& file = *(wxFile*)id.m_data;
 
-	Memory.Write64(nread_addr, file.Read(Memory.GetMemFromAddr(buf_addr), nbytes));
+	Memory.Write64NN(nread_addr, file.Read(Memory.GetMemFromAddr(buf_addr), nbytes));
 
 	return CELL_OK;
 }
@@ -189,7 +201,9 @@ int cellFsWrite(const u32 fd, const u32 buf_addr, const u64 nbytes, const u32 nw
 	const ID& id = Emu.GetIdManager().GetIDData(fd);
 	if(!!id.m_name.Cmp(sc_log.GetName())) return CELL_ESRCH;
 	wxFile& file = *(wxFile*)id.m_data;
-	Memory.Write64(nwrite_addr, file.Write(Memory.GetMemFromAddr(buf_addr), nbytes));
+
+	Memory.Write64NN(nwrite_addr, file.Write(Memory.GetMemFromAddr(buf_addr), nbytes));
+
 	return CELL_OK;
 }
 

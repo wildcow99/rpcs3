@@ -25,7 +25,7 @@ public:
 
 class LogFrame 
 	: public FrameBase
-	, public StepThread
+	, public ThreadBase
 {
 	wxListView& m_log;
 
@@ -38,7 +38,7 @@ public:
 private:
 	virtual void OnColBeginDrag(wxListEvent& event);
 	virtual void OnResize(wxSizeEvent& event);
-	virtual void Step();
+	virtual void Task();
 
 	void OnQuit(wxCloseEvent& event);
 

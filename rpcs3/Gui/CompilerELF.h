@@ -3,6 +3,7 @@
 #include "Emu/Cell/PPUOpcodes.h"
 #include "wx/aui/aui.h"
 #include "Loader/ELF64.h"
+#include <wx/richtext/richtextctrl.h>
 
 void Write8(wxFile& f, const u8 data);
 void Write16(wxFile& f, const u16 data);
@@ -13,20 +14,18 @@ struct SectionInfo
 {
 	Elf64_Shdr shdr;
 	wxString name;
-	Array<u32> code;
+	Array<u8> code;
+	u32 section_num;
 
-	SectionInfo() : name(".unknown")
-	{
-		code.Clear();
-		memset(&shdr, 0, sizeof(Elf64_Shdr));
-		shdr.sh_addr = 0;
-		shdr.sh_addralign = 0;
-	}
+	SectionInfo(const wxString& name);
+	~SectionInfo();
+
+	void SetDataSize(u32 size, u32 align = 0);
 };
 
 struct ProgramInfo
 {
-	Array<u32> code;
+	Array<u8> code;
 	Elf64_Phdr phdr;
 	bool is_preload;
 
@@ -40,9 +39,9 @@ struct ProgramInfo
 
 class CompilerELF : public FrameBase
 {
-	wxTextAttr* a_instr;
 	wxAuiManager m_aui_mgr;
-	wxTimer* m_update_scroll_timer;
+	wxStatusBar& m_status_bar;
+	bool m_disable_scroll;
 
 public:
 	CompilerELF(wxWindow* parent);
@@ -52,10 +51,12 @@ public:
 	wxTextCtrl* hex_list;
 	wxTextCtrl* err_list;
 	
+	void MouseWheel(wxMouseEvent& event);
+	void OnKeyDown(wxKeyEvent& event);
+
 	void OnUpdate(wxCommandEvent& event);
-	void OnUpdateScroll(wxTimerEvent& event);
-	void UpdateScroll();
-	void WriteError(const u32 line, const wxString& error);
+	void OnScroll(wxScrollWinEvent& event);
+	void UpdateScroll(bool is_hex, int orient);
 
 	void AnalyzeCode(wxCommandEvent& WXUNUSED(event))
 	{
@@ -67,17 +68,12 @@ public:
 		DoAnalyzeCode(true);
 	}
 
-	bool SearchReg(u64& p, const wxString& line_text, const u32 line_num, const u32 line_len, wxArrayLong& arr);
-	bool SearchText(u64& p, const wxString& line_text, const u32 line_num, const u32 line_len, wxString& dst);
-	bool SearchImm(u64& p, const wxString& line_text, const u32 line_num, const u32 line_len, wxArrayLong& arr);
-
-	int CompileLine_Instr(wxString line_text, const u32 line_num, const u32 line_len, bool& has_error);
-	void CompileLine_Section(Array<SectionInfo>& sections_info, u64& errors_count, u32& addr, u32& current_section, u32& line_num, const u32 lines_count);
-	void CompileLine_Program(Array<ProgramInfo>& programs_info, u64& errors_count, u32& addr, u32& current_program, u32& line_num, const u32 lines_count);
-	void CompileLine_Elf(Elf64_Ehdr& elf_info, u64& errors_count, u32& line_num, const u32 lines_count);
-
 	void LoadElf(wxCommandEvent& event);
 	void LoadElf(const wxString& path);
 
+	void SetTextStyle(const wxString& text, const wxColour& color, bool bold=false);
+	void SetOpStyle(const wxString& text, const wxColour& color, bool bold=true);
 	void DoAnalyzeCode(bool compile);
+
+	void UpdateStatus(int offset=0);
 };

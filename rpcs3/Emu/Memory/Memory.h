@@ -168,8 +168,10 @@ public:
 
 	bool InitSpuRawMem(const u32 max_spu_raw)
 	{
-		if(SpuRawMem.GetSize()) return false;
+		//if(SpuRawMem.GetSize()) return false;
+
 		MemoryBlocks.Add(SpuRawMem.SetRange(0xe0000000, 0x100000 * max_spu_raw));
+
 		return true;
 	}
 
@@ -180,8 +182,8 @@ public:
 
 		ConLog.Write("Initing memory...");
 
-		MemoryBlocks.Add(MainRam.SetRange(0x00000001, 0x10000000)); //256 MB
-		MemoryBlocks.Add(UnkMem. SetRange(0x10000000, 0x00100000)); //unk
+		MemoryBlocks.Add(MainRam.SetRange(0x00000001, 0x10100000));
+		//MemoryBlocks.Add(UnkMem. SetRange(0x10000000, 0x00100000));
 		MemoryBlocks.Add(UserMem.SetRange(0x2ffffe00, 0x0d500000));
 		MemoryBlocks.Add(VideoMem.SetRange(0x40000000, 0x01000000));
 		MemoryBlocks.Add(GcmReportIoAddressMem.SetRange(0x0e000000, 0x01000000)); //16 MB
@@ -205,7 +207,7 @@ public:
 		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
 		{
 			if( MemoryBlocks[i].IsMyAddress(addr) &&
-				MemoryBlocks[i].IsMyAddress(addr + size) ) return true;
+				MemoryBlocks[i].IsMyAddress(addr + size - 1) ) return true;
 		}
 
 		return false;
@@ -245,6 +247,12 @@ public:
 	void Write64(const u64 addr, const u64 data);
 	void Write128(const u64 addr, const u128 data);
 
+	bool Write8NN(const u64 addr, const u8 data);
+	bool Write16NN(const u64 addr, const u16 data);
+	bool Write32NN(const u64 addr, const u32 data);
+	bool Write64NN(const u64 addr, const u64 data);
+	bool Write128NN(const u64 addr, const u128 data);
+
 	u8 Read8(const u64 addr);
 	u16 Read16(const u64 addr);
 	u32 Read32(const u64 addr);
@@ -258,18 +266,16 @@ public:
 
 	template<typename T> void WriteData(const u64 addr, const T data)
 	{
-
 		*(T*)GetMemFromAddr(addr) = data;
 	}
 
 	wxString ReadString(const u64 addr, const u64 len)
 	{
-		wxString str;
-		str.Clear();
-		wxStringBuffer buf(str, len);
-		memcpy((wxChar*)buf, (const void*)GetMemFromAddr(addr), len);
+		wxString ret = wxEmptyString;
 
-		return str;
+		if(len) memcpy(wxStringBuffer(ret, len), GetMemFromAddr(addr), len);
+
+		return ret;
 	}
 
 	wxString ReadString(const u64 addr)
@@ -296,7 +302,7 @@ public:
 		Write8(addr + str.Length(), 0);
 	}
 
-	static u64 AlignAddr(const u64 addr, const u8 align)
+	static u64 AlignAddr(const u64 addr, const u64 align)
 	{
 		return (addr + (align-1)) & ~(align-1);
 	}
@@ -361,10 +367,13 @@ public:
 
 		UserMemInfo mem(m_mem_point, size);
 		ConLog.Warning("Memory alloc: creating new block (addr=0x%llx,size=0x%x)", mem.addr, mem.size);
+
 		if(!IsGoodAddr(mem.addr, mem.size)) return 0;
+
 		memset(GetMemFromAddr(mem.addr), 0, mem.size);
 		m_used_usermem.AddCpy(mem);
 		m_mem_point += size;
+
 		return mem.addr;
 	}
 

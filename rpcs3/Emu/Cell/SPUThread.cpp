@@ -57,14 +57,11 @@ void SPUThread::DoPause()
 
 void SPUThread::DoStop()
 {
-	if(m_dec)
-	{
-		(*(SPU_Decoder*)m_dec).~SPU_Decoder();
-		safe_delete(m_dec);
-	}
+	delete m_dec;
+	m_dec = 0;
 }
 
 void SPUThread::DoCode(const s32 code)
 {
-	(*(SPU_Decoder*)m_dec).Decode(code);
+	m_dec->Decode(code);
 }

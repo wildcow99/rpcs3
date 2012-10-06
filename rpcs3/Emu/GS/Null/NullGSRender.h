@@ -59,7 +59,7 @@ private:
 		m_localAddress = localAddress;
 		m_ctrl = (CellGcmControl*)Memory.GetMemFromAddr(m_ctrlAddress);
 
-		m_update_timer->Start(1);
+		//m_update_timer->Start(1);
 	}
 
 	void OnTimer(wxTimerEvent&)

@@ -118,6 +118,7 @@ enum G_1fOpcodes //Field 21 - 30
 	CMPL 	= 0x020,
 	LVEHX 	= 0x027, //Load Vector Element Halfword Indexed
 	SUBF 	= 0x028,
+	LDUX 	= 0x035, //Load Doubleword with Update Indexed
 	DCBST 	= 0x036,
 	CNTLZD 	= 0x03a,
 	ANDC 	= 0x03c,
@@ -154,11 +155,9 @@ enum G_1fOpcodes //Field 21 - 30
 	ECIWX 	= 0x136,
 	LHZUX 	= 0x137,
 	XOR 	= 0x13c,
-	DIV 	= 0x14b,
 	MFSPR 	= 0x153,
 	LHAX 	= 0x157,
 	ABS 	= 0x168,
-	DIVS 	= 0x16b,
 	MFTB 	= 0x173,
 	LHAUX 	= 0x177,
 	STHX	= 0x197, //Store Halfword Indexed
@@ -171,13 +170,13 @@ enum G_1fOpcodes //Field 21 - 30
 	DCBI 	= 0x1d6,
 	DIVD 	= 0x1e9,
 	DIVW 	= 0x1eb,
+	LWBRX 	= 0x216,
 	LFSX 	= 0x217,
 	SRW 	= 0x218,
 	SRD 	= 0x21b,
 	LFSUX 	= 0x237,
 	SYNC 	= 0x256,
 	LFDX 	= 0x257,
-	LDUX 	= 0x28a,
 	LFDUX	= 0x277,
 	STFSX 	= 0x297,
 	LHBRX 	= 0x316,
@@ -228,7 +227,7 @@ enum G_3fOpcodes //Field 21 - 30
 	MTFSB0	= 0x046,
 	MTFSFI 	= 0x086,
 	MFFS 	= 0x247,
-	MTFSF 	= 0x303,
+	MTFSF	= 0x2c7,
 
 	FCMPU 	= 0x000,
 	FRSP 	= 0x00c,
@@ -267,8 +266,9 @@ public:
 		return pc + (imm & ~0x3);
     }
 
+	ADD_NULL_OPCODE(NULL_OP);
 	ADD_NULL_OPCODE(NOP);
-	
+
 	ADD_OPCODE(TDI,(OP_uIMM to, OP_REG ra, OP_sIMM simm16));
 	ADD_OPCODE(TWI,(OP_uIMM to, OP_REG ra, OP_sIMM simm16));
 
@@ -276,14 +276,14 @@ public:
 		ADD_OPCODE(VXOR,(OP_REG vrd, OP_REG vra, OP_REG vrb));
 	END_OPCODES_GROUP(G_04);
 
-	ADD_OPCODE(MULLI,(OP_REG rt, OP_REG ra, OP_sIMM simm16));
-	ADD_OPCODE(SUBFIC,(OP_REG rt, OP_REG ra, OP_sIMM simm16));
+	ADD_OPCODE(MULLI,(OP_REG rd, OP_REG ra, OP_sIMM simm16));
+	ADD_OPCODE(SUBFIC,(OP_REG rd, OP_REG ra, OP_sIMM simm16));
 	ADD_OPCODE(CMPLI,(OP_REG bf, OP_REG l, OP_REG ra, OP_uIMM uimm16));
 	ADD_OPCODE(CMPI,(OP_REG bf, OP_REG l, OP_REG ra, OP_sIMM simm16));
-	ADD_OPCODE(ADDIC,(OP_REG rt, OP_REG ra, OP_sIMM simm16));
-	ADD_OPCODE(ADDIC_,(OP_REG rt, OP_REG ra, OP_sIMM simm16));
-	ADD_OPCODE(ADDI,(OP_REG rt, OP_REG ra, OP_sIMM simm16));
-	ADD_OPCODE(ADDIS,(OP_REG rt, OP_REG ra, OP_sIMM simm16));
+	ADD_OPCODE(ADDIC,(OP_REG rd, OP_REG ra, OP_sIMM simm16));
+	ADD_OPCODE(ADDIC_,(OP_REG rd, OP_REG ra, OP_sIMM simm16));
+	ADD_OPCODE(ADDI,(OP_REG rd, OP_REG ra, OP_sIMM simm16));
+	ADD_OPCODE(ADDIS,(OP_REG rd, OP_REG ra, OP_sIMM simm16));
 	ADD_OPCODE(BC,(OP_REG bo, OP_REG bi, OP_sIMM bd, OP_REG aa, OP_REG lk));
 	ADD_OPCODE(SC,(const s32 sc_code));
 	ADD_OPCODE(B,(OP_sIMM ll, OP_REG aa, OP_REG lk));
@@ -328,7 +328,7 @@ public:
 		/*0x009*/ADD_OPCODE(MULHDU,(OP_REG rd, OP_REG ra, OP_REG rb, bool rc));
 		/*0x00a*/ADD_OPCODE(ADDC,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x00b*/ADD_OPCODE(MULHWU,(OP_REG rd, OP_REG ra, OP_REG rb, bool rc));
-		/*0x013*/ADD_OPCODE(MFOCRF,(OP_REG a, OP_REG fxm, OP_REG rt));
+		/*0x013*/ADD_OPCODE(MFOCRF,(OP_REG a, OP_REG fxm, OP_REG rd));
 		/*0x014*/ADD_OPCODE(LWARX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x015*/ADD_OPCODE(LDX,(OP_REG ra, OP_REG rs, OP_REG rb));
 		/*0x017*/ADD_OPCODE(LWZX,(OP_REG rd, OP_REG ra, OP_REG rb));
@@ -338,7 +338,8 @@ public:
 		/*0x01c*/ADD_OPCODE(AND,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x020*/ADD_OPCODE(CMPL,(OP_REG bf, OP_REG l, OP_REG ra, OP_REG rb));
 		/*0x027*/ADD_OPCODE(LVEHX,(OP_REG vd, OP_REG ra, OP_REG rb));
-		/*0x028*/ADD_OPCODE(SUBF,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
+		/*0x028*/ADD_OPCODE(SUBF,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
+		/*0x035*/ADD_OPCODE(LDUX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x036*/ADD_OPCODE(DCBST,(OP_REG ra, OP_REG rb));
 		/*0x03a*/ADD_OPCODE(CNTLZD,(OP_REG ra, OP_REG rs, bool rc));
 		/*0x03c*/ADD_OPCODE(ANDC,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
@@ -349,7 +350,7 @@ public:
 		/*0x056*/ADD_OPCODE(DCBF,(OP_REG ra, OP_REG rb));
 		/*0x057*/ADD_OPCODE(LBZX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x067*/ADD_OPCODE(LVX,(OP_REG vrd, OP_REG ra, OP_REG rb));
-		/*0x068*/ADD_OPCODE(NEG,(OP_REG rt, OP_REG ra, OP_REG oe, bool rc));
+		/*0x068*/ADD_OPCODE(NEG,(OP_REG rd, OP_REG ra, OP_REG oe, bool rc));
 		/*0x077*/ADD_OPCODE(LBZUX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x07c*/ADD_OPCODE(NOR,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x088*/ADD_OPCODE(SUBFE,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
@@ -363,24 +364,21 @@ public:
 		/*0x0d6*/ADD_OPCODE(STDCX_,(OP_REG rs, OP_REG ra, OP_REG rb));
 		/*0x0d7*/ADD_OPCODE(STBX,(OP_REG rs, OP_REG ra, OP_REG rb));
 		/*0x0e7*/ADD_OPCODE(STVX,(OP_REG vrd, OP_REG ra, OP_REG rb));
-		/*0x0e9*/ADD_OPCODE(MULLD,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
+		/*0x0e9*/ADD_OPCODE(MULLD,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x0ea*/ADD_OPCODE(ADDME,(OP_REG rd, OP_REG ra, OP_REG oe, bool rc));
-		/*0x0eb*/ADD_OPCODE(MULLW,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
+		/*0x0eb*/ADD_OPCODE(MULLW,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x0f6*/ADD_OPCODE(DCBTST,(OP_REG th, OP_REG ra, OP_REG rb));
-		/*0x108*///DOZ
-		/*0x10a*/ADD_OPCODE(ADD,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
+		/*0x10a*/ADD_OPCODE(ADD,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x116*/ADD_OPCODE(DCBT,(OP_REG ra, OP_REG rb, OP_REG th));
 		/*0x117*/ADD_OPCODE(LHZX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x11c*/ADD_OPCODE(EQV,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x136*/ADD_OPCODE(ECIWX,(OP_REG rd, OP_REG ra, OP_REG rb));
-		/*0x14b*/ADD_OPCODE(DIV,(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x137*/ADD_OPCODE(LHZUX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x13c*/ADD_OPCODE(XOR,(OP_REG rs, OP_REG ra, OP_REG rb, bool rc));
 		/*0x153*/ADD_OPCODE(MFSPR,(OP_REG rd, OP_REG spr));
 		/*0x157*/ADD_OPCODE(LHAX,(OP_REG rd, OP_REG ra, OP_REG rb));
-		/*0x168*/ADD_OPCODE(ABS,(OP_REG rt, OP_REG ra, OP_REG oe, bool rc));
-		/*0x16b*///DIVS
-		/*0x173*/ADD_OPCODE(MFTB,(OP_REG rt, OP_REG spr));
+		/*0x168*/ADD_OPCODE(ABS,(OP_REG rd, OP_REG ra, OP_REG oe, bool rc));
+		/*0x173*/ADD_OPCODE(MFTB,(OP_REG rd, OP_REG spr));
 		/*0x177*/ADD_OPCODE(LHAUX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x197*/ADD_OPCODE(STHX,(OP_REG rs, OP_REG ra, OP_REG rb));
 		/*0x19c*/ADD_OPCODE(ORC,(OP_REG rs, OP_REG ra, OP_REG rb, bool rc));
@@ -392,16 +390,16 @@ public:
 		/*0x1d6*///DCBI
 		/*0x1e9*/ADD_OPCODE(DIVD,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x1eb*/ADD_OPCODE(DIVW,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
+		/*0x216*/ADD_OPCODE(LWBRX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x217*/ADD_OPCODE(LFSX,(OP_REG frd, OP_REG ra, OP_REG rb));
 		/*0x218*/ADD_OPCODE(SRW,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x21b*/ADD_OPCODE(SRD,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
-		/*0x237*///LFSUX
+		/*0x237*/ADD_OPCODE(LFSUX,(OP_REG frd, OP_REG ra, OP_REG rb));
 		/*0x256*/ADD_OPCODE(SYNC,(OP_REG l));
-		/*0x257*///LFDX
-		/*0x28a*///LDUX
-		/*0x277*///LFDUX
+		/*0x257*/ADD_OPCODE(LFDX,(OP_REG frd, OP_REG ra, OP_REG rb));
+		/*0x277*/ADD_OPCODE(LFDUX,(OP_REG frd, OP_REG ra, OP_REG rb));
 		/*0x297*/ADD_OPCODE(STFSX,(OP_REG rs, OP_REG ra, OP_REG rb));
-		/*0x316*///LHBRX
+		/*0x316*/ADD_OPCODE(LHBRX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x318*/ADD_OPCODE(SRAW,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x31A*/ADD_OPCODE(SRAD,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x338*/ADD_OPCODE(SRAWI,(OP_REG ra, OP_REG rs, OP_REG sh, bool rc));
@@ -440,8 +438,8 @@ public:
 	ADD_OPCODE(STFDU,(OP_REG frs, OP_REG ra, OP_sIMM d));
 
 	START_OPCODES_GROUP(G_3a)
-		ADD_OPCODE(LD,(OP_REG rt, OP_REG ra, OP_sIMM ds));
-		ADD_OPCODE(LDU,(OP_REG rt, OP_REG ra, OP_sIMM ds));
+		ADD_OPCODE(LD,(OP_REG rd, OP_REG ra, OP_sIMM ds));
+		ADD_OPCODE(LDU,(OP_REG rd, OP_REG ra, OP_sIMM ds));
 	END_OPCODES_GROUP(G_3a);
 
 	START_OPCODES_GROUP(G_3b)

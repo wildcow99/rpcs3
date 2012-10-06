@@ -49,6 +49,11 @@ private:
 	}
 	
 private:
+	virtual void NULL_OP()
+	{
+		Write( "null" );
+	}
+
 	virtual void NOP()
 	{
 		Write( "nop" );
@@ -70,13 +75,13 @@ private:
 		}
 	END_OPCODES_GROUP(G_04);
 	
-	virtual void MULLI(OP_REG rt, OP_REG ra, OP_sIMM simm16)
+	virtual void MULLI(OP_REG rd, OP_REG ra, OP_sIMM simm16)
 	{
-		DisAsm_R2_IMM("mulli", rt, ra, simm16);
+		DisAsm_R2_IMM("mulli", rd, ra, simm16);
 	}
-	virtual void SUBFIC(OP_REG rt, OP_REG ra, OP_sIMM simm16)
+	virtual void SUBFIC(OP_REG rd, OP_REG ra, OP_sIMM simm16)
 	{
-		DisAsm_R2_IMM("subfic", rt, ra, simm16);
+		DisAsm_R2_IMM("subfic", rd, ra, simm16);
 	}
 	virtual void CMPLI(OP_REG crfd, OP_REG l, OP_REG ra, OP_uIMM uimm16)
 	{
@@ -86,34 +91,34 @@ private:
 	{
 		DisAsm_CR1_R1_IMM(wxString::Format("cmp%si", l ? "d" : "w"), crfd, ra, simm16);
 	}
-	virtual void ADDIC(OP_REG rt, OP_REG ra, OP_sIMM simm16)
+	virtual void ADDIC(OP_REG rd, OP_REG ra, OP_sIMM simm16)
 	{
-		DisAsm_R2_IMM("addic", rt, ra, simm16);
+		DisAsm_R2_IMM("addic", rd, ra, simm16);
 	}
-	virtual void ADDIC_(OP_REG rt, OP_REG ra, OP_sIMM simm16)
+	virtual void ADDIC_(OP_REG rd, OP_REG ra, OP_sIMM simm16)
 	{
-		DisAsm_R2_IMM("addic.", rt, ra, simm16);
+		DisAsm_R2_IMM("addic.", rd, ra, simm16);
 	}
-	virtual void ADDI(OP_REG rt, OP_REG ra, OP_sIMM simm16)
+	virtual void ADDI(OP_REG rd, OP_REG ra, OP_sIMM simm16)
 	{
 		if(ra == 0)
 		{
-			DisAsm_R1_IMM("li", rt, simm16);
+			DisAsm_R1_IMM("li", rd, simm16);
 		}
 		else
 		{
-			DisAsm_R2_IMM("addi", rt, ra, simm16);
+			DisAsm_R2_IMM("addi", rd, ra, simm16);
 		}
 	}
-	virtual void ADDIS(OP_REG rt, OP_REG ra, OP_sIMM simm16)
+	virtual void ADDIS(OP_REG rd, OP_REG ra, OP_sIMM simm16)
 	{
 		if(ra == 0)
 		{
-			DisAsm_R1_IMM("lis", rt, simm16);
+			DisAsm_R1_IMM("lis", rd, simm16);
 		}
 		else
 		{
-			DisAsm_R2_IMM("addis", rt, ra, simm16);
+			DisAsm_R2_IMM("addis", rd, ra, simm16);
 		}
 	}
 
@@ -134,86 +139,84 @@ private:
 
 		if(bo0 && !bo1 && !bo2 && bo3 && !bo4)
 		{
-			DisAsm_CR_BRANCH("bdz", bi/4, bd);
+			DisAsm_CR_BRANCH("bdz", bi/4, bd); return;
 		}
 		else if(bo0 && bo1 && !bo2 && bo3 && !bo4)
 		{
-			DisAsm_CR_BRANCH("bdz-", bi/4, bd);
+			DisAsm_CR_BRANCH("bdz-", bi/4, bd); return;
 		}
 		else if(bo0 && bo1 && !bo2 && bo3 && bo4)
 		{
-			DisAsm_CR_BRANCH("bdz+", bi/4, bd);
+			DisAsm_CR_BRANCH("bdz+", bi/4, bd); return;
 		}
 		else if(bo0 && !bo1 && !bo2 && !bo3 && !bo4)
 		{
-			DisAsm_CR_BRANCH("bdnz", bi/4, bd);
+			DisAsm_CR_BRANCH("bdnz", bi/4, bd); return;
 		}
 		else if(bo0 && bo1 && !bo2 && !bo3 && !bo4)
 		{
-			DisAsm_CR_BRANCH("bdnz-", bi/4, bd);
+			DisAsm_CR_BRANCH("bdnz-", bi/4, bd); return;
 		}
 		else if(bo0 && bo1 && !bo2 && !bo3 && bo4)
 		{
-			DisAsm_CR_BRANCH("bdnz+", bi/4, bd);
+			DisAsm_CR_BRANCH("bdnz+", bi/4, bd); return;
 		}
 		else if(!bo0 && !bo1 && bo2 && !bo3 && !bo4)
 		{
 			switch(bi % 4)
 			{
-			case 0x0: DisAsm_CR_BRANCH("bge", bi/4, bd); break;
-			case 0x1: DisAsm_CR_BRANCH("ble", bi/4, bd); break;
-			case 0x2: DisAsm_CR_BRANCH("bne", bi/4, bd); break;
+			case 0x0: DisAsm_CR_BRANCH("bge", bi/4, bd); return;
+			case 0x1: DisAsm_CR_BRANCH("ble", bi/4, bd); return;
+			case 0x2: DisAsm_CR_BRANCH("bne", bi/4, bd); return;
 			}
 		}
 		else if(!bo0 && !bo1 && bo2 && bo3 && !bo4)
 		{
 			switch(bi % 4)
 			{
-			case 0x0: DisAsm_CR_BRANCH("bge-", bi/4, bd); break;
-			case 0x1: DisAsm_CR_BRANCH("ble-", bi/4, bd); break;
-			case 0x2: DisAsm_CR_BRANCH("bne-", bi/4, bd); break;
+			case 0x0: DisAsm_CR_BRANCH("bge-", bi/4, bd); return;
+			case 0x1: DisAsm_CR_BRANCH("ble-", bi/4, bd); return;
+			case 0x2: DisAsm_CR_BRANCH("bne-", bi/4, bd); return;
 			}
 		}
 		else if(!bo0 && !bo1 && bo2 && bo3 && bo4)
 		{
 			switch(bi % 4)
 			{
-			case 0x0: DisAsm_CR_BRANCH("bge+", bi/4, bd); break;
-			case 0x1: DisAsm_CR_BRANCH("ble+", bi/4, bd); break;
-			case 0x2: DisAsm_CR_BRANCH("bne+", bi/4, bd); break;
+			case 0x0: DisAsm_CR_BRANCH("bge+", bi/4, bd); return;
+			case 0x1: DisAsm_CR_BRANCH("ble+", bi/4, bd); return;
+			case 0x2: DisAsm_CR_BRANCH("bne+", bi/4, bd); return;
 			}
 		}
 		else if(!bo0 && bo1 && bo2 && !bo3 && !bo4)
 		{
 			switch(bi % 4)
 			{
-			case 0x0: DisAsm_CR_BRANCH("blt", bi/4, bd); break;
-			case 0x1: DisAsm_CR_BRANCH("bgt", bi/4, bd); break;
-			case 0x2: DisAsm_CR_BRANCH("beq", bi/4, bd); break;
+			case 0x0: DisAsm_CR_BRANCH("blt", bi/4, bd); return;
+			case 0x1: DisAsm_CR_BRANCH("bgt", bi/4, bd); return;
+			case 0x2: DisAsm_CR_BRANCH("beq", bi/4, bd); return;
 			}
 		}
 		else if(!bo0 && bo1 && bo2 && bo3 && !bo4)
 		{
 			switch(bi % 4)
 			{
-			case 0x0: DisAsm_CR_BRANCH("blt-", bi/4, bd); break;
-			case 0x1: DisAsm_CR_BRANCH("bgt-", bi/4, bd); break;
-			case 0x2: DisAsm_CR_BRANCH("beq-", bi/4, bd); break;
+			case 0x0: DisAsm_CR_BRANCH("blt-", bi/4, bd); return;
+			case 0x1: DisAsm_CR_BRANCH("bgt-", bi/4, bd); return;
+			case 0x2: DisAsm_CR_BRANCH("beq-", bi/4, bd); return;
 			}
 		}
 		else if(!bo0 && bo1 && bo2 && bo3 && bo4)
 		{
 			switch(bi % 4)
 			{
-			case 0x0: DisAsm_CR_BRANCH("blt+", bi/4, bd); break;
-			case 0x1: DisAsm_CR_BRANCH("bgt+", bi/4, bd); break;
-			case 0x2: DisAsm_CR_BRANCH("beq+", bi/4, bd); break;
+			case 0x0: DisAsm_CR_BRANCH("blt+", bi/4, bd); return;
+			case 0x1: DisAsm_CR_BRANCH("bgt+", bi/4, bd); return;
+			case 0x2: DisAsm_CR_BRANCH("beq+", bi/4, bd); return;
 			}
 		}
-		else
-		{
-			Write(wxString::Format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi/4, bi%4, bd, aa, lk));
-		}
+		
+		Write(wxString::Format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi/4, bi%4, bd, aa, lk));
 	}
 	virtual void SC(const s32 sc_code)
 	{
@@ -433,15 +436,15 @@ private:
 		{
 			DisAsm_R3_RC("mulhwu", rd, ra, rb, rc);
 		}
-		virtual void MFOCRF(OP_REG a, OP_REG fxm, OP_REG rt)
+		virtual void MFOCRF(OP_REG a, OP_REG fxm, OP_REG rd)
 		{
 			if(a)
 			{
-				DisAsm_R1_IMM("mfocrf", rt, fxm);
+				DisAsm_R1_IMM("mfocrf", rd, fxm);
 			}
 			else
 			{
-				DisAsm_R1("mfcr", rt);
+				DisAsm_R1("mfcr", rd);
 			}
 		}
 		virtual void LWARX(OP_REG rd, OP_REG ra, OP_REG rb)
@@ -480,9 +483,13 @@ private:
 		{
 			DisAsm_V1_R2("lvehx", vd, ra, rb);
 		}
-		virtual void SUBF(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
+		virtual void SUBF(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
-			 DisAsm_R3_OE_RC("subf", rt, ra, rb, oe, rc);
+			 DisAsm_R3_OE_RC("subf", rd, ra, rb, oe, rc);
+		}
+		virtual void LDUX(OP_REG rd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_R3("ldux", rd, ra, rb);
 		}
 		virtual void DCBST(OP_REG ra, OP_REG rb)
 		{
@@ -524,9 +531,9 @@ private:
 		{
 			DisAsm_V1_R2("lvx", vrd, ra, rb);
 		}
-		virtual void NEG(OP_REG rt, OP_REG ra, OP_REG oe, bool rc)
+		virtual void NEG(OP_REG rd, OP_REG ra, OP_REG oe, bool rc)
 		{
-			DisAsm_R2_OE_RC("neg", rt, ra, oe, rc);
+			DisAsm_R2_OE_RC("neg", rd, ra, oe, rc);
 		}
 		virtual void LBZUX(OP_REG rd, OP_REG ra, OP_REG rb)
 		{
@@ -587,26 +594,25 @@ private:
 		{
 			DisAsm_V1_R2("stvx", vrd, ra, rb);
 		}
-		virtual void MULLD(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
+		virtual void MULLD(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
-			DisAsm_R3_OE_RC("mulld", rt, ra, rb, oe, rc);
+			DisAsm_R3_OE_RC("mulld", rd, ra, rb, oe, rc);
 		}
 		virtual void ADDME(OP_REG rd, OP_REG ra, OP_REG oe, bool rc)
 		{
 			DisAsm_R2_OE_RC("addme", rd, ra, oe, rc);
 		}
-		virtual void MULLW(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
+		virtual void MULLW(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
-			DisAsm_R3_OE_RC("mullw", rt, ra, rb, oe, rc);
+			DisAsm_R3_OE_RC("mullw", rd, ra, rb, oe, rc);
 		}
 		virtual void DCBTST(OP_REG th, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_R3("dcbtst", th, ra, rb);
 		}
-		/*0x108*///DOZ
-		virtual void ADD(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
+		virtual void ADD(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
-			DisAsm_R3_OE_RC("add", rt, ra, rb, oe, rc);
+			DisAsm_R3_OE_RC("add", rd, ra, rb, oe, rc);
 		}
 		virtual void DCBT(OP_REG ra, OP_REG rb, OP_REG th)
 		{
@@ -623,10 +629,6 @@ private:
 		virtual void ECIWX(OP_REG rd, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_R3("eciwx", rd, ra, rb);
-		}
-		virtual void DIV(OP_REG rt, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
-		{
-			DisAsm_R3_OE_RC("div", rt, ra, rb, oe, rc);
 		}
 		virtual void LHZUX(OP_REG rd, OP_REG ra, OP_REG rb)
 		{
@@ -651,19 +653,18 @@ private:
 		{
 			DisAsm_R3("lhax", rd, ra, rb);
 		}
-		virtual void ABS(OP_REG rt, OP_REG ra, OP_REG oe, bool rc)
+		virtual void ABS(OP_REG rd, OP_REG ra, OP_REG oe, bool rc)
 		{
-			DisAsm_R2_OE_RC("abs", rt, ra, oe, rc);
+			DisAsm_R2_OE_RC("abs", rd, ra, oe, rc);
 		}
-		/*0x16b*///DIVS
-		virtual void MFTB(OP_REG rt, OP_REG spr)
+		virtual void MFTB(OP_REG rd, OP_REG spr)
 		{
 			const u32 n = (spr >> 5) | ((spr & 0x1f) << 5);
 			switch(n)
 			{
-			case 268: DisAsm_R1("mftb", rt); break;
-			case 269: DisAsm_R1("mftbu", rt); break;
-			default: DisAsm_R1_IMM("mftb", rt, spr); break;
+			case 268: DisAsm_R1("mftb", rd); break;
+			case 269: DisAsm_R1("mftbu", rd); break;
+			default: DisAsm_R1_IMM("mftb", rd, spr); break;
 			}
 		}
 		virtual void LHAUX(OP_REG rd, OP_REG ra, OP_REG rb)
@@ -722,6 +723,10 @@ private:
 		{
 			DisAsm_R3_OE_RC("divw", rd, ra, rb, oe, rc);
 		}
+		virtual void LWBRX(OP_REG rd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_R3("lwbrx", rd, ra, rb);
+		}
 		virtual void LFSX(OP_REG frd, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_F1_R2("lfsx", frd, ra, rb);
@@ -734,19 +739,30 @@ private:
 		{
 			DisAsm_R3_RC("srd", ra, rs, rb, rc);
 		}
-		/*0x237*///LFSUX
+		virtual void LFSUX(OP_REG frd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_F1_R2("lfsux", frd, ra, rb);
+		}
 		virtual void SYNC(OP_REG l)
 		{
 			DisAsm_INT1("sync", l);
 		}
-		/*0x257*///LFDX
-		/*0x28a*///LDUX
-		/*0x277*///LFDUX
-		virtual void STFSX(OP_REG rs, OP_REG ra, OP_REG rb)
+		virtual void LFDX(OP_REG frd, OP_REG ra, OP_REG rb)
 		{
-			DisAsm_F1_R2("stfsx", rs, ra, rb);
+			DisAsm_F1_R2("lfdx", frd, ra, rb);
 		}
-		/*0x316*///LHBRX
+		virtual void LFDUX(OP_REG frd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_F1_R2("lfdux", frd, ra, rb);
+		}
+		virtual void STFSX(OP_REG frs, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_F1_R2("stfsx", frs, ra, rb);
+		}
+		virtual void LHBRX(OP_REG rd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_R3("lhbrx", rd, ra, rb);
+		}
 		virtual void SRAW(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
 		{
 			DisAsm_R3_RC("sraw", ra, rs, rb, rc);
@@ -794,21 +810,21 @@ private:
 		}
 	END_OPCODES_GROUP(G_1f);
 	
-	virtual void LWZ(OP_REG rt, OP_REG ra, OP_sIMM d)
+	virtual void LWZ(OP_REG rd, OP_REG ra, OP_sIMM d)
 	{
-		DisAsm_R2_IMM("lwz", rt, ra, d);
+		DisAsm_R2_IMM("lwz", rd, ra, d);
 	}
-	virtual void LWZU(OP_REG rt, OP_REG ra, OP_sIMM d)
+	virtual void LWZU(OP_REG rd, OP_REG ra, OP_sIMM d)
 	{
-		DisAsm_R2_IMM("lwzu", rt, ra, d);
+		DisAsm_R2_IMM("lwzu", rd, ra, d);
 	}
-	virtual void LBZ(OP_REG rt, OP_REG ra, OP_sIMM d)
+	virtual void LBZ(OP_REG rd, OP_REG ra, OP_sIMM d)
 	{
-		DisAsm_R2_IMM("lbz", rt, ra, d);
+		DisAsm_R2_IMM("lbz", rd, ra, d);
 	}
-	virtual void LBZU(OP_REG rt, OP_REG ra, OP_sIMM d)
+	virtual void LBZU(OP_REG rd, OP_REG ra, OP_sIMM d)
 	{
-		DisAsm_R2_IMM("lbzu", rt, ra, d);
+		DisAsm_R2_IMM("lbzu", rd, ra, d);
 	}
 	virtual void STW(OP_REG rs, OP_REG ra, OP_sIMM d)
 	{
@@ -884,13 +900,13 @@ private:
 	}
 	
 	START_OPCODES_GROUP(G_3a)
-		virtual void LD(OP_REG rt, OP_REG ra, OP_sIMM ds)
+		virtual void LD(OP_REG rd, OP_REG ra, OP_sIMM ds)
 		{
-			DisAsm_R2_IMM("ld", rt, ra, ds);
+			DisAsm_R2_IMM("ld", rd, ra, ds);
 		}
-		virtual void LDU(OP_REG rt, OP_REG ra, OP_sIMM ds)
+		virtual void LDU(OP_REG rd, OP_REG ra, OP_sIMM ds)
 		{
-			DisAsm_R2_IMM("ldu", rt, ra, ds);
+			DisAsm_R2_IMM("ldu", rd, ra, ds);
 		}
 	END_OPCODES_GROUP(G_3a);
 

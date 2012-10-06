@@ -47,7 +47,7 @@ void PPUThread::SetBranch(const u64 pc)
 	{
 		GPR[3] = SysCallsManager.DoFunc(fid, *this);
 
-		if((s32)GPR[3] < 0 && fid != 0x72a577ce) ConLog.Write("Func[0x%llx] done with code [0x%x]! #pc: 0x%llx", fid, (u32)GPR[3], PC);
+		if((s32)GPR[3] < 0 && fid != 0x72a577ce && fid != 0x8461e528) ConLog.Write("Func[0x%llx] done with code [0x%x]! #pc: 0x%llx", fid, (u32)GPR[3], PC);
 #ifdef HLE_CALL_LOG
 		else ConLog.Warning("Func[0xll%x] done with code [0x%llx]! #pc: 0x%llx", fid, GPR[3], PC);
 #endif
@@ -94,6 +94,8 @@ void PPUThread::InitRegs()
 	const u32 entry = Memory.Read32(PC);
 	const u32 rtoc = Memory.Read32(PC + 4);
 
+	ConLog.Write("rtoc = 0x%x", rtoc);
+
 	SetPc(entry);
 	
 	int argc = m_arg;
@@ -109,8 +111,27 @@ void PPUThread::InitRegs()
 		for(int i=0; i<argc; ++i) argv_list += argv_addr[i];
 	}
 
+	const s32 thread_num = Emu.GetCPU().GetThreadNumById(!IsSPU(), GetId());
+
+	if(thread_num < 0)
+	{
+		ConLog.Error("GetThreadNumById failed.");
+		Emu.Pause();
+		return;
+	}
+
+	const s32 tls_size = Emu.GetTLSFilesz() * thread_num;
+
+	if(tls_size >= Emu.GetTLSMemsz())
+	{
+		ConLog.Error("Out of TLS memory.");
+		Emu.Pause();
+		return;
+	}
+
 	GPR[1] = stack_point;
 	GPR[2] = rtoc;
+
 	if(argc)
 	{
 		GPR[3] = argc;
@@ -121,23 +142,16 @@ void PPUThread::InitRegs()
 	{
 		GPR[3] = m_arg;
 	}
-	GPR[7] = 0x80d90;
+
+	//GPR[7] = 0x80d90;
 	GPR[8] = entry;
-	GPR[10] = 0x131700;
-	GPR[11] = 0x80;
+	//GPR[10] = 0x131700;
+	//GPR[11] = 0x80;
 	GPR[12] = Emu.GetMallocPageSize();
 	GPR[13] = 0x10090000;
-	GPR[28] = GPR[4];
-	GPR[29] = GPR[3];
-	GPR[31] = GPR[5];
-
-	//Memory.WriteString(GPR[4], "PATH1");
-	//Memory.WriteString(GPR[5], "PATH2");
-
-	//Memory.Write32(GPR[4], Emu.GetTLSFilesz());
-	//Memory.Write32(GPR[4]+4, Emu.GetTLSMemsz());
-
-	//Memory.Write32(Memory.Read32(0x30e44), 0x12e464);
+	//GPR[28] = GPR[4];
+	//GPR[29] = GPR[3];
+	//GPR[31] = GPR[5];
 }
 
 u64 PPUThread::GetFreeStackSize() const
@@ -170,11 +184,8 @@ void PPUThread::DoPause()
 
 void PPUThread::DoStop()
 {
-	if(m_dec)
-	{
-		(*(PPU_Decoder*)m_dec).~PPU_Decoder();
-		safe_delete(m_dec);
-	}
+	delete m_dec;
+	m_dec = 0;
 }
 
 bool dump_enable = false;
@@ -191,16 +202,13 @@ void PPUThread::DoCode(const s32 code)
 		f.Write(disasm.last_opcode);
 	}
 
-	TB++;
-	/*
 	if(++cycle > 220)
 	{
 		cycle = 0;
 		TB++;
 	}
-	*/
 
-	(*(PPU_Decoder*)m_dec).Decode(code);
+	m_dec->Decode(code);
 }
 
 bool FPRdouble::IsINF(double d)

@@ -186,7 +186,7 @@ extern gcmBuffer gcmBuffers[2];
 struct GLRSXThread : public wxThread
 {
 	wxWindow* m_parent;
-	Array<u32> call_stack;
+	Stack<u32> call_stack;
 
 	GLRSXThread(wxWindow* parent);
 

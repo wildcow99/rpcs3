@@ -1,6 +1,8 @@
 #pragma once
 
-//#define LOADER_DEBUG
+#ifdef _DEBUG	
+	#define LOADER_DEBUG
+#endif
 
 enum Elf_Machine
 {
@@ -11,7 +13,7 @@ enum Elf_Machine
 
 enum ShdrType
 {
-	SHT_NULL = 0, 
+	SHT_NULL, 
 	SHT_PROGBITS,
 	SHT_SYMTAB,
 	SHT_STRTAB,
@@ -52,7 +54,7 @@ struct sys_process_param_info
 	u32 primary_stacksize;
 	u32 malloc_pagesize;
 	u32 ppc_seg;
-	u32 crash_dump_param_addr;
+	//u32 crash_dump_param_addr;
 };
 
 struct sys_process_param
@@ -61,6 +63,39 @@ struct sys_process_param
 	u32 magic;
 	u32 version;
 	sys_process_param_info info;
+};
+
+struct sys_proc_prx_param
+{
+	u32 size;
+	u32 magic;
+	u32 version;
+	u32 pad0;
+	u32 libentstart;
+	u32 libentend;
+	u32 libstubstart;
+	u32 libstubend;
+	u16 ver;
+	u16 pad1;
+	u32 pad2;
+};
+
+struct Elf64_StubHeader
+{
+	u8 s_size; // = 0x2c
+	u8 s_unk0;
+	u16 s_version; // = 0x1
+	u16 s_unk1; // = 0x9 // flags?
+	u16 s_imports;
+	u32 s_unk2; // = 0x0
+	u32 s_unk3; // = 0x0
+	u32 s_modulename;
+	u32 s_nid;
+	u32 s_text;
+	u32 s_unk4; // = 0x0
+	u32 s_unk5; // = 0x0
+	u32 s_unk6; // = 0x0
+	u32 s_unk7; // = 0x0
 };
 
 class LoaderBase

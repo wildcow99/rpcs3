@@ -11,6 +11,7 @@ PPCThread::PPCThread(bool _isSPU)
 	, stack_size(0)
 	, stack_addr(0)
 	, m_prio(0)
+	, m_offset(0)
 {
 }
 
@@ -195,6 +196,6 @@ void PPCThread::Stop()
 void PPCThread::Exec()
 {
 	if(!IsRunned()) return;
-	DoCode(Memory.Read32(PC));
+	DoCode(Memory.Read32(m_offset + PC));
 	NextPc();
 }

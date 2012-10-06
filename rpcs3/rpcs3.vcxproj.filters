@@ -172,6 +172,12 @@
     <ClCompile Include="Emu\GS\GL\ProgramBuffer.cpp">
       <Filter>Emu\GS\GL</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_SPU_Thread.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\GS\RSXThread.cpp">
+      <Filter>Emu\GS</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

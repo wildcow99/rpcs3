@@ -7,7 +7,7 @@ class WindowsPadHandler
 	, public PadHandlerBase
 {
 public:
-	WindowsPadHandler()
+	WindowsPadHandler() : wxWindow()
 	{
 		wxGetApp().Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(WindowsPadHandler::KeyDown), (wxObject*)0, this);
 		wxGetApp().Connect(wxEVT_KEY_UP, wxKeyEventHandler(WindowsPadHandler::KeyUp), (wxObject*)0, this);

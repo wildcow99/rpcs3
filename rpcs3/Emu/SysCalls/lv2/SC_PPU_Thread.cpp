@@ -119,3 +119,8 @@ int SysCalls::lv2PPUThreadGetId(PPUThread& CPU)
 	Memory.Write64(CPU.GPR[3], CPU.GetId());
 	return CELL_OK;
 }
+
+int sys_spu_thread_once(u64 once_ctrl_addr, u64 init_addr)
+{
+	return 0;
+}
