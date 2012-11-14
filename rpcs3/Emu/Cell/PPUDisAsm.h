@@ -39,8 +39,6 @@ private:
 		{
 			disasm_frame->Close();
 		}
-
-		this->~PPU_DisAsm();
 	}
 
 	virtual u32 DisAsmBranchTarget(const s32 imm)

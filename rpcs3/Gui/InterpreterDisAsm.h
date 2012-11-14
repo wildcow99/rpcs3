@@ -15,6 +15,8 @@ class InterpreterDisAsmFrame
 	DisAsm* disasm;
 	Decoder* decoder;
 	u64 PC;
+	Array<u64> markedPC;
+	Array<u32> remove_markedPC;
 	wxTextCtrl* m_regs;
 	Array<u64> m_break_points;
 	wxButton* m_btn_step;
@@ -24,18 +26,24 @@ class InterpreterDisAsmFrame
 
 public:
 	InterpreterDisAsmFrame(const wxString& title, PPCThread* cpu);
+	~InterpreterDisAsmFrame();
+
+	void Save(const wxString& path);
+	void Load(const wxString& path);
 
 	virtual void OnKeyDown(wxKeyEvent& event);
 	void DoUpdate();
-	void ShowPc(const u64 pc);
+	void ShowAddr(const u64 addr);
 	void WriteRegs();
-	virtual void OnUpdate(wxCommandEvent& event);
-	virtual void Show_Val(wxCommandEvent& event);
-	virtual void Show_PC(wxCommandEvent& event);
-	virtual void DoRun(wxCommandEvent& event);
-	virtual void DoPause(wxCommandEvent& event);
-	virtual void DoStep(wxCommandEvent& event);
-	virtual void DClick(wxListEvent& event);
+
+	void OnUpdate(wxCommandEvent& event);
+	void Show_Val(wxCommandEvent& event);
+	void Show_PC(wxCommandEvent& event);
+	void DoRun(wxCommandEvent& event);
+	void DoPause(wxCommandEvent& event);
+	void DoStep(wxCommandEvent& event);
+	void DClick(wxListEvent& event);
+
 	void OnResize(wxSizeEvent& event);
 	void MouseWheel(wxMouseEvent& event);
 	bool IsBreakPoint(u64 pc);

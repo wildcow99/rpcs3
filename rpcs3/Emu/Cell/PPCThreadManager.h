@@ -1,6 +1,4 @@
 #pragma once
-#include "Utilites/IdManager.h"
-#include "Utilites/Thread.h"
 #include "PPCThread.h"
 
 class PPCThreadManager : public ThreadBase
@@ -9,7 +7,6 @@ class PPCThreadManager : public ThreadBase
 	//ArrayF<PPUThread> m_ppu_threads;
 	//ArrayF<SPUThread> m_spu_threads;
 	ArrayF<PPCThread> m_threads;
-	volatile bool m_exec;
 
 public:
 	PPCThreadManager();

@@ -4,6 +4,7 @@
 
 #include "Emu/System.h"
 #include "Ini.h"
+#include "svnrev.h"
 
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
 	EVT_CLOSE(MainFrame::OnQuit)
@@ -19,8 +20,9 @@ enum IDs
 	id_config_emu,
 };
 
-MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_, "MainFrame", wxSize(280, 180))
+MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 180))
 {
+	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_ " r%d" SVN_MOD " (" SVN_DATE ")", SVN_REV));
 	wxMenuBar& menubar(*new wxMenuBar());
 
 	wxMenu& menu_boot(*new wxMenu());
@@ -43,10 +45,10 @@ MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, _PRGNAME_ " " _PRGVER_, "Main
 
 	SetMenuBar(&menubar);
 
-	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
+	wxBoxSizer& s_panel( *new wxBoxSizer(wxHORIZONTAL) );
 
 	m_game_viewer = new GameViewer(this);
-	s_panel.Add( m_game_viewer );
+	s_panel.Add( m_game_viewer, wxSizerFlags().Expand() );
 
 	SetSizerAndFit( &s_panel );
 
@@ -359,7 +361,7 @@ void MainFrame::OnKeyDown(wxKeyEvent& event)
 		switch(event.GetKeyCode())
 		{
 		case 'C': case 'c': if(Emu.IsPaused()) Emu.Resume(); return;
-		case 'S': case 's': if(!Emu.IsStoped()) Emu.Stop(); return;
+		case 'S': case 's': if(!Emu.IsStopped()) Emu.Stop(); return;
 		case 'R': case 'r': if(Emu.m_path.Len()) {Emu.Stop(); Emu.Run();} return;
 		}
 	}

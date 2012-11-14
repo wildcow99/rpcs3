@@ -1,7 +1,6 @@
 #pragma once
 #include <Emu/Cell/PPUThread.h>
 //#include <Emu/Cell/SPUThread.h>
-#include "Utilites/IdManager.h"
 #include "ErrorCodes.h"
 
 //#define SYSCALLS_DEBUG
@@ -147,11 +146,13 @@ extern int cellGcmInit(const u32 context_addr, const u32 cmdSize, const u32 ioSi
 extern int cellGcmGetConfiguration(const u32 config_addr);
 extern int cellGcmAddressToOffset(const u32 address, const u32 offset_addr);
 extern int cellGcmSetDisplayBuffer(const u8 id, const u32 offset, const u32 pitch, const u32 width, const u32 height);
-extern int cellGcmGetControlRegister();
+extern u32 cellGcmGetLabelAddress(const u32 index);
+extern u32 cellGcmGetControlRegister();
 extern int cellGcmFlush(const u32 ctx, const u8 id);
 extern int cellGcmSetTile(const u8 index, const u8 location, const u32 offset, const u32 size, const u32 pitch, const u8 comp, const u16 base, const u8 bank);
 extern int cellGcmGetFlipStatus();
 extern int cellGcmResetFlipStatus();
+extern u32 cellGcmGetTiledPitchSize(const u32 size);
 
 //cellResc
 extern int cellRescSetSrc(const int idx, const u32 src_addr);
@@ -166,6 +167,11 @@ extern int sys_spu_thread_group_create(u64 id_addr, u32 num, int prio, u64 attr_
 extern int sys_spu_thread_create(u64 thread_id_addr, u64 entry_addr, u64 arg, int prio, u32 stacksize, u64 flags, u64 threadname_addr);
 extern int sys_raw_spu_create(u32 id_addr, u32 attr_addr);
 extern int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu);
+
+//sys_time
+extern int sys_time_get_current_time(u32 sec_addr, u32 nsec_addr);
+extern s64 sys_time_get_system_time();
+extern u64 sys_time_get_timebase_frequency();
 
 #define SC_ARGS_1 CPU.GPR[3]
 #define SC_ARGS_2 SC_ARGS_1,CPU.GPR[4]
@@ -220,12 +226,9 @@ public:
 	int lv2TtyRead(PPUThread& CPU);
 	int lv2TtyWrite(PPUThread& CPU);
 
-	LARGE_INTEGER frequency;
-
 public:
 	SysCalls()// : CPU(cpu)
 	{
-		QueryPerformanceFrequency(&frequency);
 	}
 
 	~SysCalls()
@@ -237,15 +240,15 @@ public:
 	{
 	}
 
-	u64 DoSyscall(u32 code, PPUThread& CPU)
+	s64 DoSyscall(u32 code, PPUThread& CPU)
 	{
-		static const u64 timebase_frequency = 79800000;
 		switch(code)
 		{
 			//=== lv2 ===
 			//process
 			case 1: return sys_process_getpid();
 			case 2: return lv2ProcessWaitForChild(CPU);
+			case 3: return lv2ProcessExit(CPU);
 			case 4: return lv2ProcessGetStatus(CPU);
 			case 5: return lv2ProcessDetachChild(CPU);
 			case 12: return lv2ProcessGetNumberOfObject(CPU);
@@ -275,23 +278,15 @@ public:
 			case 97: return Lv2LwmutexLock(CPU);
 			case 98: return Lv2LwmutexTrylock(CPU);
 			case 99: return Lv2LwmutexUnlock(CPU);
-			//time
+			//timer
 			case 141:
 			case 142:
-				Sleep(Emu.GetCPU().GetThreads().GetCount() > 1 ? 1 : /*SC_ARGS_1 / 1000*/1);
+				//wxSleep(Emu.GetCPU().GetThreads().GetCount() > 1 ? 1 : /*SC_ARGS_1*/1);
 			return 0;
-			case 146:
-			{
-				/*ConLog.Write("sys_time_get_system_time()");*/
-				LARGE_INTEGER cycle;
-				QueryPerformanceCounter(&cycle);
-				return cycle.QuadPart;
-				return CPU.TB /*/ (timebase_frequency / 1000000)*/;
-			}
-			case 147:
-				/*ConLog.Write("sys_time_get_timebase_frequency()");*/
-				return frequency.QuadPart;
-				return timebase_frequency;
+			//time
+			case 145: return sys_time_get_current_time(SC_ARGS_2);
+			case 146: return sys_time_get_system_time();
+			case 147: return sys_time_get_timebase_frequency();
 			//sys_spu
 			case 160: return sys_raw_spu_create(SC_ARGS_2);
 			case 169: return sys_spu_initialize(SC_ARGS_2);
@@ -332,7 +327,7 @@ public:
 		return 0;
 	}
 	
-	u64 DoFunc(const u32 id, PPUThread& CPU);
+	s64 DoFunc(const u32 id, PPUThread& CPU);
 };
 
 extern SysCalls SysCallsManager;

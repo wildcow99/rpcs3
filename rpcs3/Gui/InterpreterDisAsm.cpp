@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "InterpreterDisAsm.h"
 
-static const int show_lines = 40;
+static const int show_lines = 30;
+static const wxString& BreakPointsDBName = "BreakPoints.dat";
+static const u16 bpdb_version = 0x1000;
 
 u32 FixPc(const u32 pc)
 {
@@ -34,25 +36,21 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread*
 
 	m_list = new wxListView(&m_main_panel);
 
-	wxButton& b_show_Val = *new wxButton(&m_main_panel, wxID_ANY, "Show value");
-	wxButton& b_show_PC = *new wxButton(&m_main_panel, wxID_ANY, "Show PC");
+	wxButton& b_go_to_addr = *new wxButton(&m_main_panel, wxID_ANY, "Go To Address");
+	wxButton& b_go_to_pc = *new wxButton(&m_main_panel, wxID_ANY, "Go To PC");
+
 	m_btn_step = new wxButton(&m_main_panel, wxID_ANY, "Step");
 	m_btn_run = new wxButton(&m_main_panel, wxID_ANY, "Run");
 	m_btn_pause = new wxButton(&m_main_panel, wxID_ANY, "Pause");
 
-	s_b_main.AddSpacer(5);
-	s_b_main.Add(&b_show_Val);
-	s_b_main.AddSpacer(5);
-	s_b_main.Add(&b_show_PC);
-	s_b_main.AddSpacer(5);
-	s_b_main.Add(m_btn_step);
-	s_b_main.AddSpacer(5);
-	s_b_main.Add(m_btn_run);
-	s_b_main.AddSpacer(5);
-	s_b_main.Add(m_btn_pause);
+	s_b_main.Add(&b_go_to_addr,	wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(&b_go_to_pc,	wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(m_btn_step,	wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(m_btn_run,		wxSizerFlags().Border(wxALL, 5));
+	s_b_main.Add(m_btn_pause,	wxSizerFlags().Border(wxALL, 5));
 
 	m_regs = new wxTextCtrl(&m_main_panel, wxID_ANY, wxEmptyString,
-		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxNO_BORDER|wxTE_RICH2);
+		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_DONTWRAP|wxNO_BORDER|wxTE_RICH2);
 	m_regs->SetMinSize(wxSize(495, 100));
 	m_regs->SetEditable(false);
 
@@ -88,8 +86,8 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread*
 	}
 
 	Connect(m_regs->GetId(),		wxEVT_COMMAND_TEXT_UPDATED,		wxCommandEventHandler(InterpreterDisAsmFrame::OnUpdate));
-	Connect(b_show_Val.GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::Show_Val));
-	Connect(b_show_PC.GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::Show_PC));
+	Connect(b_go_to_addr.GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::Show_Val));
+	Connect(b_go_to_pc.GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::Show_PC));
 	Connect(m_btn_step->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoStep));
 	Connect(m_btn_run->GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoRun));
 	Connect(m_btn_pause->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoPause));
@@ -102,6 +100,73 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread*
 	//ShowPc(Loader.entry);
 	WriteRegs();
 	ThreadBase::Start();
+
+	Load(BreakPointsDBName);
+}
+
+InterpreterDisAsmFrame::~InterpreterDisAsmFrame()
+{
+	ThreadBase::Stop();
+	Save(BreakPointsDBName);
+}
+
+void InterpreterDisAsmFrame::Save(const wxString& path)
+{
+	wxFile f(path, wxFile::write);
+	u32 break_count = m_break_points.GetCount();
+	u32 marked_count = markedPC.GetCount();
+	f.Write(&bpdb_version, sizeof(u16));
+	f.Write(&break_count, sizeof(u32));
+	f.Write(&marked_count, sizeof(u32));
+
+	for(u32 i=0; i<break_count; ++i)
+	{
+		f.Write(&m_break_points[i], sizeof(u64));
+	}
+
+	for(u32 i=0; i<marked_count; ++i)
+	{
+		f.Write(&markedPC[i], sizeof(u64));
+	}
+}
+
+void InterpreterDisAsmFrame::Load(const wxString& path)
+{
+	if(!wxFileExists(path)) return;
+
+	wxFile f(path);
+	u32 break_count, marked_count;
+	u16 version;
+	f.Read(&version, sizeof(u16));
+	f.Read(&break_count, sizeof(u32));
+	f.Read(&marked_count, sizeof(u32));
+
+	if(version != bpdb_version ||
+		(sizeof(u16) + break_count * sizeof(u64) + sizeof(u32) + marked_count * sizeof(u64) + sizeof(u32)) != f.Length())
+	{
+		ConLog.Error("'%s' is borken", path);
+		return;
+	}
+
+	if(break_count > 0)
+	{
+		m_break_points.SetCount(break_count);
+
+		for(u32 i=0; i<break_count; ++i)
+		{
+			f.Read(&m_break_points[i], sizeof(u64));
+		}
+	}
+
+	if(marked_count > 0)
+	{
+		markedPC.SetCount(marked_count);
+
+		for(u32 i=0; i<marked_count; ++i)
+		{
+			f.Read(&markedPC[i], sizeof(u64));
+		}
+	}
 }
 
 void InterpreterDisAsmFrame::OnKeyDown(wxKeyEvent& event)
@@ -124,10 +189,10 @@ void InterpreterDisAsmFrame::OnKeyDown(wxKeyEvent& event)
 	{
 		switch(event.GetKeyCode())
 		{
-		case WXK_PAGEUP:	ShowPc( PC - (show_lines * 2) * 4 ); return;
-		case WXK_PAGEDOWN:	ShowPc( PC ); return;
-		case WXK_UP:		ShowPc( PC - (show_lines + 1) * 4 ); return;
-		case WXK_DOWN:		ShowPc( PC - (show_lines - 1) * 4 ); return;
+		case WXK_PAGEUP:	ShowAddr( PC - (show_lines * 2) * 4 ); return;
+		case WXK_PAGEDOWN:	ShowAddr( PC ); return;
+		case WXK_UP:		ShowAddr( PC - (show_lines + 1) * 4 ); return;
+		case WXK_DOWN:		ShowAddr( PC - (show_lines - 1) * 4 ); return;
 		}
 	}
 
@@ -140,9 +205,9 @@ void InterpreterDisAsmFrame::DoUpdate()
 	WriteRegs();
 }
 
-void InterpreterDisAsmFrame::ShowPc(const u64 pc)
+void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 {
-	PC = pc;
+	PC = addr;
 	m_list->Freeze();
 	for(uint i=0; i<show_lines; ++i, PC += 4)
 	{
@@ -163,10 +228,49 @@ void InterpreterDisAsmFrame::ShowPc(const u64 pc)
 		{
 			m_list->SetItem(i, 0, "    " + disasm->last_opcode);
 		}
-		
 
-		m_list->SetItemBackgroundColour( i, PC == CPU.PC ? wxColour("Green") : wxColour("White") );
+		wxColour colour;
+
+		if(PC == CPU.PC)
+		{
+			colour = wxColour("Green");
+		}
+		else
+		{
+			colour = wxColour("White");
+
+			for(u32 i=0; i<markedPC.GetCount(); ++i)
+			{
+				if(markedPC[i] == PC)
+				{
+					colour = wxColour("Wheat");
+					break;
+				}
+			}
+		}
+
+		m_list->SetItemBackgroundColour( i, colour );
 	}
+
+
+	while(remove_markedPC.GetCount())
+	{
+		u32 mpc = remove_markedPC[0];
+
+		for(u32 i=0; i<remove_markedPC.GetCount(); ++i)
+		{
+			if(remove_markedPC[i] == mpc)
+			{
+				remove_markedPC.RemoveAt(i--);
+				continue;
+			}
+
+			if(remove_markedPC[i] > mpc) remove_markedPC[i]--;
+		}
+
+		markedPC.RemoveAt(mpc);
+	}
+
 	m_list->Thaw();
 }
 
@@ -207,13 +311,14 @@ void InterpreterDisAsmFrame::Show_Val(wxCommandEvent& WXUNUSED(event))
 	{
 		u64 pc = CPU.PC;
 		sscanf(p_pc->GetLabel(), "%llx", &pc);
-		ShowPc(FixPc(pc));
+		remove_markedPC.AddCpy(markedPC.AddCpy(pc));
+		ShowAddr(FixPc(pc));
 	}
 }
 
 void InterpreterDisAsmFrame::Show_PC(wxCommandEvent& WXUNUSED(event))
 {
-	ShowPc(FixPc(CPU.PC));
+	ShowAddr(FixPc(CPU.PC));
 }
 
 extern bool dump_enable;
@@ -264,7 +369,7 @@ void InterpreterDisAsmFrame::DClick(wxListEvent& event)
 		AddBreakPoint(pc);
 	}
 
-	ShowPc(start_pc);
+	ShowAddr(start_pc);
 }
 	
 void InterpreterDisAsmFrame::OnResize(wxSizeEvent& event)
@@ -291,11 +396,11 @@ void InterpreterDisAsmFrame::MouseWheel(wxMouseEvent& event)
 	const int value = (event.m_wheelRotation / event.m_wheelDelta);
 	if(event.ControlDown())
 	{
-		ShowPc( PC - (show_lines * (value + 1)) * 4);
+		ShowAddr( PC - (show_lines * (value + 1)) * 4);
 	}
 	else
 	{
-		ShowPc( PC - (show_lines + value) * 4 );
+		ShowAddr( PC - (show_lines + value) * 4 );
 	}
 
 	event.Skip();

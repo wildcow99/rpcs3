@@ -35,6 +35,9 @@
     <Filter Include="Emu\GS\GL">
       <UniqueIdentifier>{e79e49c8-6967-4776-8f50-5479c3821b51}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utilities">
+      <UniqueIdentifier>{9bd88f78-8528-48f3-b9e0-78e06476b04d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -112,9 +115,6 @@
     <ClCompile Include="Emu\Cell\SPUThread.cpp">
       <Filter>Emu\CPU</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\Cell\PPUThread.cpp">
-      <Filter>Emu\CPU</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\SysCalls\FuncList.cpp">
       <Filter>Emu\SysCalls</Filter>
     </ClCompile>
@@ -177,6 +177,15 @@
     </ClCompile>
     <ClCompile Include="Emu\GS\RSXThread.cpp">
       <Filter>Emu\GS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\PPUThread.cpp">
+      <Filter>Emu\CPU</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Time.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\Thread.cpp">
+      <Filter>Utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -317,6 +326,21 @@
     </ClInclude>
     <ClInclude Include="Loader\SELF.h">
       <Filter>Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Array.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\IdManager.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\MTProgressDialog.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Thread.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\Timer.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -102,8 +102,7 @@ void DisAsmFrame::Resume()
 	Emu.Resume();
 }
 
-#include "Utilites/Thread.h"
-#include <Utilites/MTProgressDialog.h>
+#include <Utilities/MTProgressDialog.h>
 #include "Loader/ELF.h"
 Array<Elf64_Shdr>* shdr_arr_64 = NULL;
 Array<Elf32_Shdr>* shdr_arr_32 = NULL;
@@ -314,7 +313,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		l_elf64 = new ELF64Loader(Emu.m_path);
 		if(!l_elf64->LoadInfo())
 		{
-			safe_delete(l_elf64);
+			delete l_elf64;
 			return;
 		}
 		name_arr = l_elf64->shdr_name_arr;
@@ -327,7 +326,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 		l_elf32 = new ELF32Loader(Emu.m_path);
 		if(!l_elf32->LoadInfo())
 		{
-			safe_delete(l_elf32);
+			delete l_elf32;
 			return;
 		}
 
@@ -453,25 +452,25 @@ void DisAsmFrame::SetPc(wxCommandEvent& WXUNUSED(event))
 {
 	if(!Emu.IsPaused()) return;
 
-	wxDialog* diag = new wxDialog(this, wxID_ANY, "Set PC", wxDefaultPosition);
+	wxDialog diag(this, wxID_ANY, "Set PC", wxDefaultPosition);
 
 	wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
-	wxTextCtrl* p_pc(new wxTextCtrl(diag, wxID_ANY));
+	wxTextCtrl* p_pc(new wxTextCtrl(&diag, wxID_ANY));
 
 	s_panel->Add(p_pc);
 	s_panel->AddSpacer(8);
 	s_panel->Add(s_b_panel);
 
-	s_b_panel->Add(new wxButton(diag, wxID_OK), wxLEFT, 0, 5);
+	s_b_panel->Add(new wxButton(&diag, wxID_OK), wxLEFT, 0, 5);
 	s_b_panel->AddSpacer(5);
-	s_b_panel->Add(new wxButton(diag, wxID_CANCEL), wxRIGHT, 0, 5);
+	s_b_panel->Add(new wxButton(&diag, wxID_CANCEL), wxRIGHT, 0, 5);
 
-	diag->SetSizerAndFit( s_panel );
+	diag.SetSizerAndFit( s_panel );
 
 	p_pc->SetLabel(wxString::Format("%llx", CPU.PC));
 
-	if(diag->ShowModal() == wxID_OK)
+	if(diag.ShowModal() == wxID_OK)
 	{
 		sscanf(p_pc->GetLabel(), "%llx", &CPU.PC);
 		Resume();

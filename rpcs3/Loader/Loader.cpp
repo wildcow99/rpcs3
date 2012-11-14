@@ -192,6 +192,9 @@ bool Loader::Load()
 
 Loader::~Loader()
 {
-	f->Close();
-	f = NULL;
+	if(f)
+	{
+		f->Close();
+		f = NULL;
+	}
 }

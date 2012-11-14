@@ -87,7 +87,7 @@ u32 GSRender::GetAddress(u32 offset, u8 location)
 {
 	switch(location)
 	{
-	case CELL_GCM_LOCATION_LOCAL: return m_ioAddress + offset;
+	case CELL_GCM_LOCATION_LOCAL: return Memory.RSXFBMem.GetStartAddr() + offset;
 	case CELL_GCM_LOCATION_MAIN: return offset;
 	}
 	return 0;

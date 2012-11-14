@@ -46,29 +46,14 @@ class MemoryBase
 public:
 	ArrayF<MemoryBlock> MemoryBlocks;
 
-	MemoryBlock MainRam;
-	MemoryBlock UserMem;
-	MemoryBlock UnkMem;
-	MemoryBlock VideoMem;
-	MemoryBlock GcmReportIoAddressMem;
-	MemoryBlock GcmNotifyIoAddressMem;
+	DynamicMemoryBlock MainMem;
+	DynamicMemoryBlock PRXMem;
+	DynamicMemoryBlock RSXCMDMem;
+	DynamicMemoryBlock MmaperMem;
+	DynamicMemoryBlock RSXFBMem;
+	DynamicMemoryBlock StackMem;
 	MemoryBlock SpuRawMem;
-
-	struct UserMemInfo
-	{
-		u64 addr;
-		u32 size;
-
-		UserMemInfo(u64 _addr, u32 _size)
-			: addr(_addr)
-			, size(_size)
-		{
-		}
-	};
-
-	Array<UserMemInfo> m_used_usermem;
-	Array<UserMemInfo> m_free_usermem;
-	u32 m_mem_point;
+	MemoryBlock SpuThrMem;
 
 	MemoryFlags MemFlags;
 
@@ -133,7 +118,7 @@ public:
 	{
 		for(uint i=0; i<MemoryBlocks.GetCount(); ++i)
 		{
-			if(MemoryBlocks.Get(i).IsMyAddress(addr)) return MemoryBlocks.Get(i);
+			if(MemoryBlocks.Get(i).IsMyAddress(addr)) return MemoryBlocks[i];
 		}
 
 		return NullMem;
@@ -182,14 +167,16 @@ public:
 
 		ConLog.Write("Initing memory...");
 
-		MemoryBlocks.Add(MainRam.SetRange(0x00000001, 0x10100000));
-		//MemoryBlocks.Add(UnkMem. SetRange(0x10000000, 0x00100000));
-		MemoryBlocks.Add(UserMem.SetRange(0x2ffffe00, 0x0d500000));
-		MemoryBlocks.Add(VideoMem.SetRange(0x40000000, 0x01000000));
-		MemoryBlocks.Add(GcmReportIoAddressMem.SetRange(0x0e000000, 0x01000000)); //16 MB
-		MemoryBlocks.Add(GcmNotifyIoAddressMem.SetRange(0x0f100000, 0x00000200)); //512 B
+		MemoryBlocks.Add(MainMem.SetRange(0x00010000, 0x2FFF0000));
+		MemoryBlocks.Add(PRXMem.SetRange(0x30000000, 0x10000000));
+		MemoryBlocks.Add(RSXCMDMem.SetRange(0x40000000, 0x10000000));
+		//MemoryBlocks.Add(MmaperMem.SetRange(0xB0000000, 0x10000000));
+		MemoryBlocks.Add(RSXFBMem.SetRange(0xC0000000, 0x10000000));
+		MemoryBlocks.Add(StackMem.SetRange(0xD0000000, 0x10000000));
+		//MemoryBlocks.Add(SpuRawMem.SetRange(0xE0000000, 0x10000000));
+		//MemoryBlocks.Add(SpuThrMem.SetRange(0xF0000000, 0x10000000));
 
-		m_mem_point = UserMem.GetStartAddr();
+		ConLog.Write("Memory initialized.");
 	}
 
 	bool IsGoodAddr(const u64 addr)
@@ -227,9 +214,6 @@ public:
 
 		MemoryBlocks.Clear();
 		MemFlags.Clear();
-		m_mem_point = 0;
-		m_free_usermem.Clear();
-		m_used_usermem.Clear();
 	}
 
 	void Reset()
@@ -309,86 +293,22 @@ public:
 
 	u32 GetUserMemTotalSize()
 	{
-		return UserMem.GetSize();
+		return PRXMem.GetSize();
 	}
 
 	u32 GetUserMemAvailSize()
 	{
-		u32 used_usermem_size = 0;
-		for(u32 i=0; i<m_used_usermem.GetCount(); ++i) used_usermem_size += m_used_usermem[i].size;
-		return UserMem.GetSize() - used_usermem_size;
-	}
-
-	void CombineFreeMem()
-	{
-		if(m_free_usermem.GetCount() < 2) return;
-
-		for(u32 i1=0; i1<m_free_usermem.GetCount(); ++i1)
-		{
-			UserMemInfo& u1 = m_free_usermem[i1];
-			for(u32 i2=i1+1; i2<m_free_usermem.GetCount(); ++i2)
-			{
-				const UserMemInfo u2 = m_free_usermem[i2];
-				if(u1.addr + u1.size != u2.addr) continue;
-				u1.size += u2.size;
-				m_free_usermem.RemoveAt(i2);
-				break;
-			}
-		}
+		return PRXMem.GetSize() - PRXMem.GetUsedSize();
 	}
 
 	u64 Alloc(const u32 size, const u32 align)
 	{
-		if(GetUserMemAvailSize() < size)
-		{
-			ConLog.Error("Not enought free user mem");
-			return 0;
-		}
-
-		for(u32 i=0; i<m_free_usermem.GetCount(); ++i)
-		{
-			if(m_free_usermem[i].size < size) continue;
-			UserMemInfo mem(m_free_usermem[i].addr, size);
-			m_used_usermem.AddCpy(mem);
-
-			if(m_free_usermem[i].size == size)
-			{
-				m_free_usermem.RemoveAt(i);
-			}
-			else
-			{
-				m_free_usermem[i].addr += size;
-				m_free_usermem[i].size -= size;
-			}
-
-			memset(GetMemFromAddr(mem.addr), 0, mem.size);
-			return mem.addr;
-		}
-
-		UserMemInfo mem(m_mem_point, size);
-		ConLog.Warning("Memory alloc: creating new block (addr=0x%llx,size=0x%x)", mem.addr, mem.size);
-
-		if(!IsGoodAddr(mem.addr, mem.size)) return 0;
-
-		memset(GetMemFromAddr(mem.addr), 0, mem.size);
-		m_used_usermem.AddCpy(mem);
-		m_mem_point += size;
-
-		return mem.addr;
+		return PRXMem.Alloc(AlignAddr(size, align));
 	}
 
 	bool Free(const u64 addr)
 	{
-		for(u32 i=0; i<m_used_usermem.GetCount(); ++i)
-		{
-			if(m_used_usermem[i].addr != addr) continue;
-			m_free_usermem.AddCpy(m_used_usermem[i]);
-			m_used_usermem.RemoveAt(i);
-			CombineFreeMem();
-			return true;
-		}
-
-		return false;
+		return PRXMem.Free(addr);
 	}
 
 	u8& operator[] (const u64 vaddr) { return *GetMemFromAddr(vaddr); }

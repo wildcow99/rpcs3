@@ -80,6 +80,24 @@ MemoryBlock* MemoryBlock::SetRange(const u64 start, const u32 size)
 	return this;
 }
 
+bool MemoryBlock::SetNewSize(const u32 size)
+{
+	if(range_size >= size) return false;
+
+	u8* new_mem = (u8*)realloc(mem, size);
+	if(!new_mem)
+	{
+		ConLog.Error("Not enought free memory");
+		Emu.Pause();
+		return false;
+	}
+
+	mem = new_mem;
+	range_size = size;
+
+	return true;
+}
+
 bool MemoryBlock::IsMyAddress(const u64 addr)
 {
 	return addr >= GetStartAddr() && addr < GetEndAddr();
@@ -310,6 +328,210 @@ bool NullMemoryBlock::Write128(const u64 addr, const u128 value)
 {
 	ConLog.Error("Write128 to null block: [%08llx]: %llx_%llx", addr, value.hi, value.lo);
 	Emu.Pause();
+	return false;
+}
+
+//DynamicMemoryBlock
+DynamicMemoryBlock::DynamicMemoryBlock() : m_point(0)
+	, m_max_size(0)
+{
+}
+
+bool DynamicMemoryBlock::IsInMyRange(const u64 addr)
+{
+	return addr >= GetStartAddr() && addr < GetStartAddr() + GetSize();
+}
+
+bool DynamicMemoryBlock::IsInMyRange(const u64 addr, const u32 size)
+{
+	return IsInMyRange(addr) && IsInMyRange(addr + size - 1);
+}
+
+bool DynamicMemoryBlock::IsMyAddress(const u64 addr)
+{
+	for(u32 i=0; i<m_used_mem.GetCount(); ++i)
+	{
+		if(addr >= m_used_mem[i].addr && addr < m_used_mem[i].addr + m_used_mem[i].size)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+MemoryBlock* DynamicMemoryBlock::SetRange(const u64 start, const u32 size)
+{
+	m_max_size = size;
+	MemoryBlock::SetRange(start, 4);
+	m_point = GetStartAddr();
+
+	return this;
+}
+
+void DynamicMemoryBlock::Delete()
+{
+	m_used_mem.Clear();
+	m_free_mem.Clear();
+	m_point = 0;
+	m_max_size = 0;
+
+	MemoryBlock::Delete();
+}
+
+void DynamicMemoryBlock::UpdateSize(u64 addr, u32 size)
+{
+	u32 used_size = addr + size - GetStartAddr();
+	if(used_size > GetUsedSize()) SetNewSize(used_size);
+}
+
+void DynamicMemoryBlock::CombineFreeMem()
+{
+	if(m_free_mem.GetCount() < 2) return;
+
+	for(u32 i1=0; i1<m_free_mem.GetCount(); ++i1)
+	{
+		MemBlockInfo& u1 = m_free_mem[i1];
+		for(u32 i2=i1+1; i2<m_free_mem.GetCount(); ++i2)
+		{
+			const MemBlockInfo u2 = m_free_mem[i2];
+			if(u1.addr + u1.size != u2.addr) continue;
+			u1.size += u2.size;
+			m_free_mem.RemoveAt(i2);
+			break;
+		}
+	}
+}
+
+bool DynamicMemoryBlock::Alloc(u64 addr, u32 size)
+{
+	if(!IsInMyRange(addr, size) || IsMyAddress(addr) || IsMyAddress(addr + size - 1))
+	{
+		assert(0);
+		return false;
+	}
+
+	if(addr == m_point)
+	{
+		UpdateSize(m_point, size);
+
+		m_used_mem.AddCpy(MemBlockInfo(m_point, size));
+		memset(mem + (m_point - GetStartAddr()), 0, size);
+
+		m_point += size;
+
+		return true;
+	}
+
+	if(addr > m_point)
+	{
+		u64 free_mem_addr = GetStartAddr();
+
+		if(free_mem_addr != addr)
+		{
+			for(u32 i=0; i<m_free_mem.GetCount(); ++i)
+			{
+				if(m_free_mem[i].addr >= free_mem_addr && m_free_mem[i].addr < addr)
+				{
+					free_mem_addr = m_free_mem[i].addr + m_free_mem[i].size;
+				}
+			}
+
+			for(u32 i=0; i<m_used_mem.GetCount(); ++i)
+			{
+				if(m_used_mem[i].addr >= free_mem_addr && m_used_mem[i].addr < addr)
+				{
+					free_mem_addr = m_used_mem[i].addr + m_used_mem[i].size;
+				}
+			}
+
+			m_free_mem.AddCpy(MemBlockInfo(free_mem_addr, addr - GetStartAddr()));
+		}
+
+		UpdateSize(addr, size);
+
+		m_used_mem.AddCpy(MemBlockInfo(addr, size));
+		memset(mem + (addr - GetStartAddr()), 0, size);
+
+		m_point = addr + size;
+
+		return true;
+	}
+
+	for(u32 i=0; i<m_free_mem.GetCount(); ++i)
+	{
+		if(addr < m_free_mem[i].addr || addr >= m_free_mem[i].addr + m_free_mem[i].size
+			|| m_free_mem[i].size < size) continue;
+
+		if(m_free_mem[i].addr != addr)
+		{
+			m_free_mem.AddCpy(MemBlockInfo(m_free_mem[i].addr, addr - m_free_mem[i].addr));
+		}
+
+		if(m_free_mem[i].size != size)
+		{
+			m_free_mem.AddCpy(MemBlockInfo(m_free_mem[i].addr + size, m_free_mem[i].size - size));
+		}
+
+		m_free_mem.RemoveAt(i);
+		m_used_mem.AddCpy(MemBlockInfo(addr, size));
+
+		memset(mem + (addr - GetStartAddr()), 0, size);
+		return true;
+	}
+
+	return false;
+}
+
+u64 DynamicMemoryBlock::Alloc(u32 size)
+{
+	for(u32 i=0; i<m_free_mem.GetCount(); ++i)
+	{
+		if(m_free_mem[i].size < size) continue;
+
+		const u32 addr = m_free_mem[i].addr;
+
+		if(m_free_mem[i].size != size)
+		{
+			m_free_mem.AddCpy(MemBlockInfo(addr + size, m_free_mem[i].size - size));
+		}
+
+		m_free_mem.RemoveAt(i);
+		m_used_mem.AddCpy(MemBlockInfo(addr, size));
+
+		memset(mem + (addr - GetStartAddr()), 0, size);
+		return addr;
+	}
+
+	UpdateSize(m_point, size);
+
+	MemBlockInfo res(m_point, size);
+	m_used_mem.AddCpy(res);
+	memset(mem + (m_point - GetStartAddr()), 0, size);
+
+	m_point += size;
+
+	return res.addr;
+}
+
+bool DynamicMemoryBlock::Alloc()
+{
+	return Alloc(GetSize() - GetUsedSize()) != 0;
+}
+
+bool DynamicMemoryBlock::Free(u64 addr)
+{
+	for(u32 i=0; i<m_used_mem.GetCount(); ++i)
+	{
+		if(addr == m_used_mem[i].addr)
+		{
+			m_free_mem.AddCpy(MemBlockInfo(m_used_mem[i].addr, m_used_mem[i].size));
+			m_used_mem.RemoveAt(i);
+			CombineFreeMem();
+			return true;
+		}
+	}
+
 	return false;
 }
 

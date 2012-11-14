@@ -1,7 +1,6 @@
 #pragma once
 #include <wx/listctrl.h>
-#include <Utilites/Array.h>
-#include <Emu/GameInfo.h>
+#include "Emu/GameInfo.h"
 
 struct Column
 {

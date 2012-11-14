@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "FragmentProgram.h"
 
-void FragmentDecompilerThread::AddCode(wxString code)
+void FragmentDecompilerThread::AddCode(wxString code, bool bkt)
 {
 	if(!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_le) return;
 	if(!src0.exec_if_eq || !src0.exec_if_gr || !src0.exec_if_le)
@@ -29,7 +29,7 @@ void FragmentDecompilerThread::AddCode(wxString code)
 		}
 	}
 
-	code = AddReg(dst.dest_reg) + GetMask() + " = (" + code + ")" + GetMask();
+	code = AddReg(dst.dest_reg) + GetMask() + " = " + (bkt ? "(" + code + ")" : code) + GetMask();
 
 	main += "\t" + code + ";\n";
 }
@@ -38,10 +38,10 @@ wxString FragmentDecompilerThread::GetMask()
 {
 	wxString ret = wxEmptyString;
 
-	if(dst.mask_x) ret += "x";
-	if(dst.mask_y) ret += "y";
-	if(dst.mask_z) ret += "z";
-	if(dst.mask_w) ret += "w";
+	if(dst.mask_x) ret += 'x';
+	if(dst.mask_y) ret += 'y';
+	if(dst.mask_z) ret += 'z';
+	if(dst.mask_w) ret += 'w';
 
 	return ret.IsEmpty() || ret == "xyzw" ? wxEmptyString : ("." + ret);
 }
@@ -105,7 +105,7 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	break;
 	}
 
-	static const wxString f[4] = {"x", "y", "z", "w"};
+	static const char f[4] = {'x', 'y', 'z', 'w'};
 	wxString swizzle = wxEmptyString;
 	swizzle += f[src.swizzle_x];
 	swizzle += f[src.swizzle_y];
@@ -113,6 +113,9 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	swizzle += f[src.swizzle_w];
 
 	if(swizzle != "xyzw") ret += "." + swizzle;
+
+	if(src.abs) ret = "abs(" + ret + ")";
+	if(src.neg) ret = "-" + ret;
 
 	return ret;
 }
@@ -156,7 +159,7 @@ wxThread::ExitCode FragmentDecompilerThread::Entry()
 		{
 		case 0x0: break; //NOP
 		case 0x1:
-			AddCode(GetSRC(src0));
+			AddCode(GetSRC(src0), false);
 		break;
 
 		case 0x2:
@@ -164,7 +167,7 @@ wxThread::ExitCode FragmentDecompilerThread::Entry()
 		break;
 
 		case 0x17:
-			AddCode("texture(" + AddTex() + ", (" + GetSRC(src0) + ").xy)");
+			AddCode("texture(" + AddTex() + ", (" + GetSRC(src0) + ").xy)", false);
 		break;
 
 		default:
@@ -233,19 +236,19 @@ void ShaderProgram::Compile()
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);
-	/*
+
 	GLint r = GL_FALSE;
-	glGetProgramiv(id, GL_COMPILE_STATUS, &r);
+	glGetShaderiv(id, GL_COMPILE_STATUS, &r);
 	if(r != GL_TRUE)
 	{
-		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &r);
+		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &r);
 
 		if(r)
 		{
 			char* buf = new char[r+1];
 			GLsizei len;
 			memset(buf, 0, r+1);
-			glGetProgramInfoLog(id, r, &len, buf);
+			glGetShaderInfoLog(id, r, &len, buf);
 			ConLog.Error("Failed to compile shader: %s", buf);
 			free(buf);
 		}
@@ -254,7 +257,6 @@ void ShaderProgram::Compile()
 		Emu.Pause();
 	}
 	//else ConLog.Write("Shader compiled successfully!");
-	*/
 }
 
 void ShaderProgram::Delete()

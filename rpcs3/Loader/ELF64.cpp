@@ -172,7 +172,7 @@ bool ELF64Loader::LoadPhdrData()
 			);
 		}
 
-		if(!Memory.IsGoodAddr(phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz))
+		if(!Memory.MainMem.IsInMyRange(phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz))
 		{
 			ConLog.Warning("Skipping...");
 #ifdef LOADER_DEBUG
@@ -184,6 +184,7 @@ bool ELF64Loader::LoadPhdrData()
 		switch(phdr_arr[i].p_type)
 		{
 			case 0x00000001: //LOAD
+				Memory.MainMem.Alloc(phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz);
 				elf64_f.Seek(phdr_arr[i].p_offset);
 				elf64_f.Read(&Memory[phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
 			break;
@@ -259,7 +260,7 @@ bool ELF64Loader::LoadPhdrData()
 					ConLog.Error("Bad magic!");
 				}
 				else
-				{	
+				{
 					for(u32 s=proc_prx_param.libstubstart; s<proc_prx_param.libstubend; s+=sizeof(Elf64_StubHeader))
 					{
 						Elf64_StubHeader stub = *(Elf64_StubHeader*)Memory.GetMemFromAddr(s);
@@ -314,6 +315,8 @@ bool ELF64Loader::LoadPhdrData()
 
 bool ELF64Loader::LoadShdrData()
 {
+	u64 max_addr = 0;
+
 	for(uint i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		Elf64_Shdr& shdr = shdr_arr[i];
@@ -331,6 +334,8 @@ bool ELF64Loader::LoadShdrData()
 		shdr.Show();
 		ConLog.SkipLn();
 #endif
+		if(shdr.sh_addr + shdr.sh_size > max_addr) max_addr = shdr.sh_addr + shdr.sh_size;
+
 		if((shdr.sh_flags & SHF_ALLOC) != SHF_ALLOC) continue;
 
 		const u64 addr = shdr.sh_addr;

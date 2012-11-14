@@ -1,25 +1,22 @@
 #pragma once
-#include "Utilites/Thread.h"
 #include "Emu/Memory/MemoryBlock.h"
 #include "Emu/Cell/Decoder.h"
-//#include "Emu/System.h"
+
+enum PPCThreadType
+{
+	PPC_THREAD_PPU,
+	PPC_THREAD_SPU,
+};
 
 class PPCThread// : public StepThread
 {
-	enum
-	{
-		Runned,
-		Paused,
-		Stoped,
-	};
-
 protected:
 	u32 m_status;
 	u32 m_error;
 	Decoder* m_dec;
-	void* DisAsmFrame;
+	wxWindow* DisAsmFrame;
 	u32 m_id;
-	bool isSPU;
+	PPCThreadType m_type;
 	u64 m_arg;
 	u64 m_prio;
 	wxString m_name;
@@ -54,11 +51,24 @@ public:
 	{
 		return 
 			wxString::Format("%s[%d] Thread%s", 
-				(isSPU ? "SPU" : "PPU"),
+				GetTypeString(),
 				m_id,
 				(GetName().IsEmpty() ? "" : " (" + GetName() + ")")
 			);
 	}
+
+	static wxString PPCThreadTypeToString(PPCThreadType type)
+	{
+		switch(type)
+		{
+		case PPC_THREAD_PPU: return "PPU";
+		case PPC_THREAD_SPU: return "SPU";
+		}
+
+		return "Unknown";
+	}
+
+	wxString GetTypeString() const { return PPCThreadTypeToString(m_type); }
 
 public:
 	bool isBranch;
@@ -68,10 +78,11 @@ public:
 	u64 cycle;
 
 protected:
-	PPCThread(bool _isSPU);
-	~PPCThread();
+	PPCThread(PPCThreadType type);
 
 public:
+	~PPCThread();
+
 	void NextPc();
 	void NextBranchPc();
 	void PrevPc();
@@ -83,11 +94,11 @@ public:
 	static wxArrayString ErrorToString(const u32 error);
 	wxArrayString ErrorToString() { return ErrorToString(m_error); }
 
-	bool IsSPU()	const { return isSPU; }
+	bool IsSPU()	const { return m_type == PPC_THREAD_SPU; }
 	bool IsOk()		const { return m_error == 0; }
-	bool IsRunned()	const { return m_status == Runned; }
-	bool IsPaused()	const { return m_status == Paused; }
-	bool IsStoped()	const { return m_status == Stoped; }
+	bool IsRunned()		const { return m_status == Runned; }
+	bool IsPaused()		const { return m_status == Paused; }
+	bool IsStopped()	const { return m_status == Stopped; }
 
 	bool IsJoinable() const { return m_joinable; }
 	bool IsJoining()  const { return m_joining; }

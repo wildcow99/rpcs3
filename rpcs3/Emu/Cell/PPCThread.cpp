@@ -1,10 +1,9 @@
 #include "stdafx.h"
 #include "PPCThread.h"
-#include "Utilites/IdManager.h"
 #include "Gui/InterpreterDisAsm.h"
 
-PPCThread::PPCThread(bool _isSPU)
-	: isSPU(_isSPU)
+PPCThread::PPCThread(PPCThreadType type)
+	: m_type(type)
 	, DisAsmFrame(NULL)
 	, m_arg(0)
 	, m_dec(NULL)
@@ -23,7 +22,11 @@ PPCThread::~PPCThread()
 void PPCThread::Close()
 {
 	Stop();
-	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).Hide();
+	if(DisAsmFrame)
+	{
+		DisAsmFrame->Close();
+		DisAsmFrame = nullptr;
+	}
 }
 
 void PPCThread::Reset()
@@ -35,7 +38,7 @@ void PPCThread::Reset()
 
 	isBranch = false;
 
-	m_status = Stoped;
+	m_status = Stopped;
 	m_error = 0;
 	
 	DoReset();
@@ -45,7 +48,7 @@ void PPCThread::InitStack()
 {
 	if(stack_addr) return;
 	if(stack_size == 0) stack_size = 0x10000;
-	stack_addr = Memory.Alloc(stack_size, 0x100);
+	stack_addr = Memory.StackMem.Alloc(Memory.AlignAddr(stack_size, 0x100));
 
 	stack_point = stack_addr + stack_size;
 	/*
@@ -118,7 +121,7 @@ void PPCThread::SetPc(const u64 pc)
 
 void PPCThread::SetBranch(const u64 pc)
 {
-	if(!Memory.IsGoodAddr(pc) || Memory.UserMem.IsMyAddress(pc))
+	if(!Memory.IsGoodAddr(pc))
 	{
 		ConLog.Error("%s branch error: bad address 0x%llx #pc: 0x%llx", GetFName(), pc, PC);
 		Emu.Pause();
@@ -186,8 +189,8 @@ void PPCThread::Pause()
 
 void PPCThread::Stop()
 {
-	if(IsStoped()) return;
-	m_status = Stoped;
+	if(IsStopped()) return;
+	m_status = Stopped;
 	Reset();
 	DoStop();
 	Emu.CheckStatus();

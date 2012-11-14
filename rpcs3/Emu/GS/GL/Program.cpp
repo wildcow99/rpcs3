@@ -51,7 +51,7 @@ void Program::Create(const u32 vp, const u32 fp)
 			memset(buf, 0, bufLength+1);
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
 			ConLog.Error("Could not link program: %s", buf);
-			free(buf);
+			delete[] buf;
 		}
 	}
 	//else ConLog.Write("program linked!");
@@ -68,7 +68,7 @@ void Program::Create(const u32 vp, const u32 fp)
 			memset(buf, 0, bufLength);
 			glGetProgramInfoLog(id, bufLength, NULL, buf);
 			ConLog.Error("Could not link program: %s", buf);
-			free(buf);
+			delete[] buf;
 		}
 	}
 }

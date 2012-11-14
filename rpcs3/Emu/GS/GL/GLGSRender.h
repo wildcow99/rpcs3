@@ -72,27 +72,36 @@ public:
 		if(!m_id)
 		{
 			glGenTextures(1, &m_id);
+			checkForGlError("GLTexture::Init() -> glGenTextures");
 			glBindTexture(GL_TEXTURE_2D, m_id);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-			//glBindTexture(GL_TEXTURE_2D, 0);
+		}
+		else
+		{
+			glBindTexture(GL_TEXTURE_2D, m_id);
 		}
 
 		//TODO: safe init
-
-		glBindTexture(GL_TEXTURE_2D, m_id);
+		checkForGlError("GLTexture::Init() -> glBindTexture");
 
 		switch(m_format)
 		{
 		case 0xA1:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RED, GL_UNSIGNED_BYTE, Memory.GetMemFromAddr(m_offset));
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, GL_RED);
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, GL_RED);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_RED);
+			checkForGlError("GLTexture::Init() -> glTexParameteri");
 		break;
 
 		case 0xA5:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, Memory.GetMemFromAddr(m_offset));
+			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
 
 		default: ConLog.Error("Init tex error: Bad tex format (0x%x)", m_format); break;
@@ -157,6 +166,11 @@ public:
 		Save(wxString::Format(file_fmt, count));
 	}
 
+	void Bind()
+	{
+		glBindTexture(GL_TEXTURE_2D, m_id);
+	}
+
 	void Enable(bool enable) { m_enabled = enable; }
 	bool IsEnabled() const { return m_enabled; }
 };
@@ -188,11 +202,12 @@ struct GLRSXThread : public wxThread
 	wxWindow* m_parent;
 	Stack<u32> call_stack;
 
+	volatile bool m_paused;
+
 	GLRSXThread(wxWindow* parent);
 
 	virtual void OnExit();
 	void Start();
-
 	ExitCode Entry();
 };
 
@@ -215,6 +230,8 @@ private:
 	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
 	virtual void Draw();
 	virtual void Close();
+	virtual void Pause();
+	virtual void Resume();
 
 public:
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count);

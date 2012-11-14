@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "GLGSRender.h"
-#include "Utilites/Timer.h"
 #include "ProgramBuffer.h"
 
 #define CMD_DEBUG 0
@@ -111,12 +110,14 @@ void GLGSRender::Enable(bool enable, const u32 cap)
 GLRSXThread::GLRSXThread(wxWindow* parent)
 	: wxThread(wxTHREAD_JOINABLE)
 	, m_parent(parent)
+	, m_paused(false)
 {
 }
 
 void GLRSXThread::OnExit()
 {
 	call_stack.Clear();
+	m_paused = true;
 }
 
 void GLRSXThread::Start()
@@ -151,7 +152,7 @@ wxThread::ExitCode GLRSXThread::Entry()
 
 	while(!TestDestroy() && p.m_frame && !p.m_frame->IsBeingDeleted())
 	{
-		if(p.m_ctrl->get == p.m_ctrl->put)
+		if(m_paused || p.m_ctrl->get == p.m_ctrl->put || !Emu.IsRunned())
 		{
 			if(p.m_draw)
 			{
@@ -167,22 +168,24 @@ wxThread::ExitCode GLRSXThread::Entry()
 		const u32 get = re(p.m_ctrl->get);
 		const u32 cmd = Memory.Read32(p.m_ioAddress + get);
 		const u32 count = (cmd >> 18) & 0x7ff;
-		mem32_t data(p.m_ioAddress + get + 4);
 
 		if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
 		{
 			p.m_ctrl->get = re32(cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT));
+			ConLog.Warning("rsx jump!");
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
 		{
 			call_stack.Push(get + 4);
 			p.m_ctrl->get = re32(cmd & ~CELL_GCM_METHOD_FLAG_CALL);
+			ConLog.Warning("rsx call!");
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_RETURN)
 		{
 			p.m_ctrl->get = re32(call_stack.Pop());
+			ConLog.Warning("rsx return!");
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)
@@ -190,15 +193,14 @@ wxThread::ExitCode GLRSXThread::Entry()
 			//ConLog.Warning("non increment cmd! 0x%x", cmd);
 		}
 
-#if	CMD_DEBUG
-		wxString debug = getMethodName(cmd & 0x3ffff);
-		debug += "(";
-		for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + wxString::Format("0x%x", data[i]);
-		debug += ")";
-		ConLog.Write(debug);
-#endif
-		p.DoCmd(cmd, cmd & 0x3ffff, data, count);
+		if(cmd == 0)
+		{
+			ConLog.Warning("null cmd: addr=0x%x, put=0x%x, get=0x%x", p.m_ioAddress + get, re(p.m_ctrl->put), get);
+			Emu.Pause();
+			continue;
+		}
 
+		p.DoCmd(cmd, cmd & 0x3ffff, mem32_t(p.m_ioAddress + get + 4), count);
 		p.m_ctrl->get = re32(get + (count + 1) * 4);
 		memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
 	}
@@ -216,6 +218,16 @@ wxThread::ExitCode GLRSXThread::Entry()
 	m_prog_buffer.Clear();
 
 	return (ExitCode)0;
+}
+
+void GLGSRender::Pause()
+{
+	if(m_rsx_thread) m_rsx_thread->m_paused = true;
+}
+
+void GLGSRender::Resume()
+{
+	if(m_rsx_thread) m_rsx_thread->m_paused = false;
 }
 
 void GLGSRender::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
@@ -265,7 +277,9 @@ void EnableVertexData()
 	}
 
 	glBindVertexArray(m_vao_id);
+	checkForGlError("glBindVertexArray");
 	m_vbo.SetData(&m_vdata[0], m_vdata.GetCount());
+	checkForGlError("m_vbo.SetData");
 
 #if	CMD_DEBUG
 	wxFile dump("VertexDataArray.dump", wxFile::write);
@@ -350,10 +364,9 @@ void EnableVertexData()
 
 		default:
 			ConLog.Error("Bad cv type! %d", m_vertex_data[i].type);
-		break;
+		return;
 		}
 
-		checkForGlError("glGetAttribLocation");
 		glVertexAttribPointer(i, m_vertex_data[i].size, gltype, normalized, 0, (void*)offset_list[i]);
 		checkForGlError("glVertexAttribPointer");
 		glEnableVertexAttribArray(i);
@@ -419,9 +432,16 @@ void InitVertexData()
 	index = (cmd - a) / m; \
 	case a \
 
-
 void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count)
 {
+#if	CMD_DEBUG
+		wxString debug = getMethodName(cmd);
+		debug += "(";
+		for(u32 i=0; i<count; ++i) debug += (i ? ", " : "") + wxString::Format("0x%x", args[i]);
+		debug += ")";
+		ConLog.Write(debug);
+#endif
+
 	static int draw_mode = 0;
 	u32 index = 0;
 
@@ -436,7 +456,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		m_ctrl->ref = re32(args[0]);
 	break;
 
-	case_16(NV4097_SET_TEXTURE_OFFSET, 32):
+	case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
 	{
 		GLTexture& tex = m_frame->GetTexture(index);
 		const u32 offset = args[0];
@@ -453,6 +473,33 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 	}
 	break;
 
+	case_16(NV4097_SET_TEXTURE_CONTROL0, 0x20):
+	{
+		GLTexture& tex = m_frame->GetTexture(index);
+		tex.Enable(args[0] >> 31 ? true : false);
+	}
+	break;
+
+	case_16(NV4097_SET_TEXTURE_CONTROL1, 0x20):
+		//TODO
+	break;
+
+	case_16(NV4097_SET_TEXTURE_CONTROL3, 4):
+		//TODO
+	break;
+
+	case_16(NV4097_SET_TEXTURE_FILTER, 0x20):
+		//TODO
+	break;
+
+	case_16(NV4097_SET_TEXTURE_ADDRESS, 0x20):
+		//TODO
+	break;
+
+	case_16(NV4097_SET_TEX_COORD_CONTROL, 4):
+		//TODO
+	break;
+
 	case_16(NV4097_SET_TEXTURE_IMAGE_RECT, 32):
 	{
 		GLTexture& tex = m_frame->GetTexture(index);
@@ -461,13 +508,6 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		const u16 width = args[0] >> 16;
 		CMD_LOG("width=%d, height=%d", width, height);
 		tex.SetRect(width, height);
-	}
-	break;
-
-	case_16(NV4097_SET_TEXTURE_CONTROL0, 32):
-	{
-		GLTexture& tex = m_frame->GetTexture(index);
-		tex.Enable(args[0] >> 31 ? true : false);
 	}
 	break;
 
@@ -655,6 +695,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 
 			if(m_fp_buf_num == -1)
 			{
+				ConLog.Warning("FP not found in buffer!");
 				m_shader_prog.Wait();
 				m_shader_prog.Compile();
 
@@ -680,18 +721,45 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 			{
 				m_program.Create(m_cur_vertex_prog->id, m_shader_prog.id);
 				m_prog_buffer.Add(m_program, m_shader_prog, *m_cur_vertex_prog);
+
+				m_program.Use();
+
+				GLint r = GL_FALSE;
+				glGetProgramiv(m_program.id, GL_VALIDATE_STATUS, &r);
+				if(r != GL_TRUE)
+				{
+					glGetProgramiv(m_program.id, GL_INFO_LOG_LENGTH, &r);
+
+					if(r)
+					{
+						char* buf = new char[r+1];
+						GLsizei len;
+						memset(buf, 0, r+1);
+						glGetProgramInfoLog(m_program.id, r, &len, buf);
+						ConLog.Error("Failed to validate program: %s", buf);
+						free(buf);
+					}
+
+					Emu.Pause();
+				}
 			}
 		}
-
-		m_program.Use();
+		else m_program.Use();
 
 		for(u32 i=0; i<16; ++i)
 		{
 			GLTexture& tex = m_frame->GetTexture(i);
 			if(!tex.IsEnabled()) continue;
+
 			glActiveTexture(GL_TEXTURE0_ARB + i);
+			checkForGlError("glActiveTexture");
+			tex.Bind();
+			checkForGlError("tex.Bind");
 			m_program.SetTex(i);
+			checkForGlError("m_program.SetTex");
 			tex.Init();
+			checkForGlError("tex.Init");
+			//tex.Save();
 		}
 
 		if(draw_array_count)
@@ -799,6 +867,9 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 		//VertexData[0].prog.attributeInputMask = args[0];
 	break;
 
+	case NV4097_INVALIDATE_VERTEX_CACHE_FILE:
+	break;
+
 	case NV4097_SET_TRANSFORM_CONSTANT_LOAD:
 	{
 		if((count - 1) % 4)
@@ -827,6 +898,7 @@ void GLGSRender::DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 c
 			c.z = *(float*)&z;
 			c.w = *(float*)&w;
 
+			CMD_LOG("SET_TRANSFORM_CONSTANT_LOAD[%d : %d] = (%f, %f, %f, %f)", i, id, c.x, c.y, c.z, c.w);
 			m_cur_vertex_prog->constants4.AddCpy(c);
 		}
 	}

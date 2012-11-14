@@ -88,6 +88,7 @@ public:
 	~SPU_Decoder()
 	{
 		m_op.Exit();
+		delete &m_op;
 	}
 
 	virtual void Decode(const u32 code)

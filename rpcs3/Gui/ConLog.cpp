@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include "Utilites/Thread.h"
 #include "Gui/ConLog.h"
 #include <wx/listctrl.h>
 #include "Ini.h"
@@ -189,9 +188,9 @@ LogFrame::LogFrame()
 	, ThreadBase(false, "LogThread")
 	, m_log(*new wxListView(this))
 {
-	wxBoxSizer& s_panel( *new wxBoxSizer(wxVERTICAL) );
+	wxBoxSizer& s_panel( *new wxBoxSizer(wxHORIZONTAL) );
 
-	s_panel.Add(&m_log);
+	s_panel.Add(&m_log, wxSizerFlags().Expand());
 
 	m_log.InsertColumn(0, wxEmptyString);
 	m_log.InsertColumn(1, "Log");
@@ -214,6 +213,7 @@ LogFrame::~LogFrame()
 
 bool LogFrame::Close(bool force)
 {
+	Stop();
 	ConLogFrame = NULL;
 	return FrameBase::Close(force);
 }
@@ -264,6 +264,7 @@ void LogFrame::OnResize(wxSizeEvent& event)
 
 void LogFrame::OnQuit(wxCloseEvent& event)
 {
+	Stop();
 	ConLogFrame = NULL;
 	event.Skip();
 }

@@ -48,7 +48,7 @@ struct FragmentDecompilerThread : public wxThread
 			u32 cond_swizzle_y	: 2;
 			u32 cond_swizzle_z	: 2;
 			u32 cond_swizzle_w	: 2;
-			u32 src0_abs		: 1;
+			u32 abs				: 1;
 		};
 	} src0;
 
@@ -66,7 +66,7 @@ struct FragmentDecompilerThread : public wxThread
 			u32 swizzle_z			: 2;
 			u32 swizzle_w			: 2;
 			u32 neg					: 1;
-			u32 src1_abs			: 1;
+			u32 abs					: 1;
 			u32 input_prec			: 2;
 			u32						: 7;
 			u32 scale				: 3;
@@ -88,7 +88,7 @@ struct FragmentDecompilerThread : public wxThread
 			u32 swizzle_z		: 2;
 			u32 swizzle_w		: 2;
 			u32 neg				: 1;
-			u32 src2_abs		: 1;
+			u32 abs				: 1;
 			u32 addr_reg		: 11;
 			u32 use_index_reg	: 1;
 		};
@@ -111,7 +111,7 @@ struct FragmentDecompilerThread : public wxThread
 
 	wxString GetMask();
 
-	void AddCode(wxString code);
+	void AddCode(wxString code, bool bkt = true);
 	wxString AddReg(u32 index);
 	wxString AddTex();
 

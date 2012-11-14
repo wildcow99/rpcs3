@@ -16,19 +16,20 @@ DbgConsole::DbgConsole()
 
 	m_color_white = new wxTextAttr(wxColour(255, 255, 255));
 	m_color_red = new wxTextAttr(wxColour(255, 0, 0));
-
-	ThreadBase::Start();
 }
 
 DbgConsole::~DbgConsole()
 {
+	Stop();
 	m_dbg_buffer.Flush();
 }
 
 void DbgConsole::Write(int ch, const wxString& text)
 {
-	while(m_dbg_buffer.IsBusy()) Sleep(0);
+	while(m_dbg_buffer.IsBusy()) Sleep(1);
 	m_dbg_buffer.Push(DbgPacket(ch, text));
+
+	if(!IsAlive()) Start();
 }
 
 void DbgConsole::Clear()
@@ -38,25 +39,14 @@ void DbgConsole::Clear()
 
 void DbgConsole::Task()
 {
-	while(!TestDestroy())
+	while(m_dbg_buffer.HasNewPacket())
 	{
-		Sleep(1);
-
-		if(!m_dbg_buffer.HasNewPacket()) continue;
-
-		m_console->Freeze();
-		while(m_dbg_buffer.HasNewPacket())
-		{
-			DbgPacket packet = m_dbg_buffer.Pop();
-			m_console->SetDefaultStyle(packet.m_ch == 1 ? *m_color_red : *m_color_white);
-			m_console->SetInsertionPointEnd();
-			m_console->WriteText(packet.m_text);
-
-		}
-		m_console->Thaw();
+		DbgPacket packet = m_dbg_buffer.Pop();
+		m_console->SetDefaultStyle(packet.m_ch == 1 ? *m_color_red : *m_color_white);
+		m_console->SetInsertionPointEnd();
+		m_console->WriteText(packet.m_text);
 
 		if(!DbgConsole::IsShown()) Show();
-		SetFocus();
 	}
 }
 

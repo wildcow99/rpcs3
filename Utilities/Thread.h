@@ -1,44 +1,66 @@
 #pragma once
 #include "Array.h"
 
-class ThreadBase : public wxThread
+class ThreadExec;
+
+class ThreadBase
 {
 protected:
 	wxString m_name;
+	bool m_detached;
 
 protected:
 	ThreadBase(bool detached = true, const wxString& name = "Unknown ThreadBase")
-		: wxThread(detached ? wxTHREAD_DETACHED : wxTHREAD_JOINABLE)
+		: m_detached(detached)
+		, m_name(name)
+		, m_executor(nullptr)
 	{
 	}
 
-	virtual ~ThreadBase() throw()
+public:
+	ThreadExec* m_executor;
+
+	virtual void Task()=0;
+
+	void Start();
+	void Stop(bool wait = true);
+
+	bool IsAlive();
+	bool TestDestroy();
+};
+
+class ThreadExec : public wxThread
+{
+	ThreadBase* m_parent;
+	wxSemaphore m_wait_for_exit;
+	volatile bool m_alive;
+
+public:
+	ThreadExec(bool detached, ThreadBase* parent)
+		: wxThread(detached ? wxTHREAD_DETACHED : wxTHREAD_JOINABLE)
+		, m_parent(parent)
+		, m_alive(true)
 	{
-		if(IsAlive()) Delete();
+		Create();
+		Run();
+	}
+
+	void Stop(bool wait = true)
+	{
+		if(!m_alive) return;
+
+		m_parent = nullptr;
+		Delete();
+		if(wait && m_alive) m_wait_for_exit.Wait();
 	}
 
 	ExitCode Entry()
 	{
-		Task();
+		m_parent->Task();
+		m_alive = false;
+		m_wait_for_exit.Post();
+		if(m_parent) m_parent->m_executor = nullptr;
 		return (ExitCode)0;
-	}
-
-	virtual void Task()=0;
-
-public:
-	void Start()
-	{
-		if(IsAlive()) return;
-
-		if(IsPaused())
-		{
-			Resume();
-		}
-		else
-		{
-			Create();
-			Run();
-		}
 	}
 };
 

@@ -1,5 +1,4 @@
 #pragma once
-#include "Utilites/Thread.h"
 #include <wx/listctrl.h>
 #include "Ini.h"
 #include "Gui/FrameBase.h"
