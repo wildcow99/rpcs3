@@ -93,19 +93,33 @@ wxString VertexDecompilerThread::GetSRC(const u32 n)
 	break;
 	}
 
-	static const wxString f[4] = {"x", "z", "w", "y"};
+	static const char f[4] = {'x', 'z', 'w', 'y'};
 
 	wxString swizzle = wxEmptyString;
+
 	swizzle += f[src[n].swz_x];
 	swizzle += f[src[n].swz_y];
 	swizzle += f[src[n].swz_z];
 	swizzle += f[src[n].swz_w];
+
 	if(swizzle != "xyzw") ret += "." + swizzle;
+
+	bool abs;
+	
+	switch(n)
+	{
+	case 0: abs = d0.src0_abs; break;
+	case 1: abs = d0.src1_abs; break;
+	case 2: abs = d0.src2_abs; break;
+	}
+	
+	if(abs) ret = "abs(" + ret + ")";
+	if(src[n].neg) ret = "-" + ret;
 
 	return ret;
 }
 
-void VertexDecompilerThread::AddCode(wxString code, bool src_mask)
+void VertexDecompilerThread::AddCode(wxString code, bool bkt, bool src_mask)
 {
 	if(d0.cond == 0) return;
 	if(d0.cond != 7)
@@ -117,11 +131,11 @@ void VertexDecompilerThread::AddCode(wxString code, bool src_mask)
 
 	if(src_mask)
 	{
-		code = GetDST() + GetMask() + " = (" + code + ")" + GetMask();
+		code = GetDST() + GetMask() + " = " + (bkt ? "(" + code + ")" : code) +  GetMask();
 	}
 	else
 	{
-		code = GetDST() + GetMask() + " = " + code;
+		code = GetDST() + GetMask() + " = " + (bkt ? "(" + code + ")" : code);
 	}
 
 	main += "\t" + code + ";\n";
@@ -166,26 +180,28 @@ wxThread::ExitCode VertexDecompilerThread::Entry()
 
 		switch(d1.vec_opcode)
 		{
-		case 0x0: break; //NOP
-		case 0x1: AddCode(GetSRC(0)); break; //MOV
-		case 0x2: AddCode(GetSRC(0) + " * " + GetSRC(1)); break; //MUL
-		case 0x3: AddCode(GetSRC(0) + " + " + GetSRC(1)); break; //ADD
-		case 0x4: AddCode(GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2)); break; //MAD
-		//case 0x7: AddCode("dot(" + GetSRC(0) + ", " + GetSRC(1) + ").xxxx"); break; //DP4
-		case 0x7://DP4
-		{
-			const wxString src0 = "(" + GetSRC(0) + ")";
-			const wxString src1 = "(" + GetSRC(1) + ")";
-			wxString result = wxEmptyString;
-			result += src0 + ".x * " + src1 + ".x + ";
-			result += src0 + ".y * " + src1 + ".y + ";
-			result += src0 + ".z * " + src1 + ".z + ";
-			result += src0 + ".w * " + src1 + ".w";
-			AddCode(result, false);
-		}
-		break; 
-		case 0xe: AddCode("fract(" + GetSRC(0) + ")"); break; //FRC
-		case 0xf: AddCode("floor(" + GetSRC(0) + ")"); break; //FLR
+		case 0x00: break; //NOP
+		case 0x01: AddCode(GetSRC(0), false); break; //MOV
+		case 0x02: AddCode(GetSRC(0) + " * " + GetSRC(1)); break; //MUL
+		case 0x03: AddCode(GetSRC(0) + " + " + GetSRC(1)); break; //ADD
+		case 0x04: AddCode(GetSRC(0) + " * " + GetSRC(1) + " + " + GetSRC(2)); break; //MAD
+		case 0x05: AddCode("dot(" + GetSRC(0) + ".xyz, " + GetSRC(1) + ".xyz).xxx"); break; //DP3
+		//case 0x06: TODO //DPH
+		case 0x07: AddCode("dot(" + GetSRC(0) + ", " + GetSRC(1) + ").xxxx"); break; //DP4
+		case 0x08: AddCode("distance(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //DST
+		case 0x09: AddCode("min(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //MAX
+		case 0x0a: AddCode("max(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //MAX
+		case 0x0b: AddCode("lessThan(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SLT
+		case 0x0c: AddCode("greaterThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SGE
+		case 0x0e: AddCode("fract(" + GetSRC(0) + ")", false); break; //FRC
+		case 0x0f: AddCode("floor(" + GetSRC(0) + ")", false); break; //FLR
+		case 0x10: AddCode("equal(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SEQ
+		case 0x11: AddCode("vec4(0.0f, 0.0f, 0.0f, 0.0f)", false); break; //SFL
+		case 0x12: AddCode("greaterThan(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SGT
+		case 0x13: AddCode("lessThanEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SLE
+		case 0x14: AddCode("notEqual(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SNE
+		case 0x15: AddCode("vec4(1.0f, 1.0f, 1.0f, 1.0f)", false); break; //STR
+		case 0x16: AddCode("sign(" + GetSRC(0) + ", " + GetSRC(1) + ")", false); break; //SSG
 
 		default:
 			ConLog.Error("Unknown vp opcode 0x%x", d1.vec_opcode);
@@ -197,7 +213,7 @@ wxThread::ExitCode VertexDecompilerThread::Entry()
 	}
 
 	m_shader = BuildCode();
-	main.Clear();
+	main = wxEmptyString;
 
 	return (ExitCode)0;
 }
@@ -249,19 +265,19 @@ void VertexProgram::Compile()
 
 	glShaderSource(id, 1, &str, &strlen);
 	glCompileShader(id);
-	/*
+	
 	GLint r = GL_FALSE;
-	glGetProgramiv(id, GL_COMPILE_STATUS, &r);
+	glGetShaderiv(id, GL_COMPILE_STATUS, &r);
 	if(r != GL_TRUE)
 	{
-		glGetProgramiv(id, GL_INFO_LOG_LENGTH, &r);
+		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &r);
 
 		if(r)
 		{
 			char* buf = new char[r+1];
 			GLsizei len;
 			memset(buf, 0, r+1);
-			glGetProgramInfoLog(id, r, &len, buf);
+			glGetShaderInfoLog(id, r, &len, buf);
 			ConLog.Error("Failed to compile vertex shader: %s", buf);
 			free(buf);
 		}
@@ -270,7 +286,6 @@ void VertexProgram::Compile()
 		Emu.Pause();
 	}
 	//else ConLog.Write("Vertex shader compiled successfully!");
-	*/
 
 }
 

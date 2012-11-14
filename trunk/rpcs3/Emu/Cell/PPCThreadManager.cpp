@@ -5,9 +5,7 @@
 
 PPCThreadManager::PPCThreadManager()
 	: ThreadBase(true, "PPCThreadManager")
-	, m_exec(false)
 {
-	//ThreadBase::Start();
 }
 
 PPCThreadManager::~PPCThreadManager()
@@ -17,15 +15,9 @@ PPCThreadManager::~PPCThreadManager()
 
 void PPCThreadManager::Close()
 {
-	if(Emu.IsRunned()) Emu.Pause();
+	if(IsAlive()) Stop();
 
-	while(m_exec) Sleep(1);
-
-	while(m_threads.GetCount())
-	{
-		m_threads[0].Close();
-		RemoveThread(m_threads[0].GetId());
-	}
+	while(m_threads.GetCount()) RemoveThread(m_threads[0].GetId());
 }
 
 PPCThread& PPCThreadManager::AddThread(bool isPPU)
@@ -47,17 +39,13 @@ void PPCThreadManager::RemoveThread(const u32 id)
 	{
 		if(m_threads[i].GetId() != id) continue;
 
-		m_threads[i].Stop();
+		m_threads[i].Close();
 		m_threads.RemoveAt(i);
 
 		break;
 	}
 
-	if(Emu.GetIdManager().CheckID(id))
-	{
-		Emu.GetIdManager().RemoveID(id, false);
-	}
-
+	Emu.GetIdManager().RemoveID(id, false);
 	Emu.CheckStatus();
 }
 
@@ -76,24 +64,17 @@ s32 PPCThreadManager::GetThreadNumById(bool isPPU, u32 id)
 
 void PPCThreadManager::Exec()
 {
-	m_exec = true;
+	Start();
 }
 
 void PPCThreadManager::Task()
 {
 	u32 thread = 0;
 
-	while(!TestDestroy())
+	while(!TestDestroy() && Emu.IsRunned() && m_threads.GetCount())
 	{
-		if(!m_exec)
-		{
-			Sleep(1);
-			continue;
-		}
-
 		m_threads[thread].Exec();
 
 		thread = (thread + 1) % m_threads.GetCount();
-		if(!Emu.IsRunned()) m_exec = false;
 	}
 }

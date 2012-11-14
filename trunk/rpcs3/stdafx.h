@@ -176,12 +176,24 @@ static void safe_realloc(T* ptr, uint new_size)
 
 #define safe_delete(x) {free(x);(x)=NULL;}
 
-#include "rpcs3.h"
+enum Status
+{
+	Runned,
+	Paused,
+	Stopped,
+};
+
+#include "Utilities/Thread.h"
+#include "Utilities/Array.h"
+#include "Utilities/Timer.h"
+#include "Utilities/IdManager.h"
+
 #include "Ini.h"
 #include "Gui/FrameBase.h"
 #include "Gui/ConLog.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "rpcs3.h"
 
 #define _PRGNAME_ "RPCS3"
 #define _PRGVER_ "0.0.0.2"

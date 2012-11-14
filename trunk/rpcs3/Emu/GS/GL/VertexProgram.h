@@ -103,7 +103,7 @@ struct VertexDecompilerThread : public wxThread
 			u16 swz_z		: 2;
 			u16 swz_y		: 2;
 			u16 swz_x		: 2;
-			u16 negate		: 1;
+			u16 neg			: 1;
 		};
 	} src[3];
 
@@ -123,7 +123,7 @@ struct VertexDecompilerThread : public wxThread
 	wxString GetMask();
 	wxString GetDST();
 	wxString GetSRC(const u32 n);
-	void AddCode(wxString code, bool src_mask = true);
+	void AddCode(wxString code, bool bkt = true, bool src_mask = true);
 	wxString BuildCode();
 
 	ExitCode Entry();

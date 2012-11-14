@@ -631,7 +631,10 @@ union VPR_reg
 	u8  _u8[16];
 	s8  _i8[16];
 
-	VPR_reg(){Clear();}
+	//struct { float x, y, z, w; };
+
+	VPR_reg() { Clear(); }
+
 	VPR_reg(const __m128i val){_u128._u64[0] = val.m128i_u64[0]; _u128._u64[1] = val.m128i_u64[1];}
 	VPR_reg(const u128 val) {			_u128	= val; }
 	VPR_reg(const u64  val) { Clear();	_u64[0] = val; }
@@ -707,7 +710,7 @@ union VPR_reg
 	s8& b(const u32 c) { return _i8[15 - c]; }
 	u8& ub(const u32 c) { return _u8[15 - c]; }
 
-	void Clear() { memset(&_u128, 0, sizeof(_u128)); }
+	void Clear() { memset(this, 0, sizeof(*this)); }
 };
 
 /*
@@ -914,11 +917,12 @@ public:
 	{
 		wxString ret = PPCThread::RegsToString();
 		for(uint i=0; i<32; ++i) ret += wxString::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
-		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = 0x%llx\n", i, FPR[i]);
+		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = %.6G\n", i, FPR[i]);
 		ret += wxString::Format("CR = 0x%08x\n", CR);
 		ret += wxString::Format("LR = 0x%llx\n", LR);
 		ret += wxString::Format("CTR = 0x%llx\n", CTR);
 		ret += wxString::Format("XER = 0x%llx\n", XER);
+		ret += wxString::Format("FPSCR = 0x%x\n", FPSCR);
 		return ret;
 	}
 

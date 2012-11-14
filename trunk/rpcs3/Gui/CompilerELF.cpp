@@ -134,7 +134,7 @@ static const struct Instruction
 
 } m_instructions[] =
 {
-	{MASK_NO_ARG,			"nop",		ORI,	0, SMASK_NULL,},
+	{MASK_NO_ARG,			"nop",		ORI,	0, SMASK_NULL},
 	{MASK_TO_RA_IMM16,		"tdi",		TDI,	0, SMASK_NULL},
 	{MASK_TO_RA_IMM16,		"twi",		TWI,	0, SMASK_NULL},
 	//G_04 = 0x04,
@@ -592,11 +592,12 @@ void CompilerELF::OnKeyDown(wxKeyEvent& event)
 	event.Skip();
 }
 
-void CompilerELF::OnUpdate(wxCommandEvent& WXUNUSED(event))
+void CompilerELF::OnUpdate(wxCommandEvent& event)
 {
 	UpdateStatus();
 	DoAnalyzeCode(false);
-	
+
+	return;
 	asm_list->Freeze();
 	asm_list->SetStyle(0, asm_list->GetValue().Len(), wxTextAttr("Black"));
 
@@ -827,226 +828,6 @@ void CompilerELF::LoadElf(wxCommandEvent& event)
 
 void CompilerELF::LoadElf(const wxString& path)
 {
-	return;
-	wxCriticalSection lock;
-
-	if(!wxFile::Access(path, wxFile::read))
-	{
-		ConLog.Error("Error opening '%s'", path);
-		return;
-	}
-
-	wxFile f(path);
-	ELF64Loader l(f);
-	if(!l.LoadInfo())
-	{
-		ConLog.Error("Error loading '%s'", path);
-		Memory.Close();
-		l.Close();
-		return;
-	}
-	
-	Sleep(10);
-	asm_list->SetLabel(wxEmptyString);
-	asm_list->Freeze();
-	PPU_DisAsm disasm(*(PPCThread*)0, CompilerElfMode);
-	PPU_Decoder dec(disasm);
-
-	asm_list->WriteText("start_elf_info\n");
-	asm_list->WriteText(wxString::Format("\tentry 0x%x\n", l.ehdr.e_entry));
-	//asm_list->WriteText(wxString::Format("\tshoff 0x%x\n", l.ehdr.e_shoff));
-	asm_list->WriteText(wxString::Format("\tcurver 0x%x\n", l.ehdr.e_curver));
-	asm_list->WriteText(wxString::Format("\tversion 0x%x\n", l.ehdr.e_version));
-	asm_list->WriteText(wxString::Format("\tflags 0x%x\n", l.ehdr.e_flags));
-	asm_list->WriteText("end_elf_info\n");
-	asm_list->WriteText("\n");
-
-	Sleep(5);
-
-	for(u32 p=0; p<l.phdr_arr.GetCount(); ++p)
-	{
-		asm_list->WriteText("start_program_info\n");
-
-		if(l.phdr_arr[p].p_vaddr != l.phdr_arr[p].p_paddr)
-		{
-			asm_list->WriteText(wxString::Format("\tvaddr 0x%llx\n", l.phdr_arr[p].p_vaddr));
-			asm_list->WriteText(wxString::Format("\tpaddr 0x%llx\n", l.phdr_arr[p].p_paddr));
-		}
-		else
-		{
-			asm_list->WriteText(wxString::Format("\taddr 0x%llx\n", l.phdr_arr[p].p_vaddr));
-		}
-
-		if(l.phdr_arr[p].p_filesz != l.phdr_arr[p].p_memsz) 
-			asm_list->WriteText(wxString::Format("\tmemsz 0x%llx\n", l.phdr_arr[p].p_memsz));
-
-		asm_list->WriteText(wxString::Format("\ttype 0x%x\n", l.phdr_arr[p].p_type));
-		asm_list->WriteText(wxString::Format("\tflags 0x%x\n", l.phdr_arr[p].p_flags));
-		asm_list->WriteText(wxString::Format("\talign 0x%llx\n", l.phdr_arr[p].p_align));
-		asm_list->WriteText("end_program_info\n");
-		asm_list->WriteText("\n");
-
-		//if(!l.phdr_arr[p].p_offset) continue;
-		if(!l.phdr_arr[p].p_vaddr) continue;
-		const u32 c = 0;//l.phdr_arr[p].p_offset ? 0 : sizeof(Elf64_Ehdr) + sizeof(Elf64_Phdr) * l.phdr_arr.GetCount();
-		f.Seek(l.phdr_arr[p].p_offset + c);
-		for(u32 o=0; o<l.phdr_arr[p].p_filesz - c;)
-		{
-			if(l.phdr_arr[p].p_align < 4)
-			{
-				switch(l.phdr_arr[p].p_align)
-				{
-					case 1:
-					{
-						const char c = Read8(f);
-						if(c) asm_list->WriteText(wxString::Format("unk \"%c\"\n", c));
-						else asm_list->WriteText(wxString::Format("unk 0x%02x\n", c));
-					}
-					break;
-
-					case 2:
-						asm_list->WriteText(wxString::Format("unk 0x%04x\n", Read16(f)));
-					break;
-
-					default:
-						ConLog.Error("Bad program align! program: %d, align: %lld", p, l.phdr_arr[p].p_align);
-					break;
-				}
-
-				o += l.phdr_arr[p].p_align;
-				continue;
-			}
-
-			const u32 code = Read32(f);
-			dec.Decode(code);
-			wxString opcode = wxEmptyString;
-			for(u32 i=0; i<disasm.last_opcode.Length(); ++i)
-			{
-				const wxString& s = disasm.last_opcode[i];
-				if(s == "\n" || s == " " || s == "#") break;
-				opcode += s;
-			}
-			Instruction instr = GetInstruction(opcode);
-			if(instr.mask == MASK_ERROR)
-			{
-				asm_list->WriteText(wxString::Format("unk 0x%x\n", code));
-			}
-			else
-			{
-				hex_list->SetInsertionPointEnd();
-#ifdef USE_RICH
-				asm_list->WriteText(disasm.last_opcode);
-#else
-				lock.Enter();
-				for(u32 j=0; j<disasm.last_opcode.Len(); ++j)
-				{
-					const u32 last_len = asm_list->GetLabel().Len();
-					while(last_len == asm_list->GetLabel().Len()) asm_list->WriteText(disasm.last_opcode[j]);
-				}
-				lock.Leave();
-#endif
-			}
-
-			o += 4;
-		}
-
-		asm_list->WriteText("\n");
-	}
-
-	Sleep(5);
-
-	for(u32 i=0; i<l.shdr_arr.GetCount(); ++i)
-	{
-		if(l.shdr_name_arr.GetCount() <= i)
-		{
-			ConLog.Error("Error loading section names");
-			asm_list->SetLabel(wxEmptyString);
-			l.Close();
-			asm_list->Thaw();
-			return;
-		}
-
-		if(!l.shdr_name_arr[i].Length()) continue;
-		if(i == l.ehdr.e_shstrndx) continue;
-
-		bool data_in_program = false;
-		for(u32 p=0; p<l.phdr_arr.GetCount(); ++p)
-		{
-			if(!l.phdr_arr[p].p_offset) continue;
-			if(!l.phdr_arr[p].p_vaddr) continue;
-
-			if(!(l.phdr_arr[p].p_vaddr <= l.shdr_arr[i].sh_addr &&
-				l.phdr_arr[p].p_vaddr + l.phdr_arr[p].p_filesz >= l.shdr_arr[i].sh_addr + l.shdr_arr[i].sh_size)) continue;
-			data_in_program = true;
-			break;
-		}
-
-		asm_list->WriteText("start_section_info\n");
-		asm_list->WriteText(wxString::Format("\tname \"%s\"\n", l.shdr_name_arr[i]));
-		asm_list->WriteText(wxString::Format("\taddr 0x%llx\n", l.shdr_arr[i].sh_addr));
-		if(data_in_program) asm_list->WriteText(wxString::Format("\tsize 0x%llx\n", l.shdr_arr[i].sh_size));
-		asm_list->WriteText(wxString::Format("\talign %lld\n", l.shdr_arr[i].sh_addralign));
-		asm_list->WriteText(wxString::Format("\ttype %d\n", l.shdr_arr[i].sh_type));
-		asm_list->WriteText(wxString::Format("\tflags %lld\n", l.shdr_arr[i].sh_flags));
-		asm_list->WriteText("end_section_info\n");
-		asm_list->WriteText("\n");
-
-		if(data_in_program) continue;
-		f.Seek(l.shdr_arr[i].sh_offset);
-
-		for(u32 o = 0; o<l.shdr_arr[i].sh_size;)
-		{
-			if(l.shdr_arr[i].sh_addralign < 4)
-			{
-				switch(l.shdr_arr[i].sh_addralign)
-				{
-					case 1:
-					{
-						const char c = Read8(f);
-						if(c) asm_list->WriteText(wxString::Format("unk \"%c\"\n", c));
-						else asm_list->WriteText(wxString::Format("unk 0x%02x\n", c));
-					}
-					break;
-
-					case 2:
-						asm_list->WriteText(wxString::Format("unk 0x%04x\n", Read16(f)));
-					break;
-
-					default:
-						ConLog.Error("Bad section align! section: \"%s\"[%d], align: %lld", l.shdr_name_arr[i], i, l.shdr_arr[i].sh_addralign);
-					break;
-				}
-
-				o += l.shdr_arr[i].sh_addralign;
-			}
-			else
-			{
-				const u32 code = Read32(f);
-				dec.Decode(code);
-				wxString opcode = wxEmptyString;
-				for(u32 i=0; i<disasm.last_opcode.Length(); ++i)
-				{
-					const wxString& s = disasm.last_opcode[i];
-					if(s == "\n" || s == " " || s == "#") break;
-					opcode += s;
-				}
-				Instruction instr = GetInstruction(opcode);
-				if(instr.mask == MASK_ERROR)
-				{
-					asm_list->WriteText(wxString::Format("unk 0x%x\n", code));
-				}
-				else
-					asm_list->WriteText(disasm.last_opcode);
-
-				o += 4;
-			}
-		}
-
-		asm_list->WriteText("\n");
-	}
-
-	asm_list->Thaw();
-	l.Close();
 }
 
 struct CompileProgram
@@ -2392,7 +2173,6 @@ struct CompileProgram
 
 			case MASK_UNK:
 				SetNextArgType(ARG_IMM);
-				//ArgImm();
 			break;
 
 			case MASK_NO_ARG:
@@ -2402,22 +2182,12 @@ struct CompileProgram
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_IMM);
-				/*
-				ArgRegR();
-				ArgRegR();
-				ArgImm();
-				*/
 			break;
 
 			case MASK_RA_RST_IMM16:
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_IMM);
-				/*
-				ArgRegR();
-				ArgRegR();
-				ArgImm();
-				*/
 			break;
 
 			case MASK_CRFD_RA_IMM16:
@@ -2438,26 +2208,12 @@ struct CompileProgram
 				}
 				
 				SetNextArgType(ARG_IMM);
-				/*
-				if(!ArgRegCR(false))
-				{
-					PrevArg();
-					m_args.AddCpy(0);
-				}
-				ArgRegR();
-				ArgImm();
-				*/
 			break;
 
 			case MASK_BO_BI_BD:
 				SetNextArgType(ARG_IMM);
 				SetNextArgType(ARG_REG_CR);
 				SetNextArgBranch(instr.smask & SMASK_AA);
-				/*
-				ArgImm();
-				ArgRegCR();
-				ArgImmBranch(instr.smask & SMASK_AA);
-				*/
 			break;
 
 			case MASK_BI_BD:
@@ -2465,26 +2221,15 @@ struct CompileProgram
 				{
 					m_args.InsertCpy(0, Arg("cr0", 0, ARG_REG_CR));
 				}
-				SetNextArgType(ARG_IMM);
-
-				/*
-				if(!ArgRegCR(false))
-				{
-					PrevArg();
-					m_args.AddCpy(0);
-				}
-				ArgImmBranch(instr.smask & SMASK_AA);
-				*/
+				SetNextArgBranch(instr.smask & SMASK_AA);
 			break;
 
 			case MASK_SYS:
 				if(!SetNextArgType(ARG_IMM, false)) m_args.AddCpy(Arg("2", 2, ARG_IMM));
-				//if(!ArgImm(false)) m_args.AddCpy(2);
 			break;
 
 			case MASK_LL:
 				SetNextArgBranch(instr.smask & SMASK_AA);
-				//ArgImmBranch(instr.smask & SMASK_AA);
 			break;
 
 			case MASK_RA_RS_SH_MB_ME:
@@ -2493,14 +2238,6 @@ struct CompileProgram
 				SetNextArgType(ARG_IMM);
 				SetNextArgType(ARG_IMM);
 				SetNextArgType(ARG_IMM);
-
-				/*
-				ArgRegR();
-				ArgRegR();
-				ArgImm();
-				ArgImm();
-				ArgImm();
-				*/
 			break;
 
 			case MASK_RA_RS_RB_MB_ME:
@@ -2509,58 +2246,29 @@ struct CompileProgram
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_IMM);
 				SetNextArgType(ARG_IMM);
-
-				/*
-				ArgRegR();
-				ArgRegR();
-				ArgRegR();
-				ArgImm();
-				ArgImm();
-				*/
 			break;
 
 			case MASK_RST_RA_D:
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_IMM);
-
-				/*
-				ArgRegR();
-				ArgRegR();
-				ArgImm();
-				*/
 			break;
 
 			case MASK_RST_RA_DS:
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_IMM);
-				/*
-				ArgRegR();
-				ArgRegR();
-				ArgImm();
-				*/
 			break;
 
 			case MASK_TO_RA_IMM16:
 				SetNextArgType(ARG_IMM);
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_IMM);
-
-				/*
-				ArgImm();
-				ArgRegR();
-				ArgImm();
-				*/
 			break;
 
 			case MASK_RSD_IMM16:
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_IMM);
-				/*
-				ArgRegR();
-				ArgImm();
-				*/
 			break;
 			}
 
@@ -2694,7 +2402,7 @@ struct CompileProgram
 			}
 
 			f.Seek(s_lib_stub_top.sh_offset);
-			f.Write(0, s_lib_stub_top.sh_size);
+			f.Seek(s_lib_stub_top.sh_size, wxFromCurrent);
 
 			f.Seek(s_lib_stub.sh_offset);
 			for(u32 i=0, nameoffs=4, dataoffs=0; i<modules.GetCount(); ++i)
@@ -2717,7 +2425,7 @@ struct CompileProgram
 			}
 
 			f.Seek(s_lib_stub_btm.sh_offset);
-			f.Write(0, s_lib_stub_btm.sh_size);
+			f.Seek(s_lib_stub_btm.sh_size, wxFromCurrent);
 
 			f.Seek(s_data_sceFStub.sh_offset);
 			for(u32 m=0; m<modules.GetCount(); ++m)
@@ -2747,13 +2455,13 @@ struct CompileProgram
 			f.Write(&prx_param, sizeof(sys_proc_prx_param));
 
 			f.Seek(s_lib_ent_top.sh_offset);
-			f.Write(0, s_lib_ent_top.sh_size);
+			f.Seek(s_lib_ent_top.sh_size, wxFromCurrent);
 
 			f.Seek(s_lib_ent_btm.sh_offset);
-			f.Write(0, s_lib_ent_btm.sh_size);
+			f.Seek(s_lib_ent_btm.sh_size, wxFromCurrent);
 
 			f.Seek(s_tbss.sh_offset);
-			f.Write(0, s_tbss.sh_size);
+			f.Seek(s_tbss.sh_size, wxFromCurrent);
 
 			f.Seek(s_shstrtab.sh_offset + 1);
 			for(u32 i=0; i<sections_names.GetCount(); ++i)
@@ -2838,6 +2546,7 @@ struct CompileProgram
 
 		m_err_list.Thaw();
 		if(m_analyze) m_hex_list.Thaw();
+		else system("make_fself.cmd");
 	}
 };
 
@@ -2881,8 +2590,6 @@ void CompilerELF::SetOpStyle(const wxString& text, const wxColour& color, bool b
 void CompilerELF::DoAnalyzeCode(bool compile)
 {
 	CompileProgram(asm_list->GetValue(), asm_list, hex_list, err_list, !compile).Compile();
-
-	if(compile) return;
 
 	/*
 	return;

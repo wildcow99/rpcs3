@@ -4,14 +4,13 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Cell/SPUDisAsm.h"
 
-SPUThread::SPUThread() : PPCThread(true)
+SPUThread::SPUThread() : PPCThread(PPC_THREAD_SPU)
 {
 	Reset();
 }
 
 SPUThread::~SPUThread()
 {
-	//~CPUThread();
 }
 
 void SPUThread::DoReset()

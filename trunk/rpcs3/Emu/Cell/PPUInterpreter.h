@@ -1249,7 +1249,7 @@ private:
 			u32 mask = 0;
 			for(u32 i=0; i<8; ++i)
 			{
-				if(flm & (1 << i)) mask |= 0xf << i;
+				if(flm & (1 << i)) mask |= 0xf << (i * 4);
 			}
 
 			CPU.FPSCR.FPSCR = (CPU.FPSCR.FPSCR & ~mask) | (*(u32*)&CPU.FPR[frb] & mask);

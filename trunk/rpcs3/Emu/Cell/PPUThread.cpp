@@ -8,7 +8,7 @@
 
 extern gcmInfo gcm_info;
 
-PPUThread::PPUThread() : PPCThread(false)
+PPUThread::PPUThread() : PPCThread(PPC_THREAD_PPU)
 {
 	Reset();
 }
@@ -47,7 +47,7 @@ void PPUThread::SetBranch(const u64 pc)
 	{
 		GPR[3] = SysCallsManager.DoFunc(fid, *this);
 
-		if((s32)GPR[3] < 0 && fid != 0x72a577ce && fid != 0x8461e528) ConLog.Write("Func[0x%llx] done with code [0x%x]! #pc: 0x%llx", fid, (u32)GPR[3], PC);
+		if((s64)GPR[3] < 0 && fid != 0x72a577ce && fid != 0x8461e528) ConLog.Write("Func[0x%llx] done with code [0x%llx]! #pc: 0x%llx", fid, GPR[3], PC);
 #ifdef HLE_CALL_LOG
 		else ConLog.Warning("Func[0xll%x] done with code [0x%llx]! #pc: 0x%llx", fid, GPR[3], PC);
 #endif
@@ -58,20 +58,22 @@ void PPUThread::SetBranch(const u64 pc)
 		if(fid == 0x744680a2) Memory.Write32(addr+4, GPR[3]);
 		//Memory.Write32(addr+4, Emu.GetTLSMemsz());
 	}
-	else if(pc == Memory.VideoMem.GetStartAddr())
+	else if(pc == Emu.GetRSXCallback())
 	{
-		ConLog.Warning("gcm: callback(context=0x%llx, count=0x%llx) #pc: 0x%llx", GPR[3], GPR[4], PC);
+		//ConLog.Warning("gcm: callback(context=0x%llx, count=0x%llx) #pc: 0x%llx", GPR[3], GPR[4], PC);
 
 		CellGcmContextData& ctx = *(CellGcmContextData*)Memory.GetMemFromAddr(GPR[3]);
 		CellGcmControl& ctrl = *(CellGcmControl*)Memory.GetMemFromAddr(gcm_info.control_addr);
 
-		while(ctrl.put != ctrl.get) Sleep(0);
+		while(ctrl.put != ctrl.get) Sleep(1);
 
-		const u32 reserve = GPR[4] * 4;
-		ctx.current = ctx.begin;
+		const u32 reserve = GPR[4];
 
-		ctrl.put = 0/*re32(reserve)*/;
-		ctrl.get = 0;
+		ctx.current = re(re(ctx.begin) + reserve);
+
+		Emu.GetGSManager().GetRender().Pause();
+		ctrl.put = ctrl.get = re(reserve);
+		Emu.GetGSManager().GetRender().Resume();
 
 		GPR[3] = 0;
 
@@ -85,8 +87,9 @@ void PPUThread::SetBranch(const u64 pc)
 void PPUThread::AddArgv(const wxString& arg)
 {
 	stack_point -= arg.Len() + 1;
-	argv_addr.AddCpy(stack_point + 1);
-	Memory.WriteString(stack_point + 1, arg);
+	stack_point = Memory.AlignAddr(stack_point, 0x10) - 0x10;
+	argv_addr.AddCpy(stack_point);
+	Memory.WriteString(stack_point, arg);
 }
 
 void PPUThread::InitRegs()
@@ -98,8 +101,8 @@ void PPUThread::InitRegs()
 
 	SetPc(entry);
 	
-	int argc = m_arg;
-	int argv = 0;
+	u64 argc = m_arg;
+	u64 argv = 0;
 
 	if(argv_addr.GetCount())
 	{
@@ -129,6 +132,8 @@ void PPUThread::InitRegs()
 		return;
 	}
 
+	stack_point = Memory.AlignAddr(stack_point, 0x200) - 0x200;
+
 	GPR[1] = stack_point;
 	GPR[2] = rtoc;
 
@@ -143,15 +148,19 @@ void PPUThread::InitRegs()
 		GPR[3] = m_arg;
 	}
 
+	GPR[0] = entry;
 	//GPR[7] = 0x80d90;
 	GPR[8] = entry;
 	//GPR[10] = 0x131700;
-	//GPR[11] = 0x80;
+	GPR[11] = 0x80;
 	GPR[12] = Emu.GetMallocPageSize();
-	GPR[13] = 0x10090000;
-	//GPR[28] = GPR[4];
-	//GPR[29] = GPR[3];
-	//GPR[31] = GPR[5];
+	GPR[13] = 0x10007060;
+	GPR[28] = GPR[4];
+	GPR[29] = GPR[3];
+	GPR[31] = GPR[5];
+
+	CTR = PC;
+	CR.CR = 0x22000082;
 }
 
 u64 PPUThread::GetFreeStackSize() const

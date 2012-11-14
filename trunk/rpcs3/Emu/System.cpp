@@ -12,15 +12,15 @@
 SysCalls SysCallsManager;
 
 Emulator::Emulator()
-	: m_status(Stoped)
+	: m_status(Stopped)
 	, m_mode(DisAsm)
 	, m_dbg_console(NULL)
+	, m_rsx_callback(0)
 {
 }
 
 void Emulator::Init()
 {
-	GetCPU().Start();
 	//if(m_memory_viewer) m_memory_viewer->Close();
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
@@ -63,7 +63,7 @@ void Emulator::CheckStatus()
 	bool IsAllStoped = true;
 	for(u32 i=0; i<threads.GetCount(); ++i)
 	{
-		if(threads[i].IsStoped()) continue;
+		if(threads[i].IsStopped()) continue;
 		IsAllStoped = false;
 		break;
 	}
@@ -111,11 +111,19 @@ void Emulator::Run()
 
 	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64);
 
+	Memory.MainMem.Alloc(0x10000000, 0x10010000);
+	Memory.PRXMem.Write64(Memory.PRXMem.GetStartAddr(), 0xDEADBEEFABADCAFE);
+
 	thread.SetPc(l.GetEntry());
 	thread.SetArg(thread.GetId());
+	Memory.StackMem.Alloc(0x1000);
 	thread.InitStack();
 	thread.AddArgv(m_path);
-	thread.AddArgv("-emu");
+	//thread.AddArgv("-emu");
+
+	m_rsx_callback = Memory.MainMem.Alloc(0x10) + 4;
+	Memory.Write32(m_rsx_callback - 4, m_rsx_callback);
+
 	thread.Run();
 
 	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
@@ -132,7 +140,7 @@ void Emulator::Run()
 
 	if(Ini.CPUDecoderMode.GetValue() != 1)
 	{
-		//GetCPU().Start();
+		GetCPU().Start();
 		GetCPU().Exec();
 	}
 }
@@ -160,10 +168,11 @@ void Emulator::Resume()
 
 void Emulator::Stop()
 {
-	if(IsStoped()) return;
+	if(IsStopped()) return;
 	//ConLog.Write("shutdown...");
 
-	m_status = Stoped;
+	m_rsx_callback = 0;
+	m_status = Stopped;
 	wxGetApp().m_MainFrame->UpdateUI();
 
 	GetGSManager().Close();

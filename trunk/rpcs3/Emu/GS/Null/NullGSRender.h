@@ -30,9 +30,12 @@ class NullGSRender
 private:
 	NullGSFrame* m_frame;
 	wxTimer* m_update_timer;
+	bool m_paused;
 
 public:
-	NullGSRender() : m_frame(NULL)
+	NullGSRender()
+		: m_frame(NULL)
+		, m_paused(false)
 	{
 		m_update_timer = new wxTimer(this);
 		Connect(m_update_timer->GetId(), wxEVT_TIMER, wxTimerEventHandler(NullGSRender::OnTimer));
@@ -59,12 +62,12 @@ private:
 		m_localAddress = localAddress;
 		m_ctrl = (CellGcmControl*)Memory.GetMemFromAddr(m_ctrlAddress);
 
-		//m_update_timer->Start(1);
+		m_update_timer->Start(1);
 	}
 
 	void OnTimer(wxTimerEvent&)
 	{
-		while(m_ctrl->get != m_ctrl->put)
+		while(!m_paused && m_ctrl->get != m_ctrl->put && Emu.IsRunned())
 		{
 			const u32 get = re(m_ctrl->get);
 			const u32 cmd = Memory.Read32(m_ioAddress + get);
@@ -101,5 +104,15 @@ private:
 		m_update_timer->Stop();
 		if(m_frame->IsShown()) m_frame->Hide();
 		m_ctrl = NULL;
+	}
+
+	void Pause()
+	{
+		m_paused = true;
+	}
+
+	void Resume()
+	{
+		m_paused = false;
 	}
 };

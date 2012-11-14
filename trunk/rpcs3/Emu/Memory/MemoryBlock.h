@@ -1,8 +1,20 @@
 #pragma once
 
+struct MemBlockInfo
+{
+	u64 addr;
+	u32 size;
+
+	MemBlockInfo(u64 _addr, u32 _size)
+		: addr(_addr)
+		, size(_size)
+	{
+	}
+};
+
 class MemoryBlock
 {
-private:
+protected:
 	u8* mem;
 	u64 range_start;
 	u64 range_size;
@@ -16,7 +28,7 @@ private:
 	void InitMemory();
 
 public:
-	void Delete();
+	virtual void Delete();
 
 	virtual bool IsNULL() { return false; }
 
@@ -27,7 +39,8 @@ public:
 	bool GetMemFFromAddr(void* dst, const u64 addr);
 	u8* GetMemFromAddr(const u64 addr);
 
-	MemoryBlock* SetRange(const u64 start, const u32 size);
+	virtual MemoryBlock* SetRange(const u64 start, const u32 size);
+	bool SetNewSize(const u32 size);
 	virtual bool IsMyAddress(const u64 addr);
 
 	__forceinline const u8 FastRead8(const u64 addr) const;
@@ -56,7 +69,7 @@ public:
 
 	const u64 GetStartAddr() const { return range_start; }
 	const u64 GetEndAddr() const { return range_start + range_size - 1; }
-	const u32 GetSize() const { return range_size; }
+	virtual const u32 GetSize() const { return range_size; }
 	void* GetMem() const { return mem; }
 };
 
@@ -76,4 +89,34 @@ class NullMemoryBlock : public MemoryBlock
 	virtual bool Write32(const u64 addr, const u32 value);
 	virtual bool Write64(const u64 addr, const u64 value);
 	virtual bool Write128(const u64 addr, const u128 value);
+};
+
+class DynamicMemoryBlock : public MemoryBlock
+{
+	Array<MemBlockInfo> m_used_mem;
+	Array<MemBlockInfo> m_free_mem;
+	u64 m_point;
+	u32 m_max_size;
+
+public:
+	DynamicMemoryBlock();
+
+	const u32 GetSize() const { return m_max_size; }
+	const u32 GetUsedSize() const { return range_size; }
+
+	bool IsInMyRange(const u64 addr);
+	bool IsInMyRange(const u64 addr, const u32 size);
+	bool IsMyAddress(const u64 addr);
+
+	MemoryBlock* SetRange(const u64 start, const u32 size);
+
+	virtual void Delete();
+
+	void UpdateSize(u64 addr, u32 size);
+	void CombineFreeMem();
+
+	bool Alloc(u64 addr, u32 size);
+	u64 Alloc(u32 size);
+	bool Alloc();
+	bool Free(u64 addr);
 };

@@ -2,18 +2,10 @@
 
 #include "Gui/MemoryViewer.h"
 #include "Emu/Cell/PPCThreadManager.h"
-#include "Utilites/Array.h"
 #include "Emu/Io/Pad.h"
 #include "Emu/DbgConsole.h"
 #include "Emu/GS/GSManager.h"
 #include "Loader/Loader.h"
-
-enum Status
-{
-	Runned,
-	Paused,
-	Stoped,
-};
 
 struct EmuInfo
 {
@@ -63,6 +55,7 @@ class Emulator
 	Status m_status;
 	uint m_mode;
 
+	u32 m_rsx_callback;
 	MemoryViewerPanel* m_memory_viewer;
 	//ArrayF<CPUThread> m_cpu_threads;
 
@@ -71,7 +64,6 @@ class Emulator
 	IdManager m_id_manager;
 	DbgConsole* m_dbg_console;
 	GSManager m_gs_manager;
-	Loader m_loader;
 
 	EmuInfo m_info;
 
@@ -104,6 +96,8 @@ public:
 
 	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
 
+	u32 GetRSXCallback() const { return m_rsx_callback; }
+
 	void CheckStatus();
 
 	virtual void Run();
@@ -113,7 +107,7 @@ public:
 
 	virtual bool IsRunned() const { return m_status == Runned; }
 	virtual bool IsPaused() const { return m_status == Paused; }
-	virtual bool IsStoped() const { return m_status == Stoped; }
+	virtual bool IsStopped() const { return m_status == Stopped; }
 };
 
 extern Emulator Emu;

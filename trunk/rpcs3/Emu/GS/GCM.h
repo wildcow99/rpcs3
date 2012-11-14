@@ -2,9 +2,9 @@
 
 struct CellGcmControl
 {
-	u32 put;
-	u32 get;
-	u32 ref;
+	volatile u32 put;
+	volatile u32 get;
+	volatile u32 ref;
 };
 
 struct CellGcmConfig

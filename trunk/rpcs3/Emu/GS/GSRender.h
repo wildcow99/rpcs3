@@ -40,6 +40,8 @@ struct GSRender
 	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)=0;
 	virtual void Draw()=0;
 	virtual void Close()=0;
+	virtual void Pause()=0;
+	virtual void Resume()=0;
 
 	u32 GetAddress(u32 offset, u8 location);
 };
