@@ -411,21 +411,11 @@ bool DynamicMemoryBlock::Alloc(u64 addr, u32 size)
 		return false;
 	}
 
-	if(addr == m_point)
+	if(addr >= m_point)
 	{
-		UpdateSize(m_point, size);
+		u64 free_mem_addr = GetStartAddr() + GetUsedSize();
 
-		m_used_mem.AddCpy(MemBlockInfo(m_point, size));
-		memset(mem + (m_point - GetStartAddr()), 0, size);
-
-		m_point += size;
-
-		return true;
-	}
-
-	if(addr > m_point)
-	{
-		u64 free_mem_addr = GetStartAddr();
+		if(free_mem_addr + size >= GetSize()) return false;
 
 		if(free_mem_addr != addr)
 		{
@@ -502,6 +492,8 @@ u64 DynamicMemoryBlock::Alloc(u32 size)
 		memset(mem + (addr - GetStartAddr()), 0, size);
 		return addr;
 	}
+
+	if(GetUsedSize() + size >= GetSize()) return 0;
 
 	UpdateSize(m_point, size);
 
