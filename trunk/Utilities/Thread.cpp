@@ -23,7 +23,7 @@ bool ThreadBase::IsAlive()
 
 bool ThreadBase::TestDestroy()
 {
-	if(!m_executor) return true;
+	if(!m_executor || !m_executor->m_parent) return true;
 
 	return m_executor->TestDestroy();
 }

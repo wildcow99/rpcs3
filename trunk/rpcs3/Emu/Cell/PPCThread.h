@@ -8,7 +8,7 @@ enum PPCThreadType
 	PPC_THREAD_SPU,
 };
 
-class PPCThread// : public StepThread
+class PPCThread : public ThreadBase
 {
 protected:
 	u32 m_status;
@@ -118,6 +118,10 @@ public:
 	virtual wxString RegsToString() { return wxEmptyString; }
 
 	virtual void Exec();
+	void ExecOnce();
+
+	void InitTls();
+	void FreeTls();
 
 	virtual void AddArgv(const wxString& arg) {}
 	
@@ -127,7 +131,12 @@ protected:
 	virtual void DoPause()=0;
 	virtual void DoResume()=0;
 	virtual void DoStop()=0;
+
+	virtual void Task();
 	
 private:
 	virtual void DoCode(const s32 code)=0;
 };
+
+PPCThread* GetCurrentPPCThread();
+void InitPPCThreadTls();

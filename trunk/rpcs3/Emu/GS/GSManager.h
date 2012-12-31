@@ -4,18 +4,18 @@
 
 struct GSInfo
 {
-	CellVideoOutResolution outresolution;
 	CellVideoOutDisplayMode mode;
 
 	GSInfo()
 	{
-		outresolution.width = 740;
-		outresolution.height = 480;
+	}
 
-		mode.resolutionId = CELL_VIDEO_OUT_RESOLUTION_576;
+	void Init()
+	{
+		mode.resolutionId = Ini.GSResolution.GetValue();
 		mode.scanMode = CELL_VIDEO_OUT_SCAN_MODE_INTERLACE;
 		mode.conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
-		mode.aspect = CELL_VIDEO_OUT_ASPECT_4_3;
+		mode.aspect = Ini.GSAspectRatio.GetValue();
 		mode.refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_50HZ;
 	}
 };
@@ -47,7 +47,7 @@ public:
 	void Close();
 
 	GSInfo& GetInfo() { return m_info; }
-	GSRender& GetRender() { return *m_render; }
+	GSRender& GetRender() { assert(m_render); return *m_render; }
 
 	u8 GetState();
 	u8 GetColorSpace();

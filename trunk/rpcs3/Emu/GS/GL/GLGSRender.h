@@ -87,9 +87,9 @@ public:
 		//TODO: safe init
 		checkForGlError("GLTexture::Init() -> glBindTexture");
 
-		switch(m_format)
+		switch(m_format & ~(0x20 | 0x40))
 		{
-		case 0xA1:
+		case 0x81:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RED, GL_UNSIGNED_BYTE, Memory.GetMemFromAddr(m_offset));
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_RED);
@@ -99,7 +99,7 @@ public:
 			checkForGlError("GLTexture::Init() -> glTexParameteri");
 		break;
 
-		case 0xA5:
+		case 0x85:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, Memory.GetMemFromAddr(m_offset));
 			checkForGlError("GLTexture::Init() -> glTexImage2D");
 		break;
@@ -120,9 +120,9 @@ public:
 		u8* dst = data;
 		u8* dst_a = alpha;
 
-		switch(m_format)
+		switch(m_format & ~(0x20 | 0x40))
 		{
-		case 0xA1:
+		case 0x81:
 			for(u32 y=0; y<m_height; ++y) for(u32 x=0; x<m_width; ++x)
 			{
 				*dst++ = *src;
@@ -133,7 +133,7 @@ public:
 			}
 		break;
 
-		case 0xA5:
+		case 0x85:
 			for(u32 y=0; y<m_height; ++y) for(u32 x=0; x<m_width; ++x)
 			{
 				*dst++ = *src++;
@@ -175,6 +175,33 @@ public:
 	bool IsEnabled() const { return m_enabled; }
 };
 
+struct IndexArrayData
+{
+	Array<u8> m_data;
+	int m_type;
+	u32 m_first;
+	u32 m_count;
+	u32 m_addr;
+	u32 index_max;
+	u32 index_min;
+
+	IndexArrayData()
+	{
+		Reset();
+	}
+
+	void Reset()
+	{
+		m_type = 0;
+		m_first = ~0;
+		m_count = 0;
+		m_addr = 0;
+		index_min = ~0;
+		index_max = 0;
+		m_data.Clear();
+	}
+};
+
 struct GLGSFrame : public GSFrame
 {
 	wxGLCanvas* canvas;
@@ -202,8 +229,6 @@ struct GLRSXThread : public wxThread
 	wxWindow* m_parent;
 	Stack<u32> call_stack;
 
-	volatile bool m_paused;
-
 	GLRSXThread(wxWindow* parent);
 
 	virtual void OnExit();
@@ -218,9 +243,13 @@ class GLGSRender
 private:
 	GLRSXThread* m_rsx_thread;
 
+	IndexArrayData m_indexed_array;
+
 public:
 	GLGSFrame* m_frame;
 	volatile bool m_draw;
+	u32 m_draw_frames;
+	u32 m_skip_frames;
 
 	GLGSRender();
 	~GLGSRender();
@@ -230,8 +259,6 @@ private:
 	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
 	virtual void Draw();
 	virtual void Close();
-	virtual void Pause();
-	virtual void Resume();
 
 public:
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count);

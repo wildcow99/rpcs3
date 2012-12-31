@@ -2,7 +2,7 @@
 #include "SysCalls.h"
 
 #define FUNC_LOG_ERROR(x) ConLog.Warning(x); return 0
-s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU) 
+s64 SysCalls::DoFunc(const u32 id) 
 {
 	switch(id)
 	{
@@ -1410,7 +1410,7 @@ s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0xa193143c: FUNC_LOG_ERROR("TODO: cellSysmoduleSetMemcontainer");
 	case 0x018a1381: FUNC_LOG_ERROR("TODO: cellSysutilAvcSetLayoutMode");
 	case 0x01f04d94: FUNC_LOG_ERROR("TODO: cellSysutilGamePowerOff_I");
-	case 0x02ff3c1b: FUNC_LOG_ERROR("TODO: cellSysutilUnregisterCallback");
+	case 0x02ff3c1b: return cellSysutilUnregisterCallback(SC_ARGS_1); //FUNC_LOG_ERROR("TODO: cellSysutilUnregisterCallback");
 	case 0x073b89d5: FUNC_LOG_ERROR("TODO: cellSysutilAvcGetSpeakerVolumeLevel");
 	case 0x08269f37: FUNC_LOG_ERROR("TODO: cellSysutilAvcGetShowStatus");
 	case 0x0bae8772: FUNC_LOG_ERROR("TODO: cellVideoOutConfigure");
@@ -1422,7 +1422,7 @@ s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x15b0b0cd: FUNC_LOG_ERROR("TODO: cellVideoOutGetConfiguration");
 	case 0x15df71ed: FUNC_LOG_ERROR("TODO: cellSysutilAvcLoadAsync");
 	case 0x17dbe8b3: FUNC_LOG_ERROR("TODO: cellSysutilAvcJoinRequest");
-	case 0x189a74da: return 0; //FUNC_LOG_ERROR("TODO: cellSysutilCheckCallback");
+	case 0x189a74da: return cellSysutilCheckCallback(); //FUNC_LOG_ERROR("TODO: cellSysutilCheckCallback");
 	case 0x1a91874b: FUNC_LOG_ERROR("TODO: cellWebBrowserConfigSetFullScreen2");
 	case 0x1d99c3ee: FUNC_LOG_ERROR("TODO: cellOskDialogGetInputText");
 	case 0x1dfbfdd6: FUNC_LOG_ERROR("TODO: cellSaveDataListLoad2");
@@ -1515,7 +1515,7 @@ s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x9c9fe6a4: FUNC_LOG_ERROR("TODO: cellWebBrowserConfigSetFunction");
 	case 0x9ca9ffa7: FUNC_LOG_ERROR("TODO: cellHddGameSetSystemVer");
 	case 0x9d6af72a: FUNC_LOG_ERROR("TODO: cellMsgDialogProgressBarSetMsg");
-	case 0x9d98afa0: FUNC_LOG_ERROR("TODO: cellSysutilRegisterCallback");
+	case 0x9d98afa0: return cellSysutilRegisterCallback(SC_ARGS_3); //FUNC_LOG_ERROR("TODO: cellSysutilRegisterCallback");
 	case 0x9dfdad46: FUNC_LOG_ERROR("TODO: cellAudioOutUnregisterCallback");
 	case 0x9fb97b10: FUNC_LOG_ERROR("TODO: cellWebBrowserNavigate2");
 	case 0xa11552f6: FUNC_LOG_ERROR("TODO: cellSysutilGetBgmPlaybackStatus");
@@ -3563,10 +3563,10 @@ s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x05c65656: FUNC_LOG_ERROR("TODO: sys_mempool_try_allocate_block");
 	case 0x0618936b: FUNC_LOG_ERROR("TODO: _sys_vsnprintf");
 	case 0x06574237: FUNC_LOG_ERROR("TODO: _sys_snprintf");
-	case 0x1573dc3f: return Lv2LwmutexLock(CPU);//FUNC_LOG_ERROR("TODO: sys_lwmutex_lock");
+	case 0x1573dc3f: return sys_lwmutex_lock(SC_ARGS_2);//FUNC_LOG_ERROR("TODO: sys_lwmutex_lock");
 	case 0x191f0c4a: FUNC_LOG_ERROR("TODO: _sys_strrchr");
 	case 0x1ae10b92: FUNC_LOG_ERROR("TODO: _sys_spu_printf_attach_thread");
-	case 0x1bc200f4: return Lv2LwmutexUnlock(CPU);//FUNC_LOG_ERROR("TODO: sys_lwmutex_unlock");
+	case 0x1bc200f4: return sys_lwmutex_unlock(SC_ARGS_1);//FUNC_LOG_ERROR("TODO: sys_lwmutex_unlock");
 	case 0x1c9a942c: FUNC_LOG_ERROR("TODO: sys_lwcond_destroy");
 	case 0x1ca525a2: FUNC_LOG_ERROR("TODO: _sys_strncasecmp");
 	case 0x1ed454ce: FUNC_LOG_ERROR("TODO: sys_spu_elf_get_information");
@@ -3580,7 +3580,7 @@ s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 		//FUNC_LOG_ERROR("TODO: _sys_strlen");
 		ConLog.Write("sys_strlen(addr=0x%x)", SC_ARGS_1);
 		return Memory.ReadString(SC_ARGS_1).Len();
-	case 0x2f85c0ef: return Lv2LwmutexCreate(CPU);//FUNC_LOG_ERROR("TODO: sys_lwmutex_create");
+	case 0x2f85c0ef: return sys_lwmutex_create(SC_ARGS_2);//FUNC_LOG_ERROR("TODO: sys_lwmutex_create");
 	case 0x3172759d: FUNC_LOG_ERROR("TODO: sys_game_get_temperature");
 	case 0x318f17e1: FUNC_LOG_ERROR("TODO: _sys_memalign");
 	case 0x350d454e: return lv2PPUThreadGetId(CPU);//FUNC_LOG_ERROR("TODO: sys_ppu_thread_get_id");
@@ -3623,7 +3623,7 @@ s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0x7498887b: FUNC_LOG_ERROR("TODO: _sys_strchr");
 	case 0x791b9219: FUNC_LOG_ERROR("TODO: _sys_vsprintf");
 	case 0x80fb0c19: FUNC_LOG_ERROR("TODO: sys_prx_stop_module");
-	case 0x8461e528: return DoSyscall(146, CPU);//FUNC_LOG_ERROR("TODO: sys_time_get_system_time");
+	case 0x8461e528: return DoSyscall(146);//FUNC_LOG_ERROR("TODO: sys_time_get_system_time");
 	case 0x84bb6774: FUNC_LOG_ERROR("TODO: sys_prx_get_module_info");
 	case 0x893305fa: FUNC_LOG_ERROR("TODO: sys_raw_spu_load");
 	case 0x8985b5b6: FUNC_LOG_ERROR("TODO: _sys_heap_stats");
@@ -3652,9 +3652,9 @@ s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0xaa6d9bff: FUNC_LOG_ERROR("TODO: sys_prx_load_module_on_memcontainer");
 	case 0xac6fc404: FUNC_LOG_ERROR("TODO: sys_ppu_thread_unregister_atexit");
 	case 0xacad8fb6: FUNC_LOG_ERROR("TODO: sys_game_watchdog_clear");
-	case 0xaeb78725: return Lv2LwmutexTrylock(CPU);//FUNC_LOG_ERROR("TODO: sys_lwmutex_trylock");
+	case 0xaeb78725: return sys_lwmutex_trylock(SC_ARGS_1);//FUNC_LOG_ERROR("TODO: sys_lwmutex_trylock");
 	case 0xaede4b03: FUNC_LOG_ERROR("TODO: _sys_heap_delete_heap");
-	case 0xaff080a4: return lv2PPUThreadExit(CPU);//FUNC_LOG_ERROR("TODO: sys_ppu_thread_exit");
+	case 0xaff080a4: return sys_ppu_thread_exit(SC_ARGS_1);//FUNC_LOG_ERROR("TODO: sys_ppu_thread_exit");
 	case 0xb257540b: FUNC_LOG_ERROR("TODO: sys_mmapper_allocate_memory");
 	case 0xb27c8ae7: FUNC_LOG_ERROR("TODO: sys_prx_load_module_list");
 	case 0xb2fcf2c8: return sys_heap_create_heap(SC_ARGS_3);//FUNC_LOG_ERROR("TODO: _sys_heap_create_heap");
@@ -3666,7 +3666,7 @@ s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 		ConLog.Warning("_sys_malloc(0x%llx)", SC_ARGS_1);
 		return Memory.Alloc(CPU.GPR[3], Emu.GetMallocPageSize());
 		FUNC_LOG_ERROR("TODO: _sys_malloc");
-	case 0xc3476d0c: return Lv2LwmutexDestroy(CPU);////FUNC_LOG_ERROR("TODO: sys_lwmutex_destroy");
+	case 0xc3476d0c: return sys_lwmutex_destroy(SC_ARGS_1);////FUNC_LOG_ERROR("TODO: sys_lwmutex_destroy");
 	case 0xc4fd6121: FUNC_LOG_ERROR("TODO: _sys_qsort");
 	case 0xca9a60bf: FUNC_LOG_ERROR("TODO: sys_mempool_create");
 	case 0xd0ea47a7: FUNC_LOG_ERROR("TODO: sys_prx_unregister_library");
@@ -3680,7 +3680,7 @@ s64 SysCalls::DoFunc(const u32 id, PPUThread& CPU)
 	case 0xe0998dbf: FUNC_LOG_ERROR("TODO: sys_prx_get_module_id_by_name");
 	case 0xe0da8efd: FUNC_LOG_ERROR("TODO: sys_spu_image_close");
 	case 0xe66bac36: FUNC_LOG_ERROR("TODO: console_putc");
-	case 0xe6f2c1e7: return lv2ProcessExit(CPU);///FUNC_LOG_ERROR("TODO: sys_process_exit");
+	case 0xe6f2c1e7: return sys_process_exit(SC_ARGS_1);///FUNC_LOG_ERROR("TODO: sys_process_exit");
 	case 0xe76964f5: FUNC_LOG_ERROR("TODO: sys_game_board_storage_read");
 	case 0xe7ef3a80: FUNC_LOG_ERROR("TODO: sys_prx_load_module_list_on_memcontainer");
 	case 0xe9a1bd84: FUNC_LOG_ERROR("TODO: sys_lwcond_signal_all");

@@ -33,44 +33,6 @@ wxFont GetFont(int size)
 	return wxFont(size, wxMODERN, wxNORMAL, wxNORMAL);
 }
 
-u32 SetField(u32 src, u32 from, u32 to)
-{
-	return (src & ((1 << ((to - from) + 1)) - 1)) << (31 - to);
-}
-
-u32 SetField(s32 src, u32 p)
-{
-	return (src & 0x1) << (31 - p);
-}
-
-u32 ToOpcode(u32 i)	{ return SetField(i, 0, 5); }
-u32 ToRS(u32 i)		{ return SetField(i, 6, 10); }
-u32 ToRD(u32 i)		{ return SetField(i, 6, 10); }
-u32 ToRA(u32 i)		{ return SetField(i, 11, 15); }
-u32 ToRB(u32 i)		{ return SetField(i, 16, 20); }
-u32 ToLL(u32 i)		{ return i & 0x03fffffc; }
-u32 ToAA(u32 i)		{ return SetField(i, 30); }
-u32 ToLK(u32 i)		{ return SetField(i, 31); }
-u32 ToIMM16(s32 i)	{ return SetField(i, 16, 31); }
-u32 ToD(s32 i)		{ return SetField(i, 16, 31); }
-u32 ToDS(s32 i)
-{
-	if(i < 0) return ToD(i + 1);
-	return ToD(i);
-}
-u32 ToSYS(u32 i)	{ return SetField(i, 6, 31); }
-u32 ToBF(u32 i)		{ return SetField(i, 6, 10); }
-u32 ToBO(u32 i)		{ return SetField(i, 6, 10); }
-u32 ToBI(u32 i)		{ return SetField(i, 11, 15); }
-u32 ToBD(u32 i)		{ return i & 0xfffc; }
-u32 ToMB(u32 i)		{ return SetField(i, 21, 25); }
-u32 ToME(u32 i)		{ return SetField(i, 26, 30); }
-u32 ToSH(u32 i)		{ return SetField(i, 16, 20); }
-u32 ToRC(u32 i)		{ return SetField(i, 31); }
-u32 ToOE(u32 i)		{ return SetField(i, 21); }
-u32 ToL(u32 i)		{ return SetField(i, 10); }
-u32 ToCRFD(u32 i)	{ return SetField(i, 6, 8); }
-
 struct InstrField
 {
 	u32 (*To)(u32 i);
@@ -90,6 +52,8 @@ enum MASKS
 	MASK_LL,
 	MASK_RA_RS_SH_MB_ME,
 	MASK_RA_RS_RB_MB_ME,
+	MASK_RA_RS_RB,
+	MASK_RD_RA_RB,
 	MASK_RST_RA_D,
 	MASK_RST_RA_DS,
 	MASK_TO_RA_IMM16,
@@ -126,92 +90,119 @@ static const struct Instruction
 {
 	MASKS mask;
 	wxString name;
-	u32 op_num;
-	u32 op_g;
+	u32 op;
+
+	struct
+	{
+		u32 op;
+		u32 from;
+		u32 to;
+	} subop;
+
 	u32 smask;
 	u32 bo;
 	u32 bi;
 
 } m_instructions[] =
 {
-	{MASK_NO_ARG,			"nop",		ORI,	0, SMASK_NULL},
-	{MASK_TO_RA_IMM16,		"tdi",		TDI,	0, SMASK_NULL},
-	{MASK_TO_RA_IMM16,		"twi",		TWI,	0, SMASK_NULL},
+	{MASK_NO_ARG,			"nop",		ORI,	{0}, SMASK_NULL},
+	{MASK_TO_RA_IMM16,		"tdi",		TDI,	{0}, SMASK_NULL},
+	{MASK_TO_RA_IMM16,		"twi",		TWI,	{0}, SMASK_NULL},
 	//G_04 = 0x04,
-	{MASK_RSD_RA_IMM16,		"mulli",	MULLI,	0, SMASK_NULL},
-	{MASK_RSD_RA_IMM16,		"subfic",	SUBFIC,	0, SMASK_NULL},
-	{MASK_CRFD_RA_IMM16,	"cmplwi",	CMPLI,	0, SMASK_NULL},
-	{MASK_CRFD_RA_IMM16,	"cmpldi",	CMPLI,	0, SMASK_L},
-	{MASK_CRFD_RA_IMM16,	"cmpwi",	CMPI,	0, SMASK_NULL},
-	{MASK_CRFD_RA_IMM16,	"cmpdi",	CMPI,	0, SMASK_L},
-	{MASK_RSD_RA_IMM16,		"addic",	ADDIC,	0, SMASK_NULL},
-	{MASK_RSD_RA_IMM16,		"addic.",	ADDIC_,	0, SMASK_RC},
-	{MASK_RSD_RA_IMM16,		"addi",		ADDI,	0, SMASK_NULL},
-	{MASK_RSD_IMM16,		"li",		ADDI,	0, SMASK_NULL},
-	{MASK_RSD_RA_IMM16,		"addis",	ADDIS,	0, SMASK_NULL},
+	{MASK_RSD_RA_IMM16,		"mulli",	MULLI,	{0}, SMASK_NULL},
+	{MASK_RSD_RA_IMM16,		"subfic",	SUBFIC,	{0}, SMASK_NULL},
+	{MASK_CRFD_RA_IMM16,	"cmplwi",	CMPLI,	{0}, SMASK_NULL},
+	{MASK_CRFD_RA_IMM16,	"cmpldi",	CMPLI,	{0}, SMASK_L},
+	{MASK_CRFD_RA_IMM16,	"cmpwi",	CMPI,	{0}, SMASK_NULL},
+	{MASK_CRFD_RA_IMM16,	"cmpdi",	CMPI,	{0}, SMASK_L},
+	{MASK_RSD_RA_IMM16,		"addic",	ADDIC,	{0}, SMASK_NULL},
+	{MASK_RSD_RA_IMM16,		"addic.",	ADDIC_,	{0}, SMASK_RC},
+	{MASK_RSD_RA_IMM16,		"addi",		ADDI,	{0}, SMASK_NULL},
+	{MASK_RSD_IMM16,		"li",		ADDI,	{0}, SMASK_NULL},
+	{MASK_RSD_RA_IMM16,		"addis",	ADDIS,	{0}, SMASK_NULL},
 
-	{MASK_BO_BI_BD,			"bc",		BC,		0, SMASK_NULL},
-	{MASK_BO_BI_BD,			"bca",		BC,		0, SMASK_AA},
-	{MASK_BO_BI_BD,			"bcl",		BC,		0, SMASK_LK},
-	{MASK_BO_BI_BD,			"bcla",		BC,		0, SMASK_AA | SMASK_LK},
-	{MASK_BI_BD,			"bdz",		BC,		0, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO3},
-	{MASK_BI_BD,			"bdz-",		BC,		0, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO1 | BO_MASK_BO3},
-	{MASK_BI_BD,			"bdz+",		BC,		0, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO1 | BO_MASK_BO3 | BO_MASK_BO4},
-	{MASK_BI_BD,			"bdnz",		BC,		0, SMASK_BO, BO_MASK_BO0},
-	{MASK_BI_BD,			"bdnz-",	BC,		0, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO1},
-	{MASK_BI_BD,			"bdnz+",	BC,		0, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO1 | BO_MASK_BO4},
-	{MASK_BI_BD,			"bge",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO2, BI_GE},
-	{MASK_BI_BD,			"ble",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO2, BI_LE},
-	{MASK_BI_BD,			"bne",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO2, BI_NE},
-	{MASK_BI_BD,			"bge-",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3, BI_GE},
-	{MASK_BI_BD,			"ble-",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3, BI_LE},
-	{MASK_BI_BD,			"bne-",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3, BI_NE},
-	{MASK_BI_BD,			"bge+",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_GE},
-	{MASK_BI_BD,			"ble+",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_LE},
-	{MASK_BI_BD,			"bne+",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_NE},
-	{MASK_BI_BD,			"bgt",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2, BI_GT},
-	{MASK_BI_BD,			"blt",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2, BI_LT},
-	{MASK_BI_BD,			"beq",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2, BI_EQ},
-	{MASK_BI_BD,			"bgt-",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3, BI_GT},
-	{MASK_BI_BD,			"blt-",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3, BI_LT},
-	{MASK_BI_BD,			"beq-",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3, BI_EQ},
-	{MASK_BI_BD,			"bgt+",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_GT},
-	{MASK_BI_BD,			"blt+",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_LT},
-	{MASK_BI_BD,			"beq+",		BC,		0, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_EQ},
+	{MASK_BO_BI_BD,			"bc",		BC,		{0}, SMASK_NULL},
+	{MASK_BO_BI_BD,			"bca",		BC,		{0}, SMASK_AA},
+	{MASK_BO_BI_BD,			"bcl",		BC,		{0}, SMASK_LK},
+	{MASK_BO_BI_BD,			"bcla",		BC,		{0}, SMASK_AA | SMASK_LK},
+	{MASK_BI_BD,			"bdz",		BC,		{0}, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO3},
+	{MASK_BI_BD,			"bdz-",		BC,		{0}, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO1 | BO_MASK_BO3},
+	{MASK_BI_BD,			"bdz+",		BC,		{0}, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO1 | BO_MASK_BO3 | BO_MASK_BO4},
+	{MASK_BI_BD,			"bdnz",		BC,		{0}, SMASK_BO, BO_MASK_BO0},
+	{MASK_BI_BD,			"bdnz-",	BC,		{0}, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO1},
+	{MASK_BI_BD,			"bdnz+",	BC,		{0}, SMASK_BO, BO_MASK_BO0 | BO_MASK_BO1 | BO_MASK_BO4},
+	{MASK_BI_BD,			"bge",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO2, BI_GE},
+	{MASK_BI_BD,			"ble",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO2, BI_LE},
+	{MASK_BI_BD,			"bne",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO2, BI_NE},
+	{MASK_BI_BD,			"bge-",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3, BI_GE},
+	{MASK_BI_BD,			"ble-",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3, BI_LE},
+	{MASK_BI_BD,			"bne-",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3, BI_NE},
+	{MASK_BI_BD,			"bge+",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_GE},
+	{MASK_BI_BD,			"ble+",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_LE},
+	{MASK_BI_BD,			"bne+",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_NE},
+	{MASK_BI_BD,			"bgt",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2, BI_GT},
+	{MASK_BI_BD,			"blt",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2, BI_LT},
+	{MASK_BI_BD,			"beq",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2, BI_EQ},
+	{MASK_BI_BD,			"bgt-",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3, BI_GT},
+	{MASK_BI_BD,			"blt-",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3, BI_LT},
+	{MASK_BI_BD,			"beq-",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3, BI_EQ},
+	{MASK_BI_BD,			"bgt+",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_GT},
+	{MASK_BI_BD,			"blt+",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_LT},
+	{MASK_BI_BD,			"beq+",		BC,		{0}, SMASK_BO | SMASK_BI, BO_MASK_BO1 | BO_MASK_BO2 | BO_MASK_BO3 | BO_MASK_BO4, BI_EQ},
 
-	{MASK_SYS,				"sc",		SC,		0, SMASK_NULL},
-	{MASK_LL,				"b",		B,		0, SMASK_NULL},
-	{MASK_LL,				"ba",		B,		0, SMASK_AA},
-	{MASK_LL,				"bl",		B,		0, SMASK_LK},
-	{MASK_LL,				"bla",		B,		0, SMASK_AA | SMASK_LK},
+	{MASK_SYS,				"sc",		SC,		{0}, SMASK_NULL},
+	{MASK_LL,				"b",		B,		{0}, SMASK_NULL},
+	{MASK_LL,				"ba",		B,		{0}, SMASK_AA},
+	{MASK_LL,				"bl",		B,		{0}, SMASK_LK},
+	{MASK_LL,				"bla",		B,		{0}, SMASK_AA | SMASK_LK},
 	//G_13 = 0x13,
-	{MASK_RA_RS_SH_MB_ME,	"rlwimi",	RLWIMI,	0, SMASK_NULL},
-	{MASK_RA_RS_SH_MB_ME,	"rlwimi.",	RLWIMI,	0, SMASK_RC},
-	{MASK_RA_RS_SH_MB_ME,	"rlwinm",	RLWINM,	0, SMASK_NULL},
-	{MASK_RA_RS_SH_MB_ME,	"rlwinm.",	RLWINM,	0, SMASK_RC},
-	{MASK_RA_RS_RB_MB_ME,	"rlwnm",	RLWNM,	0, SMASK_NULL},
-	{MASK_RA_RS_RB_MB_ME,	"rlwnm.",	RLWNM,	0, SMASK_RC},
-	{MASK_RSD_RA_IMM16,		"ori",		ORI,	0, SMASK_NULL},
-	{MASK_RSD_RA_IMM16,		"oris",		ORIS,	0, SMASK_NULL},
-	{MASK_RSD_RA_IMM16,		"xori",		XORI,	0, SMASK_NULL},
-	{MASK_RSD_RA_IMM16,		"xoris",	XORIS,	0, SMASK_NULL},
-	{MASK_RA_RST_IMM16,		"andi.",	ANDI_,	0, SMASK_RC},
-	{MASK_RA_RST_IMM16,		"andis.",	ANDIS_,	0, SMASK_RC},
+	{MASK_RA_RS_SH_MB_ME,	"rlwimi",	RLWIMI,	{0}, SMASK_NULL},
+	{MASK_RA_RS_SH_MB_ME,	"rlwimi.",	RLWIMI,	{0}, SMASK_RC},
+	{MASK_RA_RS_SH_MB_ME,	"rlwinm",	RLWINM,	{0}, SMASK_NULL},
+	{MASK_RA_RS_SH_MB_ME,	"rlwinm.",	RLWINM,	{0}, SMASK_RC},
+	{MASK_RA_RS_RB_MB_ME,	"rlwnm",	RLWNM,	{0}, SMASK_NULL},
+	{MASK_RA_RS_RB_MB_ME,	"rlwnm.",	RLWNM,	{0}, SMASK_RC},
+	{MASK_RSD_RA_IMM16,		"ori",		ORI,	{0}, SMASK_NULL},
+	{MASK_RSD_RA_IMM16,		"oris",		ORIS,	{0}, SMASK_NULL},
+	{MASK_RSD_RA_IMM16,		"xori",		XORI,	{0}, SMASK_NULL},
+	{MASK_RSD_RA_IMM16,		"xoris",	XORIS,	{0}, SMASK_NULL},
+	{MASK_RA_RST_IMM16,		"andi.",	ANDI_,	{0}, SMASK_RC},
+	{MASK_RA_RST_IMM16,		"andis.",	ANDIS_,	{0}, SMASK_RC},
 	//G_1e = 0x1e,
-	//G_1f = 0x1f,
-	{MASK_RST_RA_D,			"lwz",		LWZ,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"lwzu",		LWZU,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"lbz",		LBZ,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"lbzu",		LBZU,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"stw",		STW,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"stwu",		STWU,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"stb",		STB,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"stbu",		STBU,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"lhz",		LHZ,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"lhzu",		LHZU,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"lha",		LHA,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"lhau",		LHAU,	0, SMASK_NULL},
-	{MASK_RST_RA_D,			"sth",		STH,	0, SMASK_NULL},
+	{MASK_RD_RA_RB,			"lwarx",	G_1f,	{LWARX,	21, 30}, SMASK_NULL},
+	{MASK_RA_RS_RB,			"ldx",		G_1f,	{LDX,	21, 30}, SMASK_NULL},
+	{MASK_RA_RS_RB,			"slw",		G_1f,	{SLW,	21, 30}, SMASK_NULL},
+	{MASK_RA_RS_RB,			"slw.",		G_1f,	{SLW,	21, 30}, SMASK_RC},
+	{MASK_RA_RS_RB,			"sld",		G_1f,	{SLD,	21, 30}, SMASK_NULL},
+	{MASK_RA_RS_RB,			"sld.",		G_1f,	{SLD,	21, 30}, SMASK_RC},
+	{MASK_RA_RS_RB,			"and",		G_1f,	{AND,	21, 30}, SMASK_NULL},
+	{MASK_RA_RS_RB,			"and.",		G_1f,	{AND,	21, 30}, SMASK_RC},
+	{MASK_RD_RA_RB,			"subf",		G_1f,	{SUBF,	21, 30}, SMASK_NULL},
+	{MASK_RD_RA_RB,			"subf.",	G_1f,	{SUBF,	21, 30}, SMASK_RC},
+	{MASK_RD_RA_RB,			"subfo",	G_1f,	{SUBF,	21, 30}, SMASK_OE},
+	{MASK_RD_RA_RB,			"subfo.",	G_1f,	{SUBF,	21, 30}, SMASK_OE | SMASK_RC},
+	{MASK_RA_RS_RB,			"andc",		G_1f,	{ANDC,	21, 30}, SMASK_NULL},
+	{MASK_RA_RS_RB,			"andc.",	G_1f,	{ANDC,	21, 30}, SMASK_RC},
+	{MASK_RD_RA_RB,			"mulhd",	G_1f,	{MULHD,	21, 30}, SMASK_NULL},
+	{MASK_RD_RA_RB,			"mulhd.",	G_1f,	{MULHD,	21, 30}, SMASK_RC},
+	{MASK_RD_RA_RB,			"mulhw",	G_1f,	{MULHW,	21, 30}, SMASK_NULL},
+	{MASK_RD_RA_RB,			"mulhw.",	G_1f,	{MULHW,	21, 30}, SMASK_RC},
+	{MASK_RD_RA_RB,			"ldarx",	G_1f,	{LDARX,	21, 30}, SMASK_NULL},
+	{MASK_RD_RA_RB,			"lbzx",		G_1f,	{LBZX,	21, 30}, SMASK_NULL},
+
+	{MASK_RST_RA_D,			"lwz",		LWZ,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"lwzu",		LWZU,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"lbz",		LBZ,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"lbzu",		LBZU,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"stw",		STW,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"stwu",		STWU,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"stb",		STB,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"stbu",		STBU,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"lhz",		LHZ,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"lhzu",		LHZU,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"lha",		LHA,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"lhau",		LHAU,	{0}, SMASK_NULL},
+	{MASK_RST_RA_D,			"sth",		STH,	{0}, SMASK_NULL},
 	//{0, "lmw", LMW, 0, false, false},
 	//LFS = 0x30,
 	//LFSU = 0x31,
@@ -225,8 +216,8 @@ static const struct Instruction
 	//G_3b = 0x3b,
 	//G_3e = 0x3e,
 	//G_3f = 0x3f,
-	{MASK_UNK, "unk", 0, 0, SMASK_NULL},
-}, m_error_instr = {MASK_ERROR, "err", 0, 0, SMASK_ERROR};
+	{MASK_UNK, "unk", 0, {0}, SMASK_NULL},
+}, m_error_instr = {MASK_ERROR, "err", 0, {0}, SMASK_ERROR};
 static const u32 instr_count = WXSIZEOF(m_instructions);
 
 enum ArgType
@@ -271,6 +262,8 @@ Instruction GetInstruction(const wxString& str)
 
 u32 CompileInstruction(Instruction instr, Array<Arg>& arr)
 {
+	if(instr.mask == MASK_ERROR) return 0;
+
 	u32 code = 
 		ToOE(instr.smask & SMASK_OE) | ToRC(instr.smask & SMASK_RC) | 
 		ToAA(instr.smask & SMASK_AA) | ToLK(instr.smask & SMASK_LK) |
@@ -279,7 +272,9 @@ u32 CompileInstruction(Instruction instr, Array<Arg>& arr)
 	if(instr.smask & SMASK_BO) code |= ToBO(instr.bo);
 	if(instr.smask & SMASK_BI) code |= ToBI(instr.bi);
 
-	code |= ToOpcode(instr.op_num);
+	code |= ToOpcode(instr.op);
+
+	if(instr.subop.from < instr.subop.to) code |= SetField(instr.subop.op, instr.subop.from, instr.subop.to);
 
 	switch(instr.mask)
 	{
@@ -299,10 +294,18 @@ u32 CompileInstruction(Instruction instr, Array<Arg>& arr)
 		return code | ToLL(arr[0].value);
 	case MASK_RA_RS_SH_MB_ME:
 		return code | ToRA(arr[0].value) | ToRS(arr[1].value) | ToSH(arr[2].value) | ToMB(arr[3].value) | ToME(arr[4].value);
+	case MASK_RA_RS_RB_MB_ME:
+		return code | ToRA(arr[0].value) | ToRS(arr[1].value) | ToRB(arr[2].value) | ToMB(arr[3].value) | ToME(arr[4].value);
+	case MASK_RA_RS_RB:
+		return code | ToRA(arr[0].value) | ToRS(arr[1].value) | ToRB(arr[2].value);
+	case MASK_RD_RA_RB:
+		return code | ToRD(arr[0].value) | ToRA(arr[1].value) | ToRB(arr[2].value);
 	case MASK_RST_RA_D:
 		return code | ToRS(arr[0].value) | ToRA(arr[1].value) | ToD(arr[2].value);
 	case MASK_RST_RA_DS:
 		return code | ToRS(arr[0].value) | ToRA(arr[1].value) | ToDS(arr[2].value);
+	case MASK_TO_RA_IMM16:
+		return code | ToTO(arr[0].value) | ToRA(arr[1].value) | ToIMM16(arr[2].value);
 	case MASK_RSD_IMM16:
 		return code | ToRS(arr[0].value) | ToIMM16(arr[1].value);
 
@@ -431,64 +434,32 @@ CompilerELF::CompilerELF(wxWindow* parent)
 	wxGetApp().Connect(hex_list->GetId(), wxEVT_KEY_DOWN, wxKeyEventHandler(CompilerELF::OnKeyDown), (wxObject*)0, this);
 
 	asm_list->WriteText(
-		"[sysPrxForUser, sys_initialize_tls, 0x744680a2]\n"
-		"[sysPrxForUser, sys_process_exit, 0xe6f2c1e7]\n"
-		"[sys_fs, cellFsOpen, 0x718bf5f8]\n"
-		"[sys_fs, cellFsClose, 0x2cb51f0d]\n"
-		"[sys_fs, cellFsRead, 0x4d5ff8e2]\n"
-		"[sys_fs, cellFsWrite, 0xecdcf2ab]\n"
-		"[sys_fs, cellFsLseek, 0xa397d042]\n"
-		"[sys_fs, cellFsMkdir, 0xba901fe6]\n"
-		"\n"
-		".int [flags, 577] #LV2_O_WRONLY | LV2_O_CREAT | LV2_O_TRUNC\n"
-		".string [path, \"dev_hdd0/game/TEST12345/USRDIR/test.txt\"]\n"
-		".string [str, \"Hello World!\"]\n"
+		".int [sys_tty_write, 0x193]\n"
+		".int [sys_process_exit, 0x003]\n"
+		".string [str, \"Hello World!\\n\"]\n"
 		".strlen [str_len, str]\n"
-		".buf [fd, 8]\n"
-		"\n"
-		".srr [fd_hi, fd, 16]\n"
-		".and [fd_lo, fd, 0xffff]\n"
-		"\n"
-		".srr [path_hi, path, 16]\n"
-		".and [path_lo, path, 0xffff]\n"
+		".buf [ret, 8]\n"
 		"\n"
 		".srr [str_hi, str, 16]\n"
 		".and [str_lo, str, 0xffff]\n"
 		"\n"
-		"\tbl \tsys_initialize_tls\n"
+		".srr [ret_hi, str, 16]\n"
+		".and [ret_lo, str, 0xffff]\n"
 		"\n"
-		"\tli \tr3, path_lo\n"
-		"\toris \tr3, r3, path_hi\n"
-		"\tli \tr4, flags\n"
-		"\tli \tr5, fd_lo\n"
-		"\toris \tr5, r5, fd_hi\n"
-		"\tli \tr6, 0\n"
-		"\tli \tr7, 0\n"
-		"\tbl \tcellFsOpen\n"
-		"\tcmpwi \tcr7, r3, 0\n"
-		"\tblt- \tcr7, exit_err\n"
-		"\n"
-		"\tli \tr3, fd_lo\n"
-		"\toris \tr3, r3, fd_hi\n"
-		"\tlwz \tr3, r3, 0\n"
-		"\tli \tr4, str_lo\n"
-		"\toris \tr4, r4, str_hi\n"
-		"\tli \tr5, str_len\n"
-		"\tli \tr6, 0\n"
-		"\tbl \tcellFsWrite\n"
-		"\tcmpwi \tcr7, r3, 0\n"
-		"\tblt- \tcr7, exit_err\n"
-		"\n"
-		"\tli \tr3, fd_lo\n"
-		"\toris \tr3, r3, fd_hi\n"
-		"\tlwz \tr3, r3, 0\n"
-		"\tbl \tcellFsClose\n"
-		"\tcmpwi \tcr7, r3, 0\n"
-		"\tblt- \tcr7, exit_err\n"
+		"	li	r3, 0\n"
+		"	li 	r4, str_lo\n"
+		"	oris 	r4, r4, str_hi\n"
+		"	li 	r5, str_len\n"
+		"	li 	r6, ret_lo\n"
+		"	oris 	r6, r6, ret_hi\n"
+		"	li	r11, sys_tty_write\n"
+		"	sc\n"
+		"	cmpwi 	cr7, r3, 0\n"
+		"	bne- 	cr7, exit_err\n"
 		"\n"
 		"exit_ok:\n"
-		"\tli \tr3, 0\n"
-		"\tb \texit\n"
+		"	li 	r3, 0\n"
+		"	b 	exit\n"
 		"\n"
 		"exit_err:\n"
 		".string [str, \"error.\\n\"]\n"
@@ -497,21 +468,21 @@ CompilerELF::CompilerELF(wxWindow* parent)
 		".strlen [str_len, str]\n"
 		".int [written_len_lo, fd_lo]\n"
 		".int [written_len_hi, fd_hi]\n"
-		"\tli \tr3, 1\n"
-		"\tli \tr4, str_lo\n"
-		"\toris \tr4, r4, str_hi\n"
-		"\tli \tr5, str_len\n"
-		"\tli \tr6, written_len_lo\n"
-		"\toris \tr6, r6, written_len_hi\n"
-		"\tli \tr11, 403\n"
-		"\tsc\n"
-		"\tli \tr3, 1\n"
-		"\tb \texit\n"
+		"	li 	r3, 1\n"
+		"	li 	r4, str_lo\n"
+		"	oris 	r4, r4, str_hi\n"
+		"	li 	r5, str_len\n"
+		"	li 	r6, written_len_lo\n"
+		"	oris 	r6, r6, written_len_hi\n"
+		"	li	r11, sys_tty_write\n"
+		"	sc\n"
+		"	li 	r3, 1\n"
 		"\n"
 		"exit:\n"
-		"\tbl \tsys_process_exit\n"
-		"\tli \tr3, 1\n"
-		"\tb \texit\n"
+		"	li	r11, sys_process_exit\n"
+		"	sc\n"
+		"	li 	r3, 1\n"
+		"	b 	exit\n"
 	);
 
 	::SendMessage((HWND)hex_list->GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
@@ -685,6 +656,8 @@ void CompilerELF::OnUpdate(wxCommandEvent& event)
 
 void CompilerELF::OnScroll(wxScrollWinEvent& event)
 {
+	if(!m_aui_mgr.GetManagedWindow()) return;
+
 	const int id = event.GetEventObject() ? ((wxScrollBar*)event.GetEventObject())->GetId() : -1;
 
 	wxTextCtrl* src = NULL;
@@ -2248,6 +2221,18 @@ struct CompileProgram
 				SetNextArgType(ARG_IMM);
 			break;
 
+			case MASK_RA_RS_RB:
+				SetNextArgType(ARG_REG_R);
+				SetNextArgType(ARG_REG_R);
+				SetNextArgType(ARG_REG_R);
+			break;
+
+			case MASK_RD_RA_RB:
+				SetNextArgType(ARG_REG_R);
+				SetNextArgType(ARG_REG_R);
+				SetNextArgType(ARG_REG_R);
+			break;
+
 			case MASK_RST_RA_D:
 				SetNextArgType(ARG_REG_R);
 				SetNextArgType(ARG_REG_R);
@@ -2527,7 +2512,7 @@ struct CompileProgram
 			WritePhdr(f, p_loos_2);
 
 			sections_names.Clear();
-			free(opd_data);
+			delete[] opd_data;
 			for(u32 i=0; i<modules.GetCount(); ++i) modules[i].Clear();
 			modules.Clear();
 		}

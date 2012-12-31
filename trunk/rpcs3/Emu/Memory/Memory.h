@@ -1,44 +1,6 @@
 #pragma once
 #include "MemoryBlock.h"
 
-class MemoryFlags
-{
-	struct Flag
-	{
-		const u64 addr;
-		const u64 waddr;
-		const u64 fid;
-
-		Flag(const u64 _addr, const u64 _waddr, const u64 _fid)
-			: addr(_addr)
-			, waddr(_waddr)
-			, fid(_fid)
-		{
-		}
-	};
-
-	Array<Flag> m_memflags;
-
-public:
-	void Add(const u64 addr, const u64 waddr, const u64 fid) {m_memflags.Add(new Flag(addr, waddr, fid));}
-	void Clear() { m_memflags.Clear(); }
-
-	bool IsFlag(const u64 addr, u64& waddr, u64& fid)
-	{
-		for(u32 i=0; i<GetCount(); i++)
-		{
-			if(m_memflags[i].addr != addr) continue;
-			fid = m_memflags[i].fid;
-			waddr = m_memflags[i].waddr;
-			return true;
-		}
-
-		return false;
-	}
-
-	u64 GetCount() const { return m_memflags.GetCount(); }
-};
-
 class MemoryBase
 {
 	NullMemoryBlock NullMem;
@@ -54,8 +16,6 @@ public:
 	DynamicMemoryBlock StackMem;
 	MemoryBlock SpuRawMem;
 	MemoryBlock SpuThrMem;
-
-	MemoryFlags MemFlags;
 
 	bool m_inited;
 
@@ -213,7 +173,6 @@ public:
 		}
 
 		MemoryBlocks.Clear();
-		MemFlags.Clear();
 	}
 
 	void Reset()

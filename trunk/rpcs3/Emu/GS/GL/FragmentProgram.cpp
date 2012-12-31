@@ -49,7 +49,12 @@ wxString FragmentDecompilerThread::GetMask()
 wxString FragmentDecompilerThread::AddReg(u32 index)
 {
 	//if(!index) return "gl_FragColor";
-	return m_parr.AddParam(index ? PARAM_NONE : PARAM_OUT, "vec4", wxString::Format("r%d", index));
+	return m_parr.AddParam(index ? PARAM_NONE : PARAM_OUT, "vec4", wxString::Format("r%d", index), index ? -1 : 0);
+}
+
+wxString FragmentDecompilerThread::AddConst()
+{
+	return m_parr.AddParam(PARAM_CONST, "vec4", wxString::Format("fc%d", m_const_index++));
 }
 
 wxString FragmentDecompilerThread::AddTex()
@@ -96,8 +101,10 @@ template<typename T> wxString FragmentDecompilerThread::GetSRC(T src)
 	}
 	break;
 
-	//case 2: //imm
-	//break;
+	case 2: //const
+		ConLog.Write("reg index = %d", src.tmp_reg_index);
+		ret += AddConst();
+	break;
 
 	default:
 		ConLog.Error("Bad src type %d", src.reg_type);
@@ -126,17 +133,11 @@ wxString FragmentDecompilerThread::BuildCode()
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{
-		for(u32 n=0; n<m_parr.params[i].names.GetCount(); ++n)
-		{
-			p += m_parr.params[i].type;
-			p += " ";
-			p += m_parr.params[i].names[n];
-			p += ";\n";
-		}
+		p += m_parr.params[i].Format();
 	}
 
 	static const wxString& prot = 
-		"#version 330 core\n"
+		"#version 330\n"
 		"\n"
 		"%s\n"
 		"void main()\n{\n%s}\n";
@@ -160,6 +161,8 @@ wxThread::ExitCode FragmentDecompilerThread::Entry()
 		case 0x00: break; //NOP
 		case 0x01: AddCode(GetSRC(src0)); break; //MOV
 		case 0x02: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + ")"); break; //MUL
+		case 0x03: AddCode("(" + GetSRC(src0) + " + " + GetSRC(src1) + ")"); break; //ADD
+		case 0x04: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + " + " + GetSRC(src2) + ")"); break; //MAD
 		case 0x17: AddCode("texture(" + AddTex() + ", (" + GetSRC(src0) + ").xy)"); break; //TEX
 
 		default:
@@ -242,7 +245,7 @@ void ShaderProgram::Compile()
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
 			ConLog.Error("Failed to compile shader: %s", buf);
-			free(buf);
+			delete[] buf;
 		}
 
 		ConLog.Write(shader);
@@ -255,7 +258,7 @@ void ShaderProgram::Delete()
 {
 	for(u32 i=0; i<parr.params.GetCount(); ++i)
 	{
-		parr.params[i].names.Clear();
+		parr.params[i].items.Clear();
 		parr.params[i].type.Clear();
 	}
 	parr.params.Clear();

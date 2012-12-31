@@ -75,12 +75,12 @@ wxString VertexDecompilerThread::GetSRC(const u32 n)
 	case 2: //input
 		if(d1.input_src < WXSIZEOF(reg_table))
 		{
-			ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[d1.input_src]);
+			ret += m_parr.AddParam(PARAM_IN, "vec4", reg_table[d1.input_src], d1.input_src);
 		}
 		else
 		{
 			ConLog.Error("Bad input src num: %d", d1.input_src);
-			ret += m_parr.AddParam(PARAM_IN, "vec4", "in_unk");
+			ret += m_parr.AddParam(PARAM_IN, "vec4", "in_unk", d1.input_src);
 		}
 	break;
 	case 3: //const
@@ -140,17 +140,11 @@ wxString VertexDecompilerThread::BuildCode()
 
 	for(u32 i=0; i<m_parr.params.GetCount(); ++i)
 	{
-		for(u32 n=0; n<m_parr.params[i].names.GetCount(); ++n)
-		{
-			p += m_parr.params[i].type;
-			p += " ";
-			p += m_parr.params[i].names[n];
-			p += ";\n";
-		}
+		p += m_parr.params[i].Format();
 	}
 		
 	static const wxString& prot = 
-		"#version 330 core\n"
+		"#version 330\n"
 		"\n"
 		"%s\n"
 		"void main()\n{\n%s}\n";
@@ -272,7 +266,7 @@ void VertexProgram::Compile()
 			memset(buf, 0, r+1);
 			glGetShaderInfoLog(id, r, &len, buf);
 			ConLog.Error("Failed to compile vertex shader: %s", buf);
-			free(buf);
+			delete[] buf;
 		}
 
 		ConLog.Write(shader);
@@ -287,7 +281,7 @@ void VertexProgram::Delete()
 	data.Clear();
 	for(u32 i=0; i<parr.params.GetCount(); ++i)
 	{
-		parr.params[i].names.Clear();
+		parr.params[i].items.Clear();
 		parr.params[i].type.Clear();
 	}
 	parr.params.Clear();

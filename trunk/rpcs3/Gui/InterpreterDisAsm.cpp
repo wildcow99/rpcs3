@@ -16,7 +16,6 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread*
 	, m_main_panel(*new wxPanel(this))
 	, CPU(*cpu)
 	, PC(0)
-	, m_exec(false)
 {
 	if(CPU.IsSPU())
 	{
@@ -99,7 +98,6 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread*
 	m_btn_pause->Disable();
 	//ShowPc(Loader.entry);
 	WriteRegs();
-	ThreadBase::Start();
 
 	Load(BreakPointsDBName);
 }
@@ -252,7 +250,6 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 		m_list->SetItemBackgroundColour( i, colour );
 	}
 
-
 	while(remove_markedPC.GetCount())
 	{
 		u32 mpc = remove_markedPC[0];
@@ -324,7 +321,8 @@ void InterpreterDisAsmFrame::Show_PC(wxCommandEvent& WXUNUSED(event))
 extern bool dump_enable;
 void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 {
-	m_exec = true;
+	if(Emu.IsPaused()) Emu.Resume();
+	ThreadBase::Start();
 	/*
 	bool dump_status = dump_enable;
 	if(Emu.IsPaused()) Emu.Run();
@@ -340,13 +338,14 @@ void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 
 void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 {
-	Emu.Pause();
+	ThreadBase::Stop();
+	ConLog.Warning("STOPPED");
 }
 
 void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
-	CPU.Exec();
-	DoUpdate();
+	if(Emu.IsRunned()) Emu.Pause();
+	ThreadBase::Start();
 }
 
 void InterpreterDisAsmFrame::DClick(wxListEvent& event)
@@ -356,7 +355,7 @@ void InterpreterDisAsmFrame::DClick(wxListEvent& event)
 
 	const u64 start_pc = PC - show_lines*4;
 	const u64 pc = start_pc + i*4;
-	//ConLog.Write("pc=0x%x", pc);
+	//ConLog.Write("pc=0x%llx", pc);
 
 	if(!Memory.IsGoodAddr(pc, 4)) return;
 
@@ -394,14 +393,8 @@ void InterpreterDisAsmFrame::OnResize(wxSizeEvent& event)
 void InterpreterDisAsmFrame::MouseWheel(wxMouseEvent& event)
 {
 	const int value = (event.m_wheelRotation / event.m_wheelDelta);
-	if(event.ControlDown())
-	{
-		ShowAddr( PC - (show_lines * (value + 1)) * 4);
-	}
-	else
-	{
-		ShowAddr( PC - (show_lines + value) * 4 );
-	}
+
+	ShowAddr( PC - (event.ControlDown() ? show_lines * (value + 1) : show_lines + value) * 4);
 
 	event.Skip();
 }
@@ -440,31 +433,37 @@ bool InterpreterDisAsmFrame::RemoveBreakPoint(u64 pc)
 
 void InterpreterDisAsmFrame::Task()
 {
-	while(!TestDestroy())
+	m_btn_step->Disable();
+	m_btn_run->Disable();
+	m_btn_pause->Enable();
+
+	bool dump_status = dump_enable;
+
+	CPU.InitTls();
+
+	try
 	{
-		Sleep(1);
-
-		if(!m_exec) continue;
-
-		m_btn_step->Disable();
-		m_btn_run->Disable();
-		m_btn_pause->Enable();
-
-		bool dump_status = dump_enable;
-		if(Emu.IsPaused()) Emu.Resume();
-
-		while(Emu.IsRunned() && !TestDestroy())
+		do
 		{
-			CPU.Exec();
-			if(IsBreakPoint(CPU.PC) || dump_status != dump_enable) break;
+			CPU.ExecOnce();
 		}
-
-		DoUpdate();
-
-		m_btn_step->Enable();
-		m_btn_run->Enable();
-		m_btn_pause->Disable();
-
-		m_exec = false;
+		while(Emu.IsRunned() && !TestDestroy() && !IsBreakPoint(CPU.PC) && dump_status == dump_enable);
 	}
+	catch(const wxString& e)
+	{
+		ConLog.Error(e);
+	}
+	catch(...)
+	{
+		ConLog.Error("Unhandled exception.");
+	}
+
+	CPU.FreeTls();
+	Emu.Pause();
+
+	DoUpdate();
+
+	m_btn_step->Enable();
+	m_btn_run->Enable();
+	m_btn_pause->Disable();
 }

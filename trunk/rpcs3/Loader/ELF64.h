@@ -182,4 +182,6 @@ private:
 	bool LoadEhdrData();
 	bool LoadPhdrData();
 	bool LoadShdrData();
+
+	//bool LoadImports();
 };

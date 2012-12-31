@@ -3,6 +3,7 @@
 #include "Ini.h"
 #include "Emu/System.h"
 #include <wx/msw/wrapwin.h>
+#include "Gui/CompilerELF.h"
 
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
@@ -18,7 +19,10 @@ bool Rpcs3App::OnInit()
 	ConLogFrame = new LogFrame();
 	ConLogFrame->Show();
 
+	(new CompilerELF(nullptr))->Show();
+
 	m_MainFrame = new MainFrame();
+	SetTopWindow(m_MainFrame);
 	Emu.Init();
 	m_MainFrame->Show();
 

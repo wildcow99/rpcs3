@@ -2,8 +2,28 @@
 #include "PPCThread.h"
 #include "Gui/InterpreterDisAsm.h"
 
+static DWORD _tls_cur_ppc_thread = 0xffffffff;
+
+PPCThread* GetCurrentPPCThread()
+{
+	return (PPCThread*)::TlsGetValue(_tls_cur_ppc_thread);
+}
+
+void InitPPCThreadTls()
+{
+	if(_tls_cur_ppc_thread != 0xffffffff) return;
+
+	_tls_cur_ppc_thread = ::TlsAlloc();
+
+	if(_tls_cur_ppc_thread != 0xffffffff) return;
+
+	ConLog.Error("tls initialization failed.");
+	wxGetApp().Exit();
+}
+
 PPCThread::PPCThread(PPCThreadType type)
-	: m_type(type)
+	: ThreadBase(true, "PPCThread")
+	, m_type(type)
 	, DisAsmFrame(NULL)
 	, m_arg(0)
 	, m_dec(NULL)
@@ -168,37 +188,95 @@ void PPCThread::Run()
 	InitRegs();
 	DoRun();
 	Emu.CheckStatus();
+
 	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).DoUpdate();
 }
 
 void PPCThread::Resume()
 {
 	if(!IsPaused()) return;
+
 	m_status = Runned;
 	DoResume();
 	Emu.CheckStatus();
+
+	ThreadBase::Start();
 }
 
 void PPCThread::Pause()
 {
 	if(!IsRunned()) return;
+
 	m_status = Paused;
 	DoPause();
 	Emu.CheckStatus();
+
+	ThreadBase::Stop(false);
 }
 
 void PPCThread::Stop()
 {
 	if(IsStopped()) return;
+
 	m_status = Stopped;
 	Reset();
 	DoStop();
 	Emu.CheckStatus();
+
+	ThreadBase::Stop();
 }
 
 void PPCThread::Exec()
 {
-	if(!IsRunned()) return;
+	ThreadBase::Start();
+}
+
+void PPCThread::ExecOnce()
+{
 	DoCode(Memory.Read32(m_offset + PC));
 	NextPc();
+}
+
+void PPCThread::InitTls()
+{
+	if(::TlsSetValue(_tls_cur_ppc_thread, this)) return;
+
+	ConLog.Error("PPU thread tls initialization failed.");
+}
+
+void PPCThread::FreeTls()
+{
+	::TlsFree(_tls_cur_ppc_thread);
+}
+
+void PPCThread::Task()
+{
+	ConLog.Write("%s enter", PPCThread::GetFName());
+	InitTls();
+
+	try
+	{
+		while(!Emu.IsStopped() && !TestDestroy())
+		{
+			if(Emu.IsPaused())
+			{
+				Sleep(1);
+				continue;
+			}
+
+			DoCode(Memory.Read32(m_offset + PC));
+			NextPc();
+		}
+	}
+	catch(const wxString& e)
+	{
+		ConLog.Error("Exception: %s", e);
+	}
+	catch(const char* e)
+	{
+		ConLog.Error("Exception: %s", e);
+	}
+
+	FreeTls();
+	ConLog.Write("%s leave", PPCThread::GetFName());
 }

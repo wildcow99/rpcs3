@@ -5,6 +5,7 @@ struct NullGSFrame : public GSFrame
 {
 	NullGSFrame() : GSFrame(NULL, "GSFrame[Null]")
 	{
+		Connect(wxEVT_LEFT_DCLICK, wxMouseEventHandler(GSFrame::OnLeftDclick));
 	}
 
 	void Draw() { Draw(wxClientDC(this)); }
