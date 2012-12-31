@@ -38,13 +38,32 @@ int cellGcmInit(const u32 context_addr, const u32 cmdSize, const u32 ioSize, con
 	Memory.WriteData(gcm_info.context_addr, current_context);
 	Memory.Write32(context_addr, gcm_info.context_addr);
 
-	CellGcmControl& ctrl = *(CellGcmControl*)Memory.GetMemFromAddr(gcm_info.control_addr);
+	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
 	ctrl.put = 0;
 	ctrl.get = 0;
 	ctrl.ref = -1;
 
 	Emu.GetGSManager().GetRender().Init(ctx_begin, ctx_size, gcm_info.control_addr, local_addr);
 
+	return CELL_OK;
+}
+
+int cellGcmCallback(u32 context_addr, u32 count)
+{
+	GSLockCurrent gslock(GS_LOCK_WAIT_FLUSH);
+
+	CellGcmContextData& ctx = (CellGcmContextData&)Memory[context_addr];
+	CellGcmControl& ctrl = (CellGcmControl&)Memory[gcm_info.control_addr];
+
+	const s32 res = re(ctx.current) - re(ctx.begin) - re(ctrl.put);
+
+	if(res > 0) memcpy(&Memory[re(ctx.begin)], &Memory[re(ctx.current) - res], res);
+
+	ctx.current = re(re(ctx.begin) + res);
+
+	ctrl.put = re(res);
+	ctrl.get = 0;
+	
 	return CELL_OK;
 }
 
@@ -68,7 +87,7 @@ int cellGcmAddressToOffset(const u32 address, const u32 offset_addr)
 
 int cellGcmSetDisplayBuffer(const u8 id, const u32 offset, const u32 pitch, const u32 width, const u32 height)
 {
-	sc_gcm.Log("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
+	sc_gcm.Warning("cellGcmSetDisplayBuffer(id=0x%x,offset=0x%x,pitch=%d,width=%d,height=%d)",
 		id, offset, width ? pitch/width : pitch, width, height);
 	if(id > 1) return CELL_EINVAL;
 
@@ -107,7 +126,7 @@ int cellGcmFlush(const u32 ctx, const u8 id)
 int cellGcmSetTile(const u8 index, const u8 location, const u32 offset, const u32 size,
 	const u32 pitch, const u8 comp, const u16 base, const u8 bank)
 {
-	sc_gcm.Log("cellGcmSetTile(index=%d, location=%d, offset=0x%x, size=0x%x, pitch=0x%x, comp=0x%x, base=0x%x, bank=0x%x)",
+	sc_gcm.Warning("cellGcmSetTile(index=%d, location=%d, offset=0x%x, size=0x%x, pitch=0x%x, comp=0x%x, base=0x%x, bank=0x%x)",
 		index, location, offset, size, pitch, comp, base, bank);
 
 	return CELL_OK;
@@ -121,13 +140,14 @@ int cellGcmGetFlipStatus()
 int cellGcmResetFlipStatus()
 {
 	Emu.GetGSManager().GetRender().m_flip_status = 1;
+
 	return CELL_OK;
 }
 
 u32 cellGcmGetTiledPitchSize(const u32 size)
 {
 	//TODO
-	sc_gcm.Log("cellGcmGetTiledPitchSize(size=%d)", size);
+	sc_gcm.Warning("cellGcmGetTiledPitchSize(size=%d)", size);
 
 	return size;
 }

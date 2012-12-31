@@ -163,8 +163,6 @@ bool ELF32Loader::LoadPhdrData()
 
 bool ELF32Loader::LoadShdrData()
 {
-	Memory.MemFlags.Clear();
-
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
 	{
 		Elf32_Shdr& shdr = shdr_arr[i];
@@ -177,7 +175,7 @@ bool ELF32Loader::LoadShdrData()
 
 		const s64 addr = shdr.sh_addr;
 		const s64 size = shdr.sh_size;
-		MemoryBlock* mem = NULL;
+		MemoryBlock* mem = nullptr;
 
 		/*
 		switch(shdr.sh_type)

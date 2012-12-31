@@ -143,20 +143,23 @@ void Loader::Open(wxFile& _f, const wxString& path)
 
 LoaderBase* Loader::SearchLoader()
 {
-	if(!f) return NULL;
+	if(!f) return nullptr;
 
-	LoaderBase* l = NULL;
+	LoaderBase* l;
 
 	if((l=new ELFLoader(*f))->LoadInfo()) return l;
-	safe_delete(l);
+	delete l;
+
 	if((l=new SELFLoader(*f))->LoadInfo()) return l;
-	safe_delete(l);
-	return NULL;
+	delete l;
+
+	return nullptr;
 }
 
 bool Loader::Load()
 {
-	LoaderBase* l = SearchLoader();
+	ScopedPtr<LoaderBase> l = SearchLoader();
+
 	if(!l)
 	{
 		ConLog.Error("Unknown file type");
@@ -166,13 +169,11 @@ bool Loader::Load()
 	if(!l->LoadData())
 	{
 		ConLog.Error("Broken file");
-		safe_delete(l);
 		return false;
 	}
 
 	machine = l->GetMachine();
 	entry = l->GetEntry();
-	safe_delete(l);
 
 	const wxString& root = wxFileName(wxFileName(m_path).GetPath()).GetPath();
 	const wxString& psf_path = root + "\\" + "PARAM.SFO";
@@ -195,6 +196,6 @@ Loader::~Loader()
 	if(f)
 	{
 		f->Close();
-		f = NULL;
+		f = nullptr;
 	}
 }

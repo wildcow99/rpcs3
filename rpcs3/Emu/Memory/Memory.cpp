@@ -87,7 +87,7 @@ bool MemoryBlock::SetNewSize(const u32 size)
 	u8* new_mem = (u8*)realloc(mem, size);
 	if(!new_mem)
 	{
-		ConLog.Error("Not enought free memory");
+		ConLog.Error("Not enought free memory (0x%x)", size);
 		Emu.Pause();
 		return false;
 	}

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ELF64.h"
+#include "Gui/CompilerELF.h"
 
 ELF64Loader::ELF64Loader(wxFile& f)
 	: elf64_f(f)
@@ -157,8 +158,6 @@ bool ELF64Loader::LoadEhdrData()
 
 bool ELF64Loader::LoadPhdrData()
 {
-	Memory.MemFlags.Clear();
-
 	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
 	{
 		phdr_arr[i].Show();
@@ -257,7 +256,7 @@ bool ELF64Loader::LoadPhdrData()
 
 				if(proc_prx_param.magic != 0x1b434cec)
 				{
-					ConLog.Error("Bad magic!");
+					ConLog.Error("Bad magic! (0x%x)", proc_prx_param.magic);
 				}
 				else
 				{
@@ -285,17 +284,28 @@ bool ELF64Loader::LoadPhdrData()
 						ConLog.Write("*** nid: 0x%x", stub.s_nid);
 						ConLog.Write("*** text: 0x%x", stub.s_text);
 #endif
-
+						static const u32 section = 4 * 3;
+						u64 dst = Memory.Alloc(stub.s_imports * section, stub.s_imports);
+						u64 tbl = Memory.Alloc(stub.s_imports * 4 * 2, stub.s_imports);
 						for(u32 i=0; i<stub.s_imports; ++i)
 						{
 							const u32 nid = Memory.Read32(stub.s_nid + i*4);
 							const u32 text = Memory.Read32(stub.s_text + i*4);
 #ifdef LOADER_DEBUG
 							ConLog.Write("import %d:", i+1);
-							ConLog.Write("*** nid: 0x%x", nid);
-							ConLog.Write("*** text: 0x%x", text);
+							ConLog.Write("*** nid: 0x%x (0x%x)", nid, stub.s_nid + i*4);
+							ConLog.Write("*** text: 0x%x (0x%x)", text, stub.s_text + i*4);
 #endif
-							Memory.MemFlags.Add(text, stub.s_text + i*4, nid);
+							Memory.Write32(stub.s_text + i*4, tbl + i*8);
+
+							mem32_t out_tbl(tbl + i*8);
+							out_tbl += dst + i*section;
+							out_tbl += nid;
+
+							mem32_t out_dst(dst + i*section);
+							out_dst += ToOpcode(G_1f) | SetField(OR, 21, 30) | ToRA(11) | ToRS(2) | ToRB(2) | ToRC(0);
+							out_dst += ToOpcode(SC) | ToSYS(2);
+							out_dst += ToOpcode(G_13) | SetField(BCLR, 21, 30) | ToBO(0x10 | 0x04) | ToBI(0) | ToLK(0);
 						}
 					}
 #ifdef LOADER_DEBUG

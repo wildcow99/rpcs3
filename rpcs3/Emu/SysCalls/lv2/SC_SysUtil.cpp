@@ -48,53 +48,45 @@ int cellVideoOutGetResolution(u32 resolutionId, u32 resolution_addr)
 	sc_v.Log("cellVideoOutGetResolution(resolutionId=%d, resolution_addr=0x%x)",
 		resolutionId, resolution_addr);
 
-	CellVideoOutResolution res = {0, 0};
+	if(!Memory.IsGoodAddr(resolution_addr, sizeof(CellVideoOutResolution))) return CELL_EFAULT;
+	
+	u32 num = ResolutionIdToNum(resolutionId);
+	if(!num) return CELL_EINVAL;
 
-	switch(resolutionId)
-	{
-	case CELL_VIDEO_OUT_RESOLUTION_1080: 
-		res.width = re16(1920);
-		res.height = re16(1080);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_720:
-		res.width = re16(1280);
-		res.height = re16(720);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_480:
-		res.width = re16(720);
-		res.height = re16(480);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_576:
-		res.width = re16(720);
-		res.height = re16(576);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_1600x1080:
-		res.width = re16(1600);
-		res.height = re16(1080);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_1440x1080:
-		res.width = re16(1440);
-		res.height = re16(1080);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_1280x1080:
-		res.width = re16(1280);
-		res.height = re16(1080);
-	break;
-
-	case CELL_VIDEO_OUT_RESOLUTION_960x1080:
-		res.width = re16(960);
-		res.height = re16(1080);
-	break;
-
-	default: return CELL_EINVAL;
-	}
+	CellVideoOutResolution res;
+	re(res.width, ResolutionTable[num].width);
+	re(res.height, ResolutionTable[num].height);
 
 	Memory.WriteData(resolution_addr, res);
+	return CELL_OK;
+}
+
+SysCallBase sc_sysutil("cellSysutil");
+
+int cellSysutilCheckCallback()
+{
+	//sc_sysutil.Warning("cellSysutilCheckCallback()");
+	if(Emu.GetCallbackManager().m_exit_callback.Check()) return 1;
+
+	return CELL_OK;
+}
+
+int cellSysutilRegisterCallback(int slot, u64 func_addr, u64 userdata)
+{
+	sc_sysutil.Warning("cellSysutilRegisterCallback(slot=%d, func_addr=0x%llx, userdata=0x%llx)", slot, func_addr, userdata);
+	Emu.GetCallbackManager().m_exit_callback.Register(slot, func_addr, userdata);
+
+	wxGetApp().m_MainFrame->UpdateUI();
+
+	return CELL_OK;
+}
+
+int cellSysutilUnregisterCallback(int slot)
+{
+	sc_sysutil.Warning("cellSysutilUnregisterCallback(slot=%d)", slot);
+	Emu.GetCallbackManager().m_exit_callback.Unregister(slot);
+
+	wxGetApp().m_MainFrame->UpdateUI();
+
 	return CELL_OK;
 }

@@ -99,6 +99,7 @@ struct FragmentDecompilerThread : public wxThread
 	ParamArray& m_parr;
 	u32 m_addr;
 	u32& m_size;
+	u32 m_const_index;
 
 	FragmentDecompilerThread(wxString& shader, ParamArray& parr, u32 addr, u32& size)
 		: wxThread(wxTHREAD_JOINABLE)
@@ -106,6 +107,7 @@ struct FragmentDecompilerThread : public wxThread
 		, m_parr(parr)
 		, m_addr(addr)
 		, m_size(size) 
+		, m_const_index(0)
 	{
 	}
 
@@ -113,6 +115,7 @@ struct FragmentDecompilerThread : public wxThread
 
 	void AddCode(wxString code);
 	wxString AddReg(u32 index);
+	wxString AddConst();
 	wxString AddTex();
 
 	template<typename T> wxString GetSRC(T src);

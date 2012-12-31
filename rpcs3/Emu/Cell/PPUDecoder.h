@@ -374,6 +374,7 @@ public:
 			/*0x257*/ADD_OPCODE(LFDX,	FRD(), RA(), RB());
 			/*0x277*/ADD_OPCODE(LFDUX,	FRD(), RA(), RB());
 			/*0x297*/ADD_OPCODE(STFSX,	RS(), RA(), RB());
+			/*0x2d7*/ADD_OPCODE(STFDX,	RS(), RA(), RB());
 			/*0x316*/ADD_OPCODE(LHBRX,	RD(), RA(), RB());
 			/*0x318*/ADD_OPCODE(SRAW,	RA(), RS(), RB(), RC());
 			/*0x31A*/ADD_OPCODE(SRAD,	RA(), RS(), RB(), RC());

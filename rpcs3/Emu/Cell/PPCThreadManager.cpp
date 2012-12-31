@@ -4,7 +4,6 @@
 #include "SPUThread.h"
 
 PPCThreadManager::PPCThreadManager()
-	: ThreadBase(true, "PPCThreadManager")
 {
 }
 
@@ -15,8 +14,6 @@ PPCThreadManager::~PPCThreadManager()
 
 void PPCThreadManager::Close()
 {
-	if(IsAlive()) Stop();
-
 	while(m_threads.GetCount()) RemoveThread(m_threads[0].GetId());
 }
 
@@ -62,19 +59,20 @@ s32 PPCThreadManager::GetThreadNumById(bool isPPU, u32 id)
 	return -1;
 }
 
-void PPCThreadManager::Exec()
+PPCThread* PPCThreadManager::GetThread(u32 id)
 {
-	Start();
+	for(u32 i=0; i<m_threads.GetCount(); ++i)
+	{
+		if(m_threads[i].GetId() == id) return &m_threads[i];
+	}
+
+	return nullptr;
 }
 
-void PPCThreadManager::Task()
+void PPCThreadManager::Exec()
 {
-	u32 thread = 0;
-
-	while(!TestDestroy() && Emu.IsRunned() && m_threads.GetCount())
+	for(u32 i=0; i<m_threads.GetCount(); ++i)
 	{
-		m_threads[thread].Exec();
-
-		thread = (thread + 1) % m_threads.GetCount();
+		m_threads[i].Exec();
 	}
 }

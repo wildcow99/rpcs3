@@ -265,3 +265,35 @@ public:
 	inline u32 GetCount() const { return m_count; }
 	T& operator[](u32 num) const { return *m_array[num]; }
 };
+
+template<typename T> struct ScopedPtr
+{
+private:
+	T* m_ptr;
+
+public:
+	ScopedPtr() : m_ptr(nullptr)
+	{
+	}
+
+	ScopedPtr(T* ptr) : m_ptr(ptr)
+	{
+	}
+
+	~ScopedPtr()
+	{
+		Swap(nullptr);
+	}
+
+	operator T*() { return m_ptr; }
+	operator const T*() const { return m_ptr; }
+
+	T* operator ->() { return m_ptr; }
+	const T* operator ->() const { return m_ptr; }
+
+	void Swap(T* ptr)
+	{
+		delete m_ptr;
+		m_ptr = ptr;
+	}
+};

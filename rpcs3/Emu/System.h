@@ -6,6 +6,7 @@
 #include "Emu/DbgConsole.h"
 #include "Emu/GS/GSManager.h"
 #include "Loader/Loader.h"
+#include "SysCalls/Callback.h"
 
 struct EmuInfo
 {
@@ -52,6 +53,7 @@ class Emulator
 		Interpreter,
 	};
 
+	mutable wxCriticalSection m_cs_status;
 	Status m_status;
 	uint m_mode;
 
@@ -64,6 +66,7 @@ class Emulator
 	IdManager m_id_manager;
 	DbgConsole* m_dbg_console;
 	GSManager m_gs_manager;
+	CallbackManager m_callback_manager;
 
 	EmuInfo m_info;
 
@@ -74,14 +77,15 @@ public:
 	Emulator();
 
 	void Init();
-	virtual void SetSelf(const wxString& path);
-	virtual void SetElf(const wxString& path);
+	void SetSelf(const wxString& path);
+	void SetElf(const wxString& path);
 
-	PPCThreadManager&	GetCPU()		{ return m_thread_manager; }
-	PadManager&			GetPadManager()	{ return m_pad_manager; }
-	IdManager&			GetIdManager()	{ return m_id_manager; }
-	DbgConsole&			GetDbgCon()		{ return *m_dbg_console; }
-	GSManager&			GetGSManager()	{ return m_gs_manager; }
+	PPCThreadManager&	GetCPU()				{ return m_thread_manager; }
+	PadManager&			GetPadManager()			{ return m_pad_manager; }
+	IdManager&			GetIdManager()			{ return m_id_manager; }
+	DbgConsole&			GetDbgCon()				{ return *m_dbg_console; }
+	GSManager&			GetGSManager()			{ return m_gs_manager; }
+	CallbackManager&	GetCallbackManager()	{ return m_callback_manager; }
 
 	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
 	{
@@ -100,14 +104,14 @@ public:
 
 	void CheckStatus();
 
-	virtual void Run();
-	virtual void Pause();
-	virtual void Resume();
-	virtual void Stop();
+	void Run();
+	void Pause();
+	void Resume();
+	void Stop();
 
-	virtual bool IsRunned() const { return m_status == Runned; }
-	virtual bool IsPaused() const { return m_status == Paused; }
-	virtual bool IsStopped() const { return m_status == Stopped; }
+	__forceinline bool IsRunned() const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Runned; }
+	__forceinline bool IsPaused() const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Paused; }
+	__forceinline bool IsStopped() const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Stopped; }
 };
 
 extern Emulator Emu;

@@ -22,7 +22,6 @@ class InterpreterDisAsmFrame
 	wxButton* m_btn_step;
 	wxButton* m_btn_run;
 	wxButton* m_btn_pause;
-	volatile bool m_exec;
 
 public:
 	InterpreterDisAsmFrame(const wxString& title, PPCThread* cpu);
@@ -31,7 +30,7 @@ public:
 	void Save(const wxString& path);
 	void Load(const wxString& path);
 
-	virtual void OnKeyDown(wxKeyEvent& event);
+	void OnKeyDown(wxKeyEvent& event);
 	void DoUpdate();
 	void ShowAddr(const u64 addr);
 	void WriteRegs();

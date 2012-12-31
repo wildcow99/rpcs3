@@ -15,6 +15,9 @@ GSManager::GSManager() : m_render(NULL)
 void GSManager::Init()
 {
 	if(m_render) return;
+
+	m_info.Init();
+
 	switch(Ini.GSRenderMode.GetValue())
 	{
 	default:

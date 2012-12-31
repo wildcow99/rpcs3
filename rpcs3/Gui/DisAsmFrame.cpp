@@ -211,7 +211,7 @@ struct WaitDumperThread : public ThreadBase
 
 	~WaitDumperThread()
 	{
-		free((bool*)done);
+		delete (bool*)done;
 		done = NULL;
 	}
 
@@ -272,11 +272,11 @@ struct WaitDumperThread : public ThreadBase
 			for(uint sh=0; sh<shdr_count; ++sh) arr[c][sh].Empty();
 		}
 
-		free(arr);
+		delete[] arr;
 
 		//safe_delete(shdr_arr);
-		safe_delete(l_elf32);
-		safe_delete(l_elf64);
+		delete l_elf32;
+		delete l_elf64;
 
 		prog_dial2.Close();
 		fd.Close();

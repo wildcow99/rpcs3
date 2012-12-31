@@ -173,8 +173,7 @@ int cellFsOpen(const u32 path_addr, const int flags, const u32 fd_addr, const u3
 		return CELL_ENOENT;
 	}
 
-	Memory.Write32(fd_addr, 
-		Emu.GetIdManager().GetNewID(sc_log.GetName(), new wxFile(ppath, o_mode), flags));
+	Memory.Write32(fd_addr, sc_log.GetNewId(new wxFile(ppath, o_mode), flags));
 
 	return CELL_OK;
 }
@@ -183,9 +182,8 @@ int cellFsRead(const u32 fd, const u32 buf_addr, const u64 nbytes, const u32 nre
 {
 	sc_log.Log("cellFsRead(fd: %d, buf_addr: 0x%x, nbytes: 0x%llx, nread_addr: 0x%x)",
 		fd, buf_addr, nbytes, nread_addr);
-	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
-	const ID& id = Emu.GetIdManager().GetIDData(fd);
-	if(!!id.m_name.Cmp(sc_log.GetName())) return CELL_ESRCH;
+	ID id;
+	if(!sc_log.CheckId(fd, id)) return CELL_ESRCH;
 	wxFile& file = *(wxFile*)id.m_data;
 
 	Memory.Write64NN(nread_addr, file.Read(Memory.GetMemFromAddr(buf_addr), nbytes));
@@ -197,9 +195,8 @@ int cellFsWrite(const u32 fd, const u32 buf_addr, const u64 nbytes, const u32 nw
 {
 	sc_log.Log("cellFsWrite(fd: %d, buf_addr: 0x%x, nbytes: 0x%llx, nwrite_addr: 0x%x)",
 		fd, buf_addr, nbytes, nwrite_addr);
-	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
-	const ID& id = Emu.GetIdManager().GetIDData(fd);
-	if(!!id.m_name.Cmp(sc_log.GetName())) return CELL_ESRCH;
+	ID id;
+	if(!sc_log.CheckId(fd, id)) return CELL_ESRCH;
 	wxFile& file = *(wxFile*)id.m_data;
 
 	Memory.Write64NN(nwrite_addr, file.Write(Memory.GetMemFromAddr(buf_addr), nbytes));
@@ -210,9 +207,8 @@ int cellFsWrite(const u32 fd, const u32 buf_addr, const u64 nbytes, const u32 nw
 int cellFsClose(const u32 fd)
 {
 	sc_log.Log("cellFsClose(fd: %d)", fd);
-	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
-	const ID& id = Emu.GetIdManager().GetIDData(fd);
-	if(!!id.m_name.Cmp(sc_log.GetName())) return CELL_ESRCH;
+	ID id;
+	if(!sc_log.CheckId(fd, id)) return CELL_ESRCH;
 	wxFile& file = *(wxFile*)id.m_data;
 	file.Close();
 	Emu.GetIdManager().RemoveID(fd);
@@ -276,9 +272,8 @@ int cellFsStat(const u32 path_addr, const u32 sb_addr)
 int cellFsFstat(u32 fd, u32 sb_addr)
 {
 	sc_log.Log("cellFsFstat(fd: %d, sb_addr: 0x%x)", fd, sb_addr);
-	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
-	const ID& id = Emu.GetIdManager().GetIDData(fd);
-	if(!!id.m_name.Cmp(sc_log.GetName())) return CELL_ESRCH;
+	ID id;
+	if(!sc_log.CheckId(fd, id)) return CELL_ESRCH;
 	wxFile& file = *(wxFile*)id.m_data;
 
 	Lv2FsStat stat;
@@ -358,9 +353,8 @@ int cellFsLseek(const u32 fd, const s64 offset, const u32 whence, const u32 pos_
 		sc_log.Error(fd, "Unknown seek whence! (%d)", whence);
 	return CELL_EINVAL;
 	}
-	if(!Emu.GetIdManager().CheckID(fd)) return CELL_ESRCH;
-	const ID& id = Emu.GetIdManager().GetIDData(fd);
-	if(!!id.m_name.Cmp(sc_log.GetName())) return CELL_ESRCH;
+	ID id;
+	if(!sc_log.CheckId(fd, id)) return CELL_ESRCH;
 	wxFile& file = *(wxFile*)id.m_data;
 	Memory.Write64(pos_addr, file.Seek(offset, seek_mode));
 	return CELL_OK;

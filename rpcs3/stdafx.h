@@ -193,6 +193,7 @@ enum Status
 #include "Gui/ConLog.h"
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
+#include "Emu/Cell/PPUThread.h"
 #include "rpcs3.h"
 
 #define _PRGNAME_ "RPCS3"

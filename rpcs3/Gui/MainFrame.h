@@ -17,6 +17,7 @@ private:
 	virtual void BootSelf(wxCommandEvent& event);
 	virtual void Pause(wxCommandEvent& event);
 	virtual void Stop(wxCommandEvent& event);
+	virtual void SendExit(wxCommandEvent& event);
 	virtual void Config(wxCommandEvent& event);
 	virtual void OnKeyDown(wxKeyEvent& event);
 

@@ -37,7 +37,7 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 	{
 	}
 
-	void Push(const LogPacket& data)
+	void _push(const LogPacket& data)
 	{
 		const u32 sprefix	= data.m_prefix.Len();
 		const u32 stext		= data.m_text.Len();
@@ -69,7 +69,7 @@ struct _LogBuffer : public MTPacketBuffer<LogPacket>
 		CheckBusy();
 	}
 
-	LogPacket Pop()
+	LogPacket _pop()
 	{
 		LogPacket ret;
 
@@ -107,6 +107,11 @@ LogWriter::LogWriter()
 
 void LogWriter::WriteToLog(wxString prefix, wxString value, wxString colour/*, wxColour bgcolour*/)
 {
+	if(PPCThread* thr = GetCurrentPPCThread())
+	{
+		prefix = (prefix.IsEmpty() ? "" : prefix + " : ") + thr->GetFName();
+	}
+
 	if(m_logfile.IsOpened())
 		m_logfile.Write((prefix.IsEmpty() ? wxEmptyString : "[" + prefix + "]: ") + value + "\n");
 
@@ -196,7 +201,7 @@ LogFrame::LogFrame()
 	m_log.InsertColumn(1, "Log");
 	m_log.SetBackgroundColour(wxColour("Black"));
 
-	m_log.SetColumnWidth(0, 18);
+	m_log.SetColumnWidth(0, -1);
 
 	SetSizerAndFit( &s_panel );
 
@@ -240,6 +245,7 @@ void LogFrame::Task()
 		m_log.InsertItem(cur_item, item.m_prefix);
 		m_log.SetItem(cur_item, 1, item.m_text);
 		m_log.SetItemTextColour(cur_item, item.m_colour);
+		m_log.SetColumnWidth(0, -1);
 
 		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
 	}

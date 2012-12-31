@@ -179,9 +179,10 @@ enum G_1fOpcodes //Field 21 - 30
 	LFDX 	= 0x257,
 	LFDUX	= 0x277,
 	STFSX 	= 0x297,
+	STFDX	= 0x2d7, //Store Floating-Point Double Indexed
 	LHBRX 	= 0x316,
 	SRAW 	= 0x318,
-	SRAD 	= 0x31A,
+	SRAD 	= 0x31a,
 	SRAWI 	= 0x338,
 	SRADI1 	= 0x33a, //sh_5 == 0
 	SRADI2 	= 0x33b, //sh_5 != 0
@@ -398,7 +399,8 @@ public:
 		/*0x256*/ADD_OPCODE(SYNC,(OP_REG l));
 		/*0x257*/ADD_OPCODE(LFDX,(OP_REG frd, OP_REG ra, OP_REG rb));
 		/*0x277*/ADD_OPCODE(LFDUX,(OP_REG frd, OP_REG ra, OP_REG rb));
-		/*0x297*/ADD_OPCODE(STFSX,(OP_REG rs, OP_REG ra, OP_REG rb));
+		/*0x297*/ADD_OPCODE(STFSX,(OP_REG frs, OP_REG ra, OP_REG rb));
+		/*0x2d7*/ADD_OPCODE(STFDX,(OP_REG frs, OP_REG ra, OP_REG rb));
 		/*0x316*/ADD_OPCODE(LHBRX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x318*/ADD_OPCODE(SRAW,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x31A*/ADD_OPCODE(SRAD,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));

@@ -89,20 +89,36 @@ private:
 public:
 	IniEntry<u8> CPUDecoderMode;
 	IniEntry<u8> GSRenderMode;
+	IniEntry<int> GSResolution;
+	IniEntry<u8> GSAspectRatio;
+	IniEntry<bool> GSVSyncEnable;
 	IniEntry<u8> PadHandlerMode;
 
 public:
 	Inis() : DefPath("EmuSettings")
 	{
-		CPUDecoderMode.Init("DecoderMode", DefPath + "\\" + "CPU");
-		GSRenderMode.Init("RenderMode", DefPath + "\\" + "GS");
-		PadHandlerMode.Init("HandlerMode", DefPath + "\\" + "Pad");
+		wxString path;
+
+		path = DefPath + "\\" + "CPU";
+		CPUDecoderMode.Init("DecoderMode", path);
+
+		path = DefPath + "\\" + "GS";
+		GSRenderMode.Init("RenderMode", path);
+		GSResolution.Init("Resolution", path);
+		GSAspectRatio.Init("AspectRatio", path);
+		GSVSyncEnable.Init("VSyncEnable", path);
+
+		path = DefPath + "\\" + "Pad";
+		PadHandlerMode.Init("HandlerMode", path);
 	}
 
 	void Load()
 	{
 		CPUDecoderMode.Load(2);
 		GSRenderMode.Load(0);
+		GSResolution.Load(4);
+		GSAspectRatio.Load(1);
+		GSVSyncEnable.Load(false);
 		PadHandlerMode.Load(0);
 	}
 
@@ -110,6 +126,9 @@ public:
 	{
 		CPUDecoderMode.Save();
 		GSRenderMode.Save();
+		GSResolution.Save();
+		GSAspectRatio.Save();
+		GSVSyncEnable.Save();
 		PadHandlerMode.Save();
 	}
 };

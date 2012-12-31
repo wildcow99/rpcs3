@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Emu/Cell/PPCThread.h"
+#include "Emu/SysCalls/SysCalls.h"
 
 enum
 {
@@ -297,6 +298,10 @@ struct PPCdouble
 
 	u32 To32()
 	{
+		float res = _double;
+
+		return (u32&)res;
+		/*
 		if (exp > 896 || (!frac && !exp))
 		{
 			return ((_u64 >> 32) & 0xc0000000) | ((_u64 >> 29) & 0x3fffffff);
@@ -309,6 +314,7 @@ struct PPCdouble
 
 		//?
 		return ((_u64 >> 32) & 0xc0000000) | ((_u64 >> 29) & 0x3fffffff);
+		*/
 	}
 
 	u32 GetZerosCount()
@@ -729,7 +735,9 @@ struct VPR_table
 
 static const s32 MAX_INT_VALUE = 0x7fffffff;
 
-class PPUThread : public PPCThread
+class PPUThread
+	: public PPCThread
+	, public SysCalls
 {
 public:
 	double FPR[32]; //Floating Point Register
@@ -926,7 +934,6 @@ public:
 		return ret;
 	}
 
-	void SetBranch(const u64 pc);
 	virtual void AddArgv(const wxString& arg);
 
 public:
@@ -940,6 +947,8 @@ protected:
 	virtual void DoResume();
 	virtual void DoStop();
 
-private:
+public:
 	virtual void DoCode(const s32 code);
 };
+
+PPUThread& GetCurrentPPUThread();
