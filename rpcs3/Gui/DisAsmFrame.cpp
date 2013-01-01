@@ -294,11 +294,11 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 	if(ctrl.ShowModal() == wxID_CANCEL) return;
 
-	wxFile& f_elf = *new wxFile(Emu.m_path);
+	vfsStream& f_elf = *new vfsLocalFile(Emu.m_path);
 	ConLog.Write("path: %s", Emu.m_path);
 	Elf_Ehdr ehdr;
 	ehdr.Load(f_elf);
-	f_elf.Close();
+
 	if(!ehdr.CheckMagic())
 	{
 		ConLog.Error("Corrupted ELF!");
@@ -310,7 +310,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 	{
 	case CLASS_ELF64:
 		ElfType64 = true;
-		l_elf64 = new ELF64Loader(Emu.m_path);
+		l_elf64 = new ELF64Loader(f_elf);
 		if(!l_elf64->LoadInfo())
 		{
 			delete l_elf64;
@@ -323,7 +323,7 @@ void DisAsmFrame::Dump(wxCommandEvent& WXUNUSED(event))
 
 	case CLASS_ELF32:
 		ElfType64 = false;
-		l_elf32 = new ELF32Loader(Emu.m_path);
+		l_elf32 = new ELF32Loader(f_elf);
 		if(!l_elf32->LoadInfo())
 		{
 			delete l_elf32;

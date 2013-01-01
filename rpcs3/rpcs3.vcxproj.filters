@@ -38,6 +38,9 @@
     <Filter Include="Utilities">
       <UniqueIdentifier>{9bd88f78-8528-48f3-b9e0-78e06476b04d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\FS">
+      <UniqueIdentifier>{fd7cea02-e77f-41b1-8b61-f78e7d280e04}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -195,6 +198,21 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\Callback.cpp">
       <Filter>Emu\SysCalls</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\VFS.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsFileBase.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsLocalFile.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsStream.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsStreamMemory.cpp">
+      <Filter>Emu\FS</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

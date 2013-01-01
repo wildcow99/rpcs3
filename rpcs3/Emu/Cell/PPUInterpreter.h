@@ -105,6 +105,7 @@ private:
 		case 0x001: return CPU.XER.XER;
 		case 0x008: return CPU.LR;
 		case 0x009: return CPU.CTR;
+		case 0x100: return CPU.USPRG0;
 		}
 
 		UNK(wxString::Format("GetRegBySPR error: Unknown spr %d!", n));

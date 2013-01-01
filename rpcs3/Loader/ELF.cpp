@@ -2,17 +2,10 @@
 #include "Loader.h"
 #include "ELF.h"
 
-ELFLoader::ELFLoader(wxFile& f)
+ELFLoader::ELFLoader(vfsStream& f)
 	: elf_f(f)
 	, LoaderBase()
-	, loader(NULL)
-{
-}
-
-ELFLoader::ELFLoader(const wxString& path)
-	: elf_f(*new wxFile(path))
-	, LoaderBase()
-	, loader(NULL)
+	, loader(nullptr)
 {
 }
 
@@ -35,9 +28,9 @@ bool ELFLoader::LoadInfo()
 	return true;
 }
 
-bool ELFLoader::LoadData()
+bool ELFLoader::LoadData(u64 offset)
 {
-	if(!loader || !loader->LoadData()) return false;
+	if(!loader || !loader->LoadData(offset)) return false;
 	entry = loader->GetEntry();
 	machine = loader->GetMachine();
 	return true;
@@ -45,6 +38,7 @@ bool ELFLoader::LoadData()
 
 bool ELFLoader::Close()
 {
-	safe_delete(loader);
+	delete loader;
+	loader = nullptr;
 	return elf_f.Close();
 }

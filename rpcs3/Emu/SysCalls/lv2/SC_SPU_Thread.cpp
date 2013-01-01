@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "Loader/ELF.h"
 
 SysCallBase sc_spu("sys_spu");
 
@@ -10,6 +11,34 @@ struct sys_spu_thread_group_attribute
 	int type;
 	union{u32 ct;} option;
 };
+
+struct sys_spu_image
+{
+	u32 type;
+	u32 entry_point;
+	u32 segs_addr;
+	int nsegs;
+};
+
+u32 LoadImage(vfsStream& stream)
+{
+	ELFLoader l(stream);
+	l.LoadInfo();
+	l.LoadData(Memory.MainMem.Alloc(stream.GetSize()));
+
+	return l.GetEntry();
+}
+
+ int sys_spu_image_open(u32 img_addr, u32 path_addr)
+ {
+	const wxString& path = Memory.ReadString(path_addr);
+	sc_spu.Warning("sys_spu_image_open(img_addr=0x%x, path_addr=0x%x [%s])", img_addr, path_addr, path);
+
+	vfsLocalFile stream(path);
+	LoadImage(stream);
+
+	return CELL_OK;
+ }
 
 //170
 int sys_spu_thread_group_create(u64 id_addr, u32 num, int prio, u64 attr_addr)
