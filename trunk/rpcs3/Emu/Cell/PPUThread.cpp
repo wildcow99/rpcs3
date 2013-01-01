@@ -38,7 +38,7 @@ void PPUThread::DoReset()
 	CR.CR	= 0;
 	LR		= 0;
 	CTR		= 0;
-	USPRG	= 0;
+	USPRG0	= 0;
 	TB		= 0;
 	XER.XER	= 0;
 	FPSCR.FPSCR	= 0;

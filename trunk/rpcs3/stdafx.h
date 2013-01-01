@@ -194,6 +194,11 @@ enum Status
 #include "Emu/System.h"
 #include "Emu/Memory/Memory.h"
 #include "Emu/Cell/PPUThread.h"
+
+#include "Emu/FS/vfsFileBase.h"
+#include "Emu/FS/vfsLocalFile.h"
+#include "Emu/FS/vfsStream.h"
+#include "Emu/FS/vfsStreamMemory.h"
 #include "rpcs3.h"
 
 #define _PRGNAME_ "RPCS3"

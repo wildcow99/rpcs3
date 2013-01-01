@@ -2,14 +2,8 @@
 #include "ELF64.h"
 #include "Gui/CompilerELF.h"
 
-ELF64Loader::ELF64Loader(wxFile& f)
+ELF64Loader::ELF64Loader(vfsStream& f)
 	: elf64_f(f)
-	, LoaderBase()
-{
-}
-
-ELF64Loader::ELF64Loader(const wxString& path)
-	: elf64_f(*new wxFile(path))
 	, LoaderBase()
 {
 }
@@ -25,13 +19,13 @@ bool ELF64Loader::LoadInfo()
 	return true;
 }
 
-bool ELF64Loader::LoadData()
+bool ELF64Loader::LoadData(u64 offset)
 {
 	if(!elf64_f.IsOpened()) return false;
 
-	if(!LoadEhdrData()) return false;
-	if(!LoadPhdrData()) return false;
-	if(!LoadShdrData()) return false;
+	if(!LoadEhdrData(offset)) return false;
+	if(!LoadPhdrData(offset)) return false;
+	if(!LoadShdrData(offset)) return false;
 
 	return true;
 }
@@ -41,9 +35,9 @@ bool ELF64Loader::Close()
 	return elf64_f.Close();
 }
 
-bool ELF64Loader::LoadEhdrInfo()
+bool ELF64Loader::LoadEhdrInfo(s64 offset)
 {
-	elf64_f.Seek(0);
+	elf64_f.Seek(offset < 0 ? 0 : offset);
 	ehdr.Load(elf64_f);
 
 	if(!ehdr.CheckMagic()) return false;
@@ -83,7 +77,7 @@ bool ELF64Loader::LoadEhdrInfo()
 	return true;
 }
 
-bool ELF64Loader::LoadPhdrInfo()
+bool ELF64Loader::LoadPhdrInfo(s64 offset)
 {
 	phdr_arr.Clear();
 
@@ -93,7 +87,8 @@ bool ELF64Loader::LoadPhdrInfo()
 		return false;
 	}
 
-	elf64_f.Seek(ehdr.e_phoff);
+	elf64_f.Seek(offset < 0 ? ehdr.e_phoff : offset);
+
 	for(u32 i=0; i<ehdr.e_phnum; ++i)
 	{
 		Elf64_Phdr phdr;
@@ -104,7 +99,7 @@ bool ELF64Loader::LoadPhdrInfo()
 	return true;
 }
 
-bool ELF64Loader::LoadShdrInfo()
+bool ELF64Loader::LoadShdrInfo(s64 offset)
 {
 	shdr_arr.Clear();
 	shdr_name_arr.Clear();
@@ -114,7 +109,7 @@ bool ELF64Loader::LoadShdrInfo()
 		return false;
 	}
 
-	elf64_f.Seek(ehdr.e_shoff);
+	elf64_f.Seek(offset < 0 ? ehdr.e_shoff : offset);
 	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
 		Elf64_Shdr shdr;
@@ -130,7 +125,7 @@ bool ELF64Loader::LoadShdrInfo()
 
 	for(u32 i=0; i<shdr_arr.GetCount(); ++i)
 	{
-		elf64_f.Seek(shdr_arr[ehdr.e_shstrndx].sh_offset + shdr_arr[i].sh_name);
+		elf64_f.Seek((offset < 0 ? shdr_arr[ehdr.e_shstrndx].sh_offset : shdr_arr[ehdr.e_shstrndx].sh_offset - ehdr.e_shoff + offset) + shdr_arr[i].sh_name);
 		wxString name = wxEmptyString;
 		while(!elf64_f.Eof())
 		{
@@ -146,7 +141,7 @@ bool ELF64Loader::LoadShdrInfo()
 	return true;
 }
 
-bool ELF64Loader::LoadEhdrData()
+bool ELF64Loader::LoadEhdrData(u64 offset)
 {
 #ifdef LOADER_DEBUG
 	ConLog.SkipLn();
@@ -156,7 +151,7 @@ bool ELF64Loader::LoadEhdrData()
 	return true;
 }
 
-bool ELF64Loader::LoadPhdrData()
+bool ELF64Loader::LoadPhdrData(u64 offset)
 {
 	for(u32 i=0; i<phdr_arr.GetCount(); ++i)
 	{
@@ -171,7 +166,7 @@ bool ELF64Loader::LoadPhdrData()
 			);
 		}
 
-		if(!Memory.MainMem.IsInMyRange(phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz))
+		if(!Memory.MainMem.IsInMyRange(offset + phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz))
 		{
 			ConLog.Warning("Skipping...");
 #ifdef LOADER_DEBUG
@@ -183,20 +178,20 @@ bool ELF64Loader::LoadPhdrData()
 		switch(phdr_arr[i].p_type)
 		{
 			case 0x00000001: //LOAD
-				Memory.MainMem.Alloc(phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz);
+				Memory.MainMem.Alloc(offset + phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz);
 				elf64_f.Seek(phdr_arr[i].p_offset);
-				elf64_f.Read(&Memory[phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
+				elf64_f.Read(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
 			break;
 
 			case 0x00000007: //TLS
-				Emu.SetTLSData(phdr_arr[i].p_vaddr, phdr_arr[i].p_filesz, phdr_arr[i].p_memsz);
+				Emu.SetTLSData(offset + phdr_arr[i].p_vaddr, phdr_arr[i].p_filesz, phdr_arr[i].p_memsz);
 			break;
 
 			case 0x60000001: //LOOS+1
 			{
 				if(!phdr_arr[i].p_filesz) break;
 
-				const sys_process_param& proc_param = *(sys_process_param*)&Memory[phdr_arr[i].p_vaddr];
+				const sys_process_param& proc_param = *(sys_process_param*)&Memory[offset + phdr_arr[i].p_vaddr];
 
 				if(re(proc_param.size) < sizeof(sys_process_param))
 				{
@@ -232,7 +227,7 @@ bool ELF64Loader::LoadPhdrData()
 			{
 				if(!phdr_arr[i].p_filesz) break;
 
-				sys_proc_prx_param proc_prx_param = *(sys_proc_prx_param*)&Memory[phdr_arr[i].p_vaddr];
+				sys_proc_prx_param proc_prx_param = *(sys_proc_prx_param*)&Memory[offset + phdr_arr[i].p_vaddr];
 
 				proc_prx_param.size = re(proc_prx_param.size);
 				proc_prx_param.magic = re(proc_prx_param.magic);
@@ -262,7 +257,7 @@ bool ELF64Loader::LoadPhdrData()
 				{
 					for(u32 s=proc_prx_param.libstubstart; s<proc_prx_param.libstubend; s+=sizeof(Elf64_StubHeader))
 					{
-						Elf64_StubHeader stub = *(Elf64_StubHeader*)Memory.GetMemFromAddr(s);
+						Elf64_StubHeader stub = *(Elf64_StubHeader*)Memory.GetMemFromAddr(offset + s);
 
 						stub.s_size = re(stub.s_size);
 						stub.s_version = re(stub.s_version);
@@ -323,7 +318,7 @@ bool ELF64Loader::LoadPhdrData()
 	return true;
 }
 
-bool ELF64Loader::LoadShdrData()
+bool ELF64Loader::LoadShdrData(u64 offset)
 {
 	u64 max_addr = 0;
 
@@ -351,12 +346,12 @@ bool ELF64Loader::LoadShdrData()
 		const u64 addr = shdr.sh_addr;
 		const u64 size = shdr.sh_size;
 
-		if(size == 0 || !Memory.IsGoodAddr(addr, size)) continue;
+		if(size == 0 || !Memory.IsGoodAddr(offset + addr, size)) continue;
 
 		switch(shdr.sh_type)
 		{
 		case SHT_NOBITS:
-			memset(&Memory[addr], 0, size);
+			memset(&Memory[offset + addr], 0, size);
 		break;
 
 		case SHT_PROGBITS:

@@ -95,11 +95,12 @@ void Emulator::Run()
 	//SetTLSData(0, 0, 0);
 	//SetMallocPageSize(0x100000);
 	bool is_error;
-	Loader l(m_path);
+	vfsLocalFile f(m_path);
+	Loader l(f);
 
 	try
 	{
-		is_error = !l.Load() && l.GetMachine() != MACHINE_Unknown;
+		is_error = !l.Load() || l.GetMachine() == MACHINE_Unknown;
 	}
 	catch(const wxString& e)
 	{

@@ -191,6 +191,11 @@
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />
     <ClCompile Include="Emu\Cell\SPUThread.cpp" />
     <ClCompile Include="Emu\DbgConsole.cpp" />
+    <ClCompile Include="Emu\FS\VFS.cpp" />
+    <ClCompile Include="Emu\FS\vfsFileBase.cpp" />
+    <ClCompile Include="Emu\FS\vfsLocalFile.cpp" />
+    <ClCompile Include="Emu\FS\vfsStream.cpp" />
+    <ClCompile Include="Emu\FS\vfsStreamMemory.cpp" />
     <ClCompile Include="Emu\GS\GL\FragmentProgram.cpp" />
     <ClCompile Include="Emu\GS\GL\GLBuffers.cpp" />
     <ClCompile Include="Emu\GS\GL\GLGSRender.cpp" />

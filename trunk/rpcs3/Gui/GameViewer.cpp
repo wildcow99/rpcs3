@@ -63,7 +63,8 @@ void GameViewer::LoadPSF()
 	{
 		const wxString& path = m_games[i] + "\\" + "PARAM.SFO";
 		if(!wxFileExists(path)) continue;
-		PSFLoader psf(path);
+		vfsLocalFile f(path);
+		PSFLoader psf(f);
 		if(!psf.Load(false)) continue;
 		psf.m_info.root = m_games[i];
 		m_game_data.Add(new GameInfo(psf.m_info));

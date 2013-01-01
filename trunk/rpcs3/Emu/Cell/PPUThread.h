@@ -797,9 +797,9 @@ public:
 	u64 LR;		//SPR 0x008 : Link Register
 	u64 CTR;	//SPR 0x009 : Count Register
 
-	s32 USPRG;	//SPR 0x100 : User-SPR General-Purpose Registers
+	u64 USPRG0;	//SPR 0x100 : User-SPR General-Purpose Register 0
 
-	s32 SPRG[8]; //SPR 0x100 - 0x107 : SPR General-Purpose Registers
+	u64 SPRG[8]; //SPR 0x100 - 0x107 : SPR General-Purpose Registers
 
 	//TBR : Time-Base Registers
 	union
