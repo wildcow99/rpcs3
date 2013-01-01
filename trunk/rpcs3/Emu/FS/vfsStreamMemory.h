@@ -3,6 +3,8 @@
 
 struct vfsStreamMemory : public vfsStream
 {
+	u64 m_addr;
+
 public:
 	vfsStreamMemory();
 	vfsStreamMemory(u64 addr);

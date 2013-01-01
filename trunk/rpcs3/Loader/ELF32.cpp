@@ -146,7 +146,7 @@ bool ELF32Loader::LoadPhdrData(u64 offset)
 
 			Memory.MainMem.Alloc(phdr_arr[i].p_vaddr + offset, phdr_arr[i].p_memsz);
 			elf32_f.Seek(phdr_arr[i].p_offset);
-			elf32_f.Read(&Memory[phdr_arr[i].p_paddr + offset], phdr_arr[i].p_filesz);
+			elf32_f.Read(&Memory[phdr_arr[i].p_vaddr + offset], phdr_arr[i].p_filesz);
 		}
 #ifdef LOADER_DEBUG
 		ConLog.SkipLn();
@@ -177,7 +177,7 @@ bool ELF32Loader::LoadShdrData(u64 offset)
 		{
 		case SHT_NOBITS:
 			if(size == 0) continue;
-			memset(&Memory[addr], 0, size);
+			memset(&Memory[addr + offset], 0, size);
 		case SHT_PROGBITS:
 		break;
 		}
