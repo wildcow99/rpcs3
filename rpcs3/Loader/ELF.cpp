@@ -25,14 +25,15 @@ bool ELFLoader::LoadInfo()
 
 	if(!loader || !loader->LoadInfo()) return false;
 
+	entry = loader->GetEntry();
+	machine = loader->GetMachine();
+
 	return true;
 }
 
 bool ELFLoader::LoadData(u64 offset)
 {
 	if(!loader || !loader->LoadData(offset)) return false;
-	entry = loader->GetEntry();
-	machine = loader->GetMachine();
 	return true;
 }
 

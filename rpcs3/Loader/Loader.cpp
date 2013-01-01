@@ -131,14 +131,14 @@ bool Loader::Load()
 		return false;
 	}
 
-	if(!l->LoadData(l->GetMachine() == MACHINE_PPC64 ? 0 : spu_offset))
+	if(!l->LoadData(l->GetMachine() == MACHINE_SPU ? spu_offset : 0))
 	{
 		ConLog.Error("Broken file");
 		return false;
 	}
 
 	machine = l->GetMachine();
-	entry = l->GetMachine() == MACHINE_PPC64 ? l->GetEntry() : l->GetEntry() + spu_offset;
+	entry = l->GetMachine() == MACHINE_SPU ? l->GetEntry() + spu_offset : l->GetEntry();
 
 	const wxString& root = wxFileName(wxFileName(m_stream->GetPath()).GetPath()).GetPath();
 	const wxString& psf_path = root + "\\" + "PARAM.SFO";
