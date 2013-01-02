@@ -63,6 +63,7 @@ private:
 		m_localAddress = localAddress;
 		m_ctrl = (CellGcmControl*)Memory.GetMemFromAddr(m_ctrlAddress);
 
+		// wx assert : only the main thread can start a timer
 		m_update_timer->Start(1);
 	}
 

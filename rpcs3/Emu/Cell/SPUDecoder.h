@@ -275,7 +275,7 @@ public:
 		ADD_OPCODE(SPU_ORI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(ORHI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(ORBI,(RT(), RA(), i10()));
-		ADD_OPCODE(SFI,(RT(), RA(), i10()));
+		ADD_OPCODE(SFI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(SFHI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(ANDI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(ANDHI,(RT(), RA(), exts10(i10())));
