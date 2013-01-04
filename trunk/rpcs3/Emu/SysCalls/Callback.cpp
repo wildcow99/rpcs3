@@ -3,20 +3,21 @@
 
 #include "Emu/Cell/PPCThread.h"
 
-Callback::Callback(u32 slot, u64 addr, u64 userdata)
+Callback::Callback(u32 slot, u64 addr)
 	: m_addr(addr)
 	, m_slot(slot)
-	, m_status(0)
-	, m_param(0)
-	, m_userdata(userdata)
+	, a1(0)
+	, a2(0)
+	, a3(0)
 	, m_has_data(false)
 {
 }
 
-void Callback::Handle(u64 status, u64 param)
+void Callback::Handle(u64 _a1, u64 _a2, u64 _a3)
 {
-	m_status = status;
-	m_param = param;
+	a1 = _a1;
+	a2 = _a2;
+	a3 = _a3;
 	m_has_data = true;
 }
 
@@ -25,54 +26,39 @@ void Callback::Branch()
 	PPCThread& new_thread = Emu.GetCPU().AddThread(true);
 
 	new_thread.SetPc(m_addr);
-	new_thread.SetArg(m_status);
 	new_thread.SetPrio(0x1001);
 	new_thread.stack_size = 0x10000;
 	new_thread.SetName("Callback");
 	new_thread.Run();
 
-	((PPUThread&)new_thread).GPR[3] = 0x212;
-	((PPUThread&)new_thread).GPR[4] = 0x399;
-	((PPUThread&)new_thread).GPR[5] = 0x21;
+	((PPUThread&)new_thread).LR = Emu.GetPPUThreadExit();
+	((PPUThread&)new_thread).GPR[3] = a1;
+	((PPUThread&)new_thread).GPR[4] = a2;
+	((PPUThread&)new_thread).GPR[5] = a3;
 	new_thread.Exec();
 
 	while(new_thread.IsAlive()) Sleep(1);
-	return;
-	PPUThread& thr = GetCurrentPPUThread();
+	Emu.GetCPU().RemoveThread(new_thread.GetId());
 
-	u64 GPR[32];
-	double FPR[32];
-	VPR_reg VPR[32];
-	u64 LR = thr.LR;
-	u64 CTR = thr.CTR;
-	memcpy(GPR, thr.GPR, sizeof(u64) * 32);
-	memcpy(FPR, thr.FPR, sizeof(double) * 32);
-	memcpy(VPR, thr.VPR, sizeof(VPR_reg) * 32);
+	ConLog.Write("Callback EXIT!");
+}
 
-	thr.GPR[1] -= 112;
-	thr.GPR[3] = m_status;
-	thr.GPR[4] = m_param;
-	thr.GPR[5] = m_userdata;
+Callback2::Callback2(u32 slot, u64 addr, u64 userdata) : Callback(slot, addr)
+{
+	a2 = userdata;
+}
 
-	u64 lpc = thr.PC;
-	thr.LR = thr.PC + 4;
-	thr.PC = Memory.Read32(m_addr);
-	thr.nPC = thr.PC + 4;
+void Callback2::Handle(u64 status)
+{
+	Callback::Handle(status, a2, 0);
+}
 
-	while(thr.PC != lpc + 4 && Emu.IsRunned())
-	{
-		thr.DoCode(Memory.Read32(thr.PC));
-		thr.NextPc();
-	}
+Callback3::Callback3(u32 slot, u64 addr, u64 userdata) : Callback(slot, addr)
+{
+	a3 = userdata;
+}
 
-	memcpy(thr.GPR, GPR, sizeof(u64) * 32);
-	memcpy(thr.FPR, FPR, sizeof(double) * 32);
-	memcpy(thr.VPR, VPR, sizeof(VPR_reg) * 32);
-	thr.CTR = CTR;
-	thr.LR = LR;
-	thr.PC = lpc;
-	thr.nPC = thr.PC + 4;
-	//thr.SetBranch(lpc);
-	//thr.NextPc();
-	ConLog.Write("EXIT!");
+void Callback3::Handle(u64 status, u64 param)
+{
+	Callback::Handle(status, param, a3);
 }

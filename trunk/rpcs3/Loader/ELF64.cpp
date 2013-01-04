@@ -280,8 +280,8 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						ConLog.Write("*** text: 0x%x", stub.s_text);
 #endif
 						static const u32 section = 4 * 3;
-						u64 dst = Memory.Alloc(stub.s_imports * section, stub.s_imports);
-						u64 tbl = Memory.Alloc(stub.s_imports * 4 * 2, stub.s_imports);
+						u64 dst = Memory.MainMem.Alloc(stub.s_imports * section);
+						u64 tbl = Memory.MainMem.Alloc(stub.s_imports * 4 * 2);
 						for(u32 i=0; i<stub.s_imports; ++i)
 						{
 							const u32 nid = Memory.Read32(stub.s_nid + i*4);

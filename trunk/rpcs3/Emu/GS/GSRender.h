@@ -1,6 +1,15 @@
 #pragma once
 #include "Emu/GS/GCM.h"
 
+enum Method
+{
+	CELL_GCM_METHOD_FLAG_NON_INCREMENT	= 0x40000000,
+	CELL_GCM_METHOD_FLAG_JUMP			= 0x20000000,
+	CELL_GCM_METHOD_FLAG_CALL			= 0x00000002,
+	CELL_GCM_METHOD_FLAG_RETURN			= 0x00020000,
+};
+
+
 wxSize AspectRatio(wxSize rs, const wxSize as);
 
 class GSFrame : public wxFrame
@@ -37,6 +46,7 @@ struct GSRender
 	wxSemaphore m_sem_flush;
 	wxSemaphore m_sem_flip;
 	int m_flip_status;
+	volatile bool m_draw;
 
 	GSRender();
 

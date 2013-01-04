@@ -66,7 +66,7 @@ SysCallBase sc_sysutil("cellSysutil");
 int cellSysutilCheckCallback()
 {
 	//sc_sysutil.Warning("cellSysutilCheckCallback()");
-	if(Emu.GetCallbackManager().m_exit_callback.Check()) return 1;
+	Emu.GetCallbackManager().m_exit_callback.Check();
 
 	return CELL_OK;
 }

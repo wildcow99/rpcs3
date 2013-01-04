@@ -180,6 +180,9 @@ extern int cellSysutilCheckCallback();
 extern int cellSysutilRegisterCallback(int slot, u64 func_addr, u64 userdata);
 extern int cellSysutilUnregisterCallback(int slot);
 
+//cellMsgDialog
+extern int cellMsgDialogOpen2(u32 type, u32 msgString_addr, u32 callback_addr, u32 userData, u32 extParam);
+
 //cellPad
 extern int cellPadInit(u32 max_connect);
 extern int cellPadEnd();

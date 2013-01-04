@@ -58,6 +58,7 @@ class Emulator
 	uint m_mode;
 
 	u32 m_rsx_callback;
+	u32 m_ppu_thr_exit;
 	MemoryViewerPanel* m_memory_viewer;
 	//ArrayF<CPUThread> m_cpu_threads;
 
@@ -101,6 +102,7 @@ public:
 	u32 GetMallocPageSize() { return m_info.GetProcParam().malloc_pagesize; }
 
 	u32 GetRSXCallback() const { return m_rsx_callback; }
+	u32 GetPPUThreadExit() const { return m_ppu_thr_exit; }
 
 	void CheckStatus();
 

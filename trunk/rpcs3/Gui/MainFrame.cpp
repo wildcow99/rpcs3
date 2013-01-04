@@ -413,6 +413,6 @@ void MainFrame::UpdateUI()
 	pause.SetText(Emu.IsRunned() ? "Pause" : "Resume");
 	pause.Enable(!Emu.IsStopped());
 	stop.Enable(!Emu.IsStopped());
-	send_exit.Enable(false);
-	//send_exit.Enable(!Emu.IsStopped() && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount());
+	//send_exit.Enable(false);
+	send_exit.Enable(!Emu.IsStopped() && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount());
 }

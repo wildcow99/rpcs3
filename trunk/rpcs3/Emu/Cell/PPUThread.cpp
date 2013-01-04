@@ -62,6 +62,7 @@ void PPUThread::InitRegs()
 	const u32 entry = Memory.Read32(PC);
 	const u32 rtoc = Memory.Read32(PC + 4);
 
+	ConLog.Write("entry = 0x%x", entry);
 	ConLog.Write("rtoc = 0x%x", rtoc);
 
 	SetPc(entry);
@@ -88,6 +89,7 @@ void PPUThread::InitRegs()
 		return;
 	}
 
+	/*
 	const s32 tls_size = Emu.GetTLSFilesz() * thread_num;
 
 	if(tls_size >= Emu.GetTLSMemsz())
@@ -96,6 +98,7 @@ void PPUThread::InitRegs()
 		Emu.Pause();
 		return;
 	}
+	*/
 
 	stack_point = Memory.AlignAddr(stack_point, 0x200) - 0x200;
 

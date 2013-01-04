@@ -138,6 +138,13 @@ void Emulator::Run()
 	callback_data += ToOpcode(SC) | ToSYS(2);
 	callback_data += ToOpcode(G_13) | SetField(BCLR, 21, 30) | ToBO(0x10 | 0x04) | ToBI(0) | ToLK(0);
 
+	m_ppu_thr_exit = Memory.Alloc(4 * 3, 4);
+	
+	mem32_t ppu_thr_exit_data(m_ppu_thr_exit);
+	ppu_thr_exit_data += ToOpcode(ADDI) | ToRD(11) | ToRA(0) | ToIMM16(41);
+	ppu_thr_exit_data += ToOpcode(SC) | ToSYS(2);
+	ppu_thr_exit_data += ToOpcode(G_13) | SetField(BCLR, 21, 30) | ToBO(0x10 | 0x04) | ToBI(0) | ToLK(0);
+
 	thread.Run();
 
 	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);

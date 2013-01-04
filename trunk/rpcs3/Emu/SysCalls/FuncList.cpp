@@ -1485,7 +1485,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x744c1544: FUNC_LOG_ERROR("TODO: cellSysCacheClear");
 	case 0x749c9b5f: FUNC_LOG_ERROR("TODO: cellWebBrowserInitialize");
 	case 0x75bbb672: FUNC_LOG_ERROR("TODO: cellVideoOutGetNumberOfDevice");
-	case 0x7603d3db: FUNC_LOG_ERROR("TODO: cellMsgDialogOpen2");
+	case 0x7603d3db: return cellMsgDialogOpen2(SC_ARGS_5);//FUNC_LOG_ERROR("TODO: cellMsgDialogOpen2");
 	case 0x7663e368: FUNC_LOG_ERROR("TODO: cellAudioOutGetDeviceInfo");
 	case 0x76948bfc: FUNC_LOG_ERROR("TODO: cellSysconfAbort");
 	case 0x76fc8fb1: FUNC_LOG_ERROR("TODO: cellWebBrowserConfigSetHeapSize");
