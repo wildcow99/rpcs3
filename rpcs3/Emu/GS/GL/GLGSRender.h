@@ -247,7 +247,6 @@ private:
 
 public:
 	GLGSFrame* m_frame;
-	volatile bool m_draw;
 	u32 m_draw_frames;
 	u32 m_skip_frames;
 

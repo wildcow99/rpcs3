@@ -5,14 +5,27 @@ struct Callback
 	u64 m_addr;
 	u32 m_slot;
 
-	u64 m_status;
-	u64 m_param;
-	u64 m_userdata;
+	u64 a1;
+	u64 a2;
+	u64 a3;
+
 	bool m_has_data;
 
-	Callback(u32 slot, u64 addr, u64 userdata);
-	void Handle(u64 status, u64 param);
+	Callback(u32 slot, u64 addr);
+	void Handle(u64 a1, u64 a2, u64 a3);
 	void Branch();
+};
+
+struct Callback2 : public Callback
+{
+	Callback2(u32 slot, u64 addr, u64 userdata);
+	void Handle(u64 status);
+};
+
+struct Callback3 : public Callback
+{
+	Callback3(u32 slot, u64 addr, u64 userdata);
+	void Handle(u64 status, u64 param);
 };
 
 struct Callbacks
@@ -24,10 +37,9 @@ struct Callbacks
 	{
 	}
 
-	void Register(u32 slot, u64 addr, u64 userdata)
+	virtual void Register(u32 slot, u64 addr, u64 userdata)
 	{
 		Unregister(slot);
-		m_callbacks.AddCpy(Callback(slot, addr, userdata));
 	}
 
 	void Unregister(u32 slot)
@@ -42,13 +54,7 @@ struct Callbacks
 		}
 	}
 
-	void Handle(u64 status, u64 param)
-	{
-		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
-		{
-			m_callbacks[i].Handle(status, param);
-		}
-	}
+	virtual void Handle(u64 status, u64 param = 0)=0;
 
 	bool Check()
 	{
@@ -67,10 +73,52 @@ struct Callbacks
 	}
 };
 
+struct Callbacks2 : public Callbacks
+{
+	Callbacks2() : Callbacks()
+	{
+	}
+
+	void Register(u32 slot, u64 addr, u64 userdata)
+	{
+		Callbacks::Register(slot, addr, userdata);
+		m_callbacks.AddCpy(Callback2(slot, addr, userdata));
+	}
+
+	void Handle(u64 a1, u64 a2)
+	{
+		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
+		{
+			((Callback2&)m_callbacks[i]).Handle(a1);
+		}
+	}
+};
+
+struct Callbacks3 : public Callbacks
+{
+	Callbacks3() : Callbacks()
+	{
+	}
+
+	void Register(u32 slot, u64 addr, u64 userdata)
+	{
+		Callbacks::Register(slot, addr, userdata);
+		m_callbacks.AddCpy(Callback3(slot, addr, userdata));
+	}
+
+	void Handle(u64 a1, u64 a2)
+	{
+		for(u32 i=0; i<m_callbacks.GetCount(); ++i)
+		{
+			((Callback3&)m_callbacks[i]).Handle(a1, a2);
+		}
+	}
+};
+
 struct CallbackManager
 {
 	ArrayF<Callbacks> m_callbacks;
-	Callbacks m_exit_callback;
+	Callbacks3 m_exit_callback;
 
 	void Add(Callbacks& c)
 	{

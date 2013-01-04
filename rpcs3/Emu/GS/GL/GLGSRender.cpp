@@ -87,9 +87,9 @@ void GLGSFrame::SetViewport(int x, int y, u32 w, u32 h)
 
 GLGSRender::GLGSRender()
 	: m_frame(NULL)
-	, m_draw(false)
 	, m_rsx_thread(NULL)
 {
+	m_draw = false;
 	m_frame = new GLGSFrame();
 	m_vao_id = 0;
 }
@@ -107,7 +107,7 @@ void GLGSRender::Enable(bool enable, const u32 cap)
 }
 
 GLRSXThread::GLRSXThread(wxWindow* parent)
-	: wxThread(wxTHREAD_JOINABLE)
+	: wxThread(wxTHREAD_DETACHED)
 	, m_parent(parent)
 {
 }
@@ -124,14 +124,6 @@ void GLRSXThread::Start()
 }
 
 extern CellGcmContextData current_context;
-
-enum Method
-{
-	CELL_GCM_METHOD_FLAG_NON_INCREMENT	= 0x40000000,
-	CELL_GCM_METHOD_FLAG_JUMP			= 0x20000000,
-	CELL_GCM_METHOD_FLAG_CALL			= 0x00000002,
-	CELL_GCM_METHOD_FLAG_RETURN			= 0x00020000,
-};
 
 wxThread::ExitCode GLRSXThread::Entry()
 {
@@ -243,7 +235,7 @@ wxThread::ExitCode GLRSXThread::Entry()
 			p.DoCmd(cmd, cmd & 0x3ffff, args, count);
 		}
 
-		p.m_ctrl->get = re32(get + (count + 1) * 4);
+		re(p.m_ctrl->get, get + (count + 1) * 4);
 		//memset(Memory.GetMemFromAddr(p.m_ioAddress + get), 0, (count + 1) * 4);
 	}
 

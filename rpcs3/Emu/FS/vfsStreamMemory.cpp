@@ -5,7 +5,7 @@ vfsStreamMemory::vfsStreamMemory() : vfsStream()
 {
 }
 
-vfsStreamMemory::vfsStreamMemory(u64 addr)
+vfsStreamMemory::vfsStreamMemory(u64 addr) : vfsStream()
 {
 	Open(addr);
 }
