@@ -3617,9 +3617,9 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x744680a2:
 		// FUNC_LOG_ERROR("TODO: sys_initialize_tls");
 		ConLog.Warning("sys_initialize_tls()");
-		CPU.GPR[4] = Emu.GetTLSFilesz();
-		CPU.GPR[5] = Emu.GetTLSMemsz();
-	return Emu.GetTLSAddr();
+		//CPU.GPR[4] = Emu.GetTLSFilesz();
+		//CPU.GPR[5] = Emu.GetTLSMemsz();
+	return Memory.MainMem.Alloc(Emu.GetTLSMemsz());//Emu.GetTLSAddr();
 	case 0x7498887b: FUNC_LOG_ERROR("TODO: _sys_strchr");
 	case 0x791b9219: FUNC_LOG_ERROR("TODO: _sys_vsprintf");
 	case 0x80fb0c19: FUNC_LOG_ERROR("TODO: sys_prx_stop_module");
@@ -3655,7 +3655,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0xaeb78725: return sys_lwmutex_trylock(SC_ARGS_1);//FUNC_LOG_ERROR("TODO: sys_lwmutex_trylock");
 	case 0xaede4b03: FUNC_LOG_ERROR("TODO: _sys_heap_delete_heap");
 	case 0xaff080a4: return sys_ppu_thread_exit(SC_ARGS_1);//FUNC_LOG_ERROR("TODO: sys_ppu_thread_exit");
-	case 0xb257540b: FUNC_LOG_ERROR("TODO: sys_mmapper_allocate_memory");
+	case 0xb257540b: return sys_mmapper_allocate_memory(SC_ARGS_3); //FUNC_LOG_ERROR("TODO: sys_mmapper_allocate_memory");
 	case 0xb27c8ae7: FUNC_LOG_ERROR("TODO: sys_prx_load_module_list");
 	case 0xb2fcf2c8: return sys_heap_create_heap(SC_ARGS_3);//FUNC_LOG_ERROR("TODO: _sys_heap_create_heap");
 	case 0xb3bbcf2a: FUNC_LOG_ERROR("TODO: _sys_spu_printf_detach_thread");
@@ -3674,7 +3674,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0xd3039d4d: FUNC_LOG_ERROR("TODO: _sys_strncpy");
 	case 0xda0eb71a: FUNC_LOG_ERROR("TODO: sys_lwcond_create");
 	case 0xdb6b3250: FUNC_LOG_ERROR("TODO: sys_spu_elf_get_segments");
-	case 0xdc578057: FUNC_LOG_ERROR("TODO: sys_mmapper_map_memory");
+	case 0xdc578057: return sys_mmapper_map_memory(SC_ARGS_3); //FUNC_LOG_ERROR("TODO: sys_mmapper_map_memory");
 	case 0xdd0c1e09: FUNC_LOG_ERROR("TODO: _sys_spu_printf_attach_group");
 	case 0xdd3b27ac: FUNC_LOG_ERROR("TODO: _sys_spu_printf_finalize");
 	case 0xe0998dbf: FUNC_LOG_ERROR("TODO: sys_prx_get_module_id_by_name");

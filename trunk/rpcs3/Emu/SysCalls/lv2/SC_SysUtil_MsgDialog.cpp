@@ -65,10 +65,12 @@ int cellMsgDialogOpen2(u32 type, u32 msgString_addr, u32 callback_addr, u32 user
 		}
 
 		status = CELL_MSGDIALOG_BUTTON_NONE;
-		break;
+	break;
 	}
+
 	Callback2 callback(0, callback_addr, userData);
 	callback.Handle(status);
 	callback.Branch();
+
 	return CELL_OK;
 }

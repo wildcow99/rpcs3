@@ -5,13 +5,16 @@
 
 #define declCPU const PPUThread& CPU = GetCurrentPPUThread
 
-class SysCallBase
+class SysCallBase //Module
 {
 private:
 	wxString m_module_name;
+	//u32 m_id;
 
 public:
-	SysCallBase(const wxString& name) : m_module_name(name)
+	SysCallBase(const wxString& name/*, u32 id*/)
+		: m_module_name(name)
+		//, m_id(id)
 	{
 	}
 
@@ -153,7 +156,11 @@ extern int sys_ppu_thread_exit(int errorcode);
 extern int sys_memory_container_create(u32 cid_addr, u32 yield_size);
 extern int sys_memory_container_destroy(u32 cid);
 extern int sys_memory_allocate(u32 size, u32 flags, u32 alloc_addr_addr);
+extern int sys_memory_free(u32 start_addr);
 extern int sys_memory_get_user_memory_size(u32 mem_info_addr);
+extern int sys_mmapper_allocate_address(u32 size, u64 flags, u32 alignment, u32 alloc_addr);
+extern int sys_mmapper_allocate_memory(u32 size, u64 flags, u32 mem_id_addr);
+extern int sys_mmapper_map_memory(u32 start_addr, u32 mem_id, u64 flags);
 
 //cellFs
 extern int cellFsOpen(const u32 path_addr, const int flags, const u32 fd_addr, const u32 arg_addr, const u64 size);

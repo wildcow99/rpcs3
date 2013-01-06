@@ -74,7 +74,7 @@ int sys_spu_thread_create(u64 thread_id_addr, u64 entry_addr, u64 arg,
 //160
 int sys_raw_spu_create(u32 id_addr, u32 attr_addr)
 {
-	sc_spu.Log("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id_addr, attr_addr);
+	sc_spu.Warning("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id_addr, attr_addr);
 
 	PPCThread& new_thread = Emu.GetCPU().AddThread(false);
 	Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
@@ -86,7 +86,7 @@ int sys_raw_spu_create(u32 id_addr, u32 attr_addr)
 //169
 int sys_spu_initialize(u32 max_usable_spu, u32 max_raw_spu)
 {
-	sc_spu.Log("sys_spu_initialize(max_usable_spu=%d, max_raw_spu=%d)", max_usable_spu, max_raw_spu);
+	sc_spu.Warning("sys_spu_initialize(max_usable_spu=%d, max_raw_spu=%d)", max_usable_spu, max_raw_spu);
 
 	if(!Memory.InitSpuRawMem(max_raw_spu))
 	{

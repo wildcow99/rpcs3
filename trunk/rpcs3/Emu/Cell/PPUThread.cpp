@@ -122,7 +122,7 @@ void PPUThread::InitRegs()
 	//GPR[10] = 0x131700;
 	GPR[11] = 0x80;
 	GPR[12] = Emu.GetMallocPageSize();
-	GPR[13] = 0x10007060;
+	GPR[13] = Memory.MainMem.Alloc(0x10000) + 0x7060;
 	GPR[28] = GPR[4];
 	GPR[29] = GPR[3];
 	GPR[31] = GPR[5];

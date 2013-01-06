@@ -8,227 +8,230 @@
 #define ADD_NULL_OPCODE(name) virtual void(##name##)()=0
 #define END_OPCODES_GROUP(x) /*x*/
 
-enum SPU_0_10_Opcodes
+namespace SPU_opcodes
 {
-	STOP = 0x0,
-	LNOP = 0x1,
-	SPU_SYNC = 0x2,
-	DSYNC = 0x3,
-	SPU_MFSPR = 0xc,
-	RDCH = 0xd,
-	RCHCNT = 0xf,
-	SF = 0x40,
-	SPU_OR = 0x41,
-	BG = 0x42,
-	SFH = 0x48,
-	SPU_NOR = 0x49,
-	ABSDB = 0x53,
-	ROT = 0x58,
-	ROTM = 0x59,
-	ROTMA = 0x5a,
-	SHL = 0x5b,
-	ROTH = 0x5c,
-	ROTHM = 0x5d,
-	ROTMAH = 0x5e,
-	SHLH = 0x5f,
-	ROTI = 0x78,
-	ROTMI = 0x79,
-	ROTMAI = 0x7a,
-	SHLI = 0x7b,
-	ROTHI = 0x7c,
-	ROTHMI = 0x7d,
-	ROTMAHI = 0x7e,
-	SHLHI = 0x7f,
-	A = 0xc0,
-	SPU_AND = 0xc1,
-	CG = 0xc2,
-	AH = 0xc8,
-	NAND = 0xc9,
-	AVGB = 0xd3,
-	SPU_MTSPR = 0x10c,
-	WRCH = 0x10d,
-	BIZ = 0x128,
-	BINZ = 0x129,
-	BIHZ = 0x12a,
-	BIHNZ = 0x12b,
-	STOPD = 0x140,
-	STQX = 0x144,
-	BI = 0x1a8,
-	BISL = 0x1a9,
-	IRET = 0x1aa,
-	BISLED = 0x1ab,
-	HBR = 0x1ac,
-	GB = 0x1b0,
-	GBH = 0x1b1,
-	GBB = 0x1b2,
-	FSM = 0x1b4,
-	FSMH = 0x1b5,
-	FSMB = 0x1b6,
-	FREST = 0x1b8,
-	FRSQEST = 0x1b9,
-	LQX = 0x1c4,
-	ROTQBYBI = 0x1cc,
-	ROTQMBYBI = 0x1cd,
-	SHLQBYBI = 0x1cf,
-	CBX = 0x1d4,
-	CHX = 0x1d5,
-	CWX = 0x1d6,
-	CDX = 0x1d7,
-	ROTQBI = 0x1d8,
-	ROTQMBI = 0x1d9,
-	SHLQBI = 0x1db,
-	ROTQBY = 0x1dc,
-	ROTQMBY = 0x1dd,
-	SHLQBY = 0x1df,
-	ORX = 0x1f0,
-	CBD = 0x1f4,
-	CHD = 0x1f5,
-	CWD = 0x1f6,
-	CDD = 0x1f7,
-	ROTQBII = 0x1f8,
-	ROTQMBII = 0x1f9,
-	SHLQBII = 0x1fb,
-	ROTQBYI = 0x1fc,
-	ROTQMBYI = 0x1fd,
-	SHLQBYI = 0x1ff,
-	SPU_NOP = 0x201,
-	CGT = 0x240,
-	SPU_XOR = 0x241,
-	CGTH = 0x248,
-	SPU_EQV = 0x249,
-	CGTB = 0x250,
-	SUMB = 0x253,
-	HGT = 0x258,
-	CLZ = 0x2a5,
-	XSWD = 0x2a6,
-	XSHW = 0x2ae,
-	CNTB = 0x2b4,
-	XSBH = 0x2b6,
-	CLGT = 0x2c0,
-	SPU_ANDC = 0x2c1,
-	FCGT = 0x2c2,
-	DFCGT = 0x2c3,
-	FA = 0x2c4,
-	FS = 0x2c5,
-	FM = 0x2c6,
-	CLGTH = 0x2c8,
-	SPU_ORC = 0x2c9,
-	FCMGT = 0x2ca,
-	DFCMGT = 0x2cb,
-	DFA = 0x2cc,
-	DFS = 0x2cd,
-	DFM = 0x2ce,
-	CLGTB = 0x2d0,
-	HLGT = 0x2d8,
-	DFMA = 0x35c,
-	DFMS = 0x35d,
-	DFNMS = 0x35e,
-	DFNMA = 0x35f,
-	CEQ = 0x3c0,
-	MPYHHU = 0x3ce,
-	ADDX = 0x340,
-	SFX = 0x341,
-	CGX = 0x342,
-	BGX = 0x343,
-	MPYHHA = 0x346,
-	MPYHHAU = 0x34e,
-	FSCRRD = 0x398,
-	FESD = 0x3b8,
-	FRDS = 0x3b9,
-	FSCRWR = 0x3ba,
-	DFTSV = 0x3bf,
-	FCEQ = 0x3c2,
-	DFCEQ = 0x3c3,
-	MPY = 0x3c4,
-	MPYH = 0x3c5,
-	MPYHH = 0x3c6,
-	MPYS = 0x3c7,
-	CEQH = 0x3c8,
-	FCMEQ = 0x3ca,
-	DFCMEQ = 0x3cb,
-	MPYU = 0x3cc,
-	CEQB = 0x3d0,
-	FI = 0x3d4,
-	HEQ = 0x3d8,
-};
+	enum SPU_0_10_Opcodes
+	{
+		STOP = 0x0,
+		LNOP = 0x1,
+		SYNC = 0x2,
+		DSYNC = 0x3,
+		MFSPR = 0xc,
+		RDCH = 0xd,
+		RCHCNT = 0xf,
+		SF = 0x40,
+		OR = 0x41,
+		BG = 0x42,
+		SFH = 0x48,
+		NOR = 0x49,
+		ABSDB = 0x53,
+		ROT = 0x58,
+		ROTM = 0x59,
+		ROTMA = 0x5a,
+		SHL = 0x5b,
+		ROTH = 0x5c,
+		ROTHM = 0x5d,
+		ROTMAH = 0x5e,
+		SHLH = 0x5f,
+		ROTI = 0x78,
+		ROTMI = 0x79,
+		ROTMAI = 0x7a,
+		SHLI = 0x7b,
+		ROTHI = 0x7c,
+		ROTHMI = 0x7d,
+		ROTMAHI = 0x7e,
+		SHLHI = 0x7f,
+		A = 0xc0,
+		AND = 0xc1,
+		CG = 0xc2,
+		AH = 0xc8,
+		NAND = 0xc9,
+		AVGB = 0xd3,
+		MTSPR = 0x10c,
+		WRCH = 0x10d,
+		BIZ = 0x128,
+		BINZ = 0x129,
+		BIHZ = 0x12a,
+		BIHNZ = 0x12b,
+		STOPD = 0x140,
+		STQX = 0x144,
+		BI = 0x1a8,
+		BISL = 0x1a9,
+		IRET = 0x1aa,
+		BISLED = 0x1ab,
+		HBR = 0x1ac,
+		GB = 0x1b0,
+		GBH = 0x1b1,
+		GBB = 0x1b2,
+		FSM = 0x1b4,
+		FSMH = 0x1b5,
+		FSMB = 0x1b6,
+		FREST = 0x1b8,
+		FRSQEST = 0x1b9,
+		LQX = 0x1c4,
+		ROTQBYBI = 0x1cc,
+		ROTQMBYBI = 0x1cd,
+		SHLQBYBI = 0x1cf,
+		CBX = 0x1d4,
+		CHX = 0x1d5,
+		CWX = 0x1d6,
+		CDX = 0x1d7,
+		ROTQBI = 0x1d8,
+		ROTQMBI = 0x1d9,
+		SHLQBI = 0x1db,
+		ROTQBY = 0x1dc,
+		ROTQMBY = 0x1dd,
+		SHLQBY = 0x1df,
+		ORX = 0x1f0,
+		CBD = 0x1f4,
+		CHD = 0x1f5,
+		CWD = 0x1f6,
+		CDD = 0x1f7,
+		ROTQBII = 0x1f8,
+		ROTQMBII = 0x1f9,
+		SHLQBII = 0x1fb,
+		ROTQBYI = 0x1fc,
+		ROTQMBYI = 0x1fd,
+		SHLQBYI = 0x1ff,
+		NOP = 0x201,
+		CGT = 0x240,
+		XOR = 0x241,
+		CGTH = 0x248,
+		EQV = 0x249,
+		CGTB = 0x250,
+		SUMB = 0x253,
+		HGT = 0x258,
+		CLZ = 0x2a5,
+		XSWD = 0x2a6,
+		XSHW = 0x2ae,
+		CNTB = 0x2b4,
+		XSBH = 0x2b6,
+		CLGT = 0x2c0,
+		ANDC = 0x2c1,
+		FCGT = 0x2c2,
+		DFCGT = 0x2c3,
+		FA = 0x2c4,
+		FS = 0x2c5,
+		FM = 0x2c6,
+		CLGTH = 0x2c8,
+		ORC = 0x2c9,
+		FCMGT = 0x2ca,
+		DFCMGT = 0x2cb,
+		DFA = 0x2cc,
+		DFS = 0x2cd,
+		DFM = 0x2ce,
+		CLGTB = 0x2d0,
+		HLGT = 0x2d8,
+		DFMA = 0x35c,
+		DFMS = 0x35d,
+		DFNMS = 0x35e,
+		DFNMA = 0x35f,
+		CEQ = 0x3c0,
+		MPYHHU = 0x3ce,
+		ADDX = 0x340,
+		SFX = 0x341,
+		CGX = 0x342,
+		BGX = 0x343,
+		MPYHHA = 0x346,
+		MPYHHAU = 0x34e,
+		FSCRRD = 0x398,
+		FESD = 0x3b8,
+		FRDS = 0x3b9,
+		FSCRWR = 0x3ba,
+		DFTSV = 0x3bf,
+		FCEQ = 0x3c2,
+		DFCEQ = 0x3c3,
+		MPY = 0x3c4,
+		MPYH = 0x3c5,
+		MPYHH = 0x3c6,
+		MPYS = 0x3c7,
+		CEQH = 0x3c8,
+		FCMEQ = 0x3ca,
+		DFCMEQ = 0x3cb,
+		MPYU = 0x3cc,
+		CEQB = 0x3d0,
+		FI = 0x3d4,
+		HEQ = 0x3d8,
+	};
 
-enum SPU_0_9_Opcodes
-{
-	CFLTS = 0x1d8,
-	CFLTU = 0x1d9,
-	CSFLT = 0x1da,
-	CUFLT = 0x1db,
-};
+	enum SPU_0_9_Opcodes
+	{
+		CFLTS = 0x1d8,
+		CFLTU = 0x1d9,
+		CSFLT = 0x1da,
+		CUFLT = 0x1db,
+	};
 
-enum SPU_0_8_Opcodes
-{
-	BRZ = 0x40,
-	STQA = 0x41,
-	BRNZ = 0x42,
-	BRHZ = 0x44,
-	BRHNZ = 0x46,
-	STQR = 0x47,
-	BRA = 0x60,
-	LQA = 0x61,
-	BRASL = 0x62,
-	BR = 0x64,
-	FSMBI = 0x65,
-	BRSL = 0x66,
-	LQR = 0x67,
-	IL = 0x81,
-	ILHU = 0x82,
-	ILH = 0x83,
-	IOHL = 0xc1,
-};
+	enum SPU_0_8_Opcodes
+	{
+		BRZ = 0x40,
+		STQA = 0x41,
+		BRNZ = 0x42,
+		BRHZ = 0x44,
+		BRHNZ = 0x46,
+		STQR = 0x47,
+		BRA = 0x60,
+		LQA = 0x61,
+		BRASL = 0x62,
+		BR = 0x64,
+		FSMBI = 0x65,
+		BRSL = 0x66,
+		LQR = 0x67,
+		IL = 0x81,
+		ILHU = 0x82,
+		ILH = 0x83,
+		IOHL = 0xc1,
+	};
 
-enum SPU_0_7_Opcodes
-{
-	SPU_ORI = 0x4,
-	ORHI = 0x5,
-	ORBI = 0x6,
-	SFI = 0xc,
-	SFHI = 0xd,
-	ANDI = 0x14,
-	ANDHI = 0x15,
-	ANDBI = 0x16,
-	AI = 0x1c,
-	AHI = 0x1d,
-	STQD = 0x24,
-	LQD = 0x34,
-	SPU_XORI = 0x44,
-	XORHI = 0x45,
-	XORBI = 0x46,
-	CGTI = 0x4c,
-	CGTHI = 0x4d,
-	CGTBI = 0x4e,
-	HGTI = 0x4f,
-	CLGTI = 0x5c,
-	CLGTHI = 0x5d,
-	CLGTBI = 0x5e,
-	HLGTI = 0x5f,
-	MPYI = 0x74,
-	MPYUI = 0x75,
-	CEQI = 0x7c,
-	CEQHI = 0x7d,
-	CEQBI = 0x7e,
-	HEQI = 0x7f,
-};
+	enum SPU_0_7_Opcodes
+	{
+		ORI = 0x4,
+		ORHI = 0x5,
+		ORBI = 0x6,
+		SFI = 0xc,
+		SFHI = 0xd,
+		ANDI = 0x14,
+		ANDHI = 0x15,
+		ANDBI = 0x16,
+		AI = 0x1c,
+		AHI = 0x1d,
+		STQD = 0x24,
+		LQD = 0x34,
+		XORI = 0x44,
+		XORHI = 0x45,
+		XORBI = 0x46,
+		CGTI = 0x4c,
+		CGTHI = 0x4d,
+		CGTBI = 0x4e,
+		HGTI = 0x4f,
+		CLGTI = 0x5c,
+		CLGTHI = 0x5d,
+		CLGTBI = 0x5e,
+		HLGTI = 0x5f,
+		MPYI = 0x74,
+		MPYUI = 0x75,
+		CEQI = 0x7c,
+		CEQHI = 0x7d,
+		CEQBI = 0x7e,
+		HEQI = 0x7f,
+	};
 
-enum SPU_0_6_Opcodes
-{
-	HBRA = 0x8,
-	HBRR = 0x9,
-	ILA = 0x21,
-};
+	enum SPU_0_6_Opcodes
+	{
+		HBRA = 0x8,
+		HBRR = 0x9,
+		ILA = 0x21,
+	};
 
-enum SPU_0_3_Opcodes
-{
-	SELB = 0x8,
-	SHUFB = 0xb,
-	MPYA = 0xc,
-	FNMS = 0xd,
-	FMA = 0xe,
-	FMS = 0xf,
+	enum SPU_0_3_Opcodes
+	{
+		SELB = 0x8,
+		SHUFB = 0xb,
+		MPYA = 0xc,
+		FNMS = 0xd,
+		FMA = 0xe,
+		FMS = 0xf,
+	};
 };
 
 class SPU_Opcodes
@@ -244,16 +247,16 @@ public:
 	//0 - 10
 	ADD_OPCODE(STOP,(OP_uIMM code));
 	ADD_OPCODE(LNOP,());
-	ADD_OPCODE(SPU_SYNC, (OP_uIMM Cbit));
+	ADD_OPCODE(SYNC, (OP_uIMM Cbit));
 	ADD_OPCODE(DSYNC, ());
-	ADD_OPCODE(SPU_MFSPR,(OP_REG rt, OP_REG sa));
+	ADD_OPCODE(MFSPR,(OP_REG rt, OP_REG sa));
 	ADD_OPCODE(RDCH,(OP_REG rt, OP_REG ra));
 	ADD_OPCODE(RCHCNT,(OP_REG rt, OP_REG ra));
 	ADD_OPCODE(SF,(OP_REG rt, OP_REG ra, OP_REG rb));
-	ADD_OPCODE(SPU_OR,(OP_REG rt, OP_REG ra, OP_REG rb));
+	ADD_OPCODE(OR,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(BG,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(SFH,(OP_REG rt, OP_REG ra, OP_REG rb));
-	ADD_OPCODE(SPU_NOR,(OP_REG rt, OP_REG ra, OP_REG rb));
+	ADD_OPCODE(NOR,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(ABSDB,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(ROT,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(ROTM,(OP_REG rt, OP_REG ra, OP_REG rb));
@@ -272,12 +275,12 @@ public:
 	ADD_OPCODE(ROTMAHI,(OP_REG rt, OP_REG ra, OP_sIMM i7));
 	ADD_OPCODE(SHLHI,(OP_REG rt, OP_REG ra, OP_sIMM i7));
 	ADD_OPCODE(A,(OP_REG rt, OP_REG ra, OP_REG rb));
-	ADD_OPCODE(SPU_AND,(OP_REG rt, OP_REG ra, OP_REG rb));
+	ADD_OPCODE(AND,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(CG,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(AH,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(NAND,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(AVGB,(OP_REG rt, OP_REG ra, OP_REG rb));
-	ADD_OPCODE(SPU_MTSPR,(OP_REG rt, OP_REG sa));
+	ADD_OPCODE(MTSPR,(OP_REG rt, OP_REG sa));
 	ADD_OPCODE(WRCH,(OP_REG ra, OP_REG rt));
 	ADD_OPCODE(BIZ,(OP_REG rt, OP_REG ra));
 	ADD_OPCODE(BINZ,(OP_REG rt, OP_REG ra));
@@ -323,11 +326,11 @@ public:
 	ADD_OPCODE(ROTQBYI,(OP_REG rt, OP_REG ra, OP_sIMM i7));
 	ADD_OPCODE(ROTQMBYI,(OP_REG rt, OP_REG ra, OP_sIMM i7));
 	ADD_OPCODE(SHLQBYI,(OP_REG rt, OP_REG ra, OP_sIMM i7));
-	ADD_OPCODE(SPU_NOP,(OP_REG rt));
+	ADD_OPCODE(NOP,(OP_REG rt));
 	ADD_OPCODE(CGT,(OP_REG rt, OP_REG ra, OP_REG rb));
-	ADD_OPCODE(SPU_XOR,(OP_REG rt, OP_REG ra, OP_REG rb));
+	ADD_OPCODE(XOR,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(CGTH,(OP_REG rt, OP_REG ra, OP_REG rb));
-	ADD_OPCODE(SPU_EQV,(OP_REG rt, OP_REG ra, OP_REG rb));
+	ADD_OPCODE(EQV,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(CGTB,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(SUMB,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(HGT,(OP_REG rt, OP_REG ra, OP_REG rb));
@@ -337,14 +340,14 @@ public:
 	ADD_OPCODE(CNTB,(OP_REG rt, OP_REG ra));
 	ADD_OPCODE(XSBH,(OP_REG rt, OP_REG ra));
 	ADD_OPCODE(CLGT,(OP_REG rt, OP_REG ra, OP_REG rb));
-	ADD_OPCODE(SPU_ANDC,(OP_REG rt, OP_REG ra, OP_REG rb));
+	ADD_OPCODE(ANDC,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(FCGT,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(DFCGT,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(FA,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(FS,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(FM,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(CLGTH,(OP_REG rt, OP_REG ra, OP_REG rb));
-	ADD_OPCODE(SPU_ORC,(OP_REG rt, OP_REG ra, OP_REG rb));
+	ADD_OPCODE(ORC,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(FCMGT,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(DFCMGT,(OP_REG rt, OP_REG ra, OP_REG rb));
 	ADD_OPCODE(DFA,(OP_REG rt, OP_REG ra, OP_REG rb));
@@ -409,7 +412,7 @@ public:
 	ADD_OPCODE(IOHL,(OP_REG rt, OP_sIMM i16));
 
 	//0 - 7
-	ADD_OPCODE(SPU_ORI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
+	ADD_OPCODE(ORI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
 	ADD_OPCODE(ORHI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
 	ADD_OPCODE(ORBI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
 	ADD_OPCODE(SFI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
@@ -421,7 +424,7 @@ public:
 	ADD_OPCODE(AHI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
 	ADD_OPCODE(STQD,(OP_REG rt, OP_sIMM i10, OP_REG ra));
 	ADD_OPCODE(LQD,(OP_REG rt, OP_sIMM i10, OP_REG ra));
-	ADD_OPCODE(SPU_XORI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
+	ADD_OPCODE(XORI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
 	ADD_OPCODE(XORHI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
 	ADD_OPCODE(XORBI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
 	ADD_OPCODE(CGTI,(OP_REG rt, OP_REG ra, OP_sIMM i10));
