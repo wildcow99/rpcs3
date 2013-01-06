@@ -95,22 +95,24 @@ public:
 
 	virtual void Decode(const u32 code)
 	{
+		using namespace SPU_opcodes;
+
 		m_code = code;
 
 		switch(RR()) //& RI7 //0 - 10
 		{
 		ADD_OPCODE(STOP,(GetField(18, 31)));
 		ADD_OPCODE(LNOP,());
-		ADD_OPCODE(SPU_SYNC,(GetField(11)));
+		ADD_OPCODE(SYNC,(GetField(11)));
 		ADD_OPCODE(DSYNC,());
-		ADD_OPCODE(SPU_MFSPR,(RT(), RA()));
+		ADD_OPCODE(MFSPR,(RT(), RA()));
 		ADD_OPCODE(RDCH,(RT(), RA()));
 		ADD_OPCODE(RCHCNT,(RT(), RA()));
 		ADD_OPCODE(SF,(RT(), RA(), RB()));
-		ADD_OPCODE(SPU_OR,(RT(), RA(), RB()));
+		ADD_OPCODE(OR,(RT(), RA(), RB()));
 		ADD_OPCODE(BG,(RT(), RA(), RB()));
 		ADD_OPCODE(SFH,(RT(), RA(), RB()));
-		ADD_OPCODE(SPU_NOR,(RT(), RA(), RB()));
+		ADD_OPCODE(NOR,(RT(), RA(), RB()));
 		ADD_OPCODE(ABSDB,(RT(), RA(), RB()));
 		ADD_OPCODE(ROT,(RT(), RA(), RB()));
 		ADD_OPCODE(ROTM,(RT(), RA(), RB()));
@@ -129,12 +131,12 @@ public:
 		ADD_OPCODE(ROTMAHI,(RT(), RA(), i7()));
 		ADD_OPCODE(SHLHI,(RT(), RA(), i7()));
 		ADD_OPCODE(A,(RT(), RA(), RB()));
-		ADD_OPCODE(SPU_AND,(RT(), RA(), RB()));
+		ADD_OPCODE(AND,(RT(), RA(), RB()));
 		ADD_OPCODE(CG,(RT(), RA(), RB()));
 		ADD_OPCODE(AH,(RT(), RA(), RB()));
 		ADD_OPCODE(NAND,(RT(), RA(), RB()));
 		ADD_OPCODE(AVGB,(RT(), RA(), RB()));
-		ADD_OPCODE(SPU_MTSPR,(RT(), RA()));
+		ADD_OPCODE(MTSPR,(RT(), RA()));
 		ADD_OPCODE(WRCH,(RA(), RT()));
 		ADD_OPCODE(BIZ,(RT(), RA()));
 		ADD_OPCODE(BINZ,(RT(), RA()));
@@ -180,11 +182,11 @@ public:
 		ADD_OPCODE(ROTQBYI,(RT(), RA(), i7()));
 		ADD_OPCODE(ROTQMBYI,(RT(), RA(), i7()));
 		ADD_OPCODE(SHLQBYI,(RT(), RA(), i7()));
-		ADD_OPCODE(SPU_NOP,(RT()));
+		ADD_OPCODE(NOP,(RT()));
 		ADD_OPCODE(CGT,(RT(), RA(), RB()));
-		ADD_OPCODE(SPU_XOR,(RT(), RA(), RB()));
+		ADD_OPCODE(XOR,(RT(), RA(), RB()));
 		ADD_OPCODE(CGTH,(RT(), RA(), RB()));
-		ADD_OPCODE(SPU_EQV,(RT(), RA(), RB()));
+		ADD_OPCODE(EQV,(RT(), RA(), RB()));
 		ADD_OPCODE(CGTB,(RT(), RA(), RB()));
 		ADD_OPCODE(SUMB,(RT(), RA(), RB()));
 		ADD_OPCODE(HGT,(RT(), RA(), RB()));
@@ -194,14 +196,14 @@ public:
 		ADD_OPCODE(CNTB,(RT(), RA()));
 		ADD_OPCODE(XSBH,(RT(), RA()));
 		ADD_OPCODE(CLGT,(RT(), RA(), RB()));
-		ADD_OPCODE(SPU_ANDC,(RT(), RA(), RB()));
+		ADD_OPCODE(ANDC,(RT(), RA(), RB()));
 		ADD_OPCODE(FCGT,(RT(), RA(), RB()));
 		ADD_OPCODE(DFCGT,(RT(), RA(), RB()));
 		ADD_OPCODE(FA,(RT(), RA(), RB()));
 		ADD_OPCODE(FS,(RT(), RA(), RB()));
 		ADD_OPCODE(FM,(RT(), RA(), RB()));
 		ADD_OPCODE(CLGTH,(RT(), RA(), RB()));
-		ADD_OPCODE(SPU_ORC,(RT(), RA(), RB()));
+		ADD_OPCODE(ORC,(RT(), RA(), RB()));
 		ADD_OPCODE(FCMGT,(RT(), RA(), RB()));
 		ADD_OPCODE(DFCMGT,(RT(), RA(), RB()));
 		ADD_OPCODE(DFA,(RT(), RA(), RB()));
@@ -272,7 +274,7 @@ public:
 
 		switch(RI10()) //0 - 7
 		{
-		ADD_OPCODE(SPU_ORI,(RT(), RA(), exts10(i10())));
+		ADD_OPCODE(ORI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(ORHI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(ORBI,(RT(), RA(), i10()));
 		ADD_OPCODE(SFI,(RT(), RA(), exts10(i10())));
@@ -284,7 +286,7 @@ public:
 		ADD_OPCODE(AHI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(STQD,(RT(), exts10(i10()) << 4, RA()));
 		ADD_OPCODE(LQD,(RT(), exts10(i10()) << 4, RA()));
-		ADD_OPCODE(SPU_XORI,(RT(), RA(), exts10(i10())));
+		ADD_OPCODE(XORI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(XORHI,(RT(), RA(), exts10(i10())));
 		ADD_OPCODE(XORBI,(RT(), RA(), i10()));
 		ADD_OPCODE(CGTI,(RT(), RA(), exts10(i10())));

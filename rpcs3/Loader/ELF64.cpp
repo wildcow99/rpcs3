@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "ELF64.h"
 #include "Gui/CompilerELF.h"
+using namespace PPU_opcodes;
 
 ELF64Loader::ELF64Loader(vfsStream& f)
 	: elf64_f(f)
@@ -168,8 +169,8 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 
 		if(!Memory.MainMem.IsInMyRange(offset + phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz))
 		{
-			ConLog.Warning("Skipping...");
 #ifdef LOADER_DEBUG
+			ConLog.Warning("Skipping...");
 			ConLog.SkipLn();
 #endif
 			continue;
@@ -178,9 +179,16 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 		switch(phdr_arr[i].p_type)
 		{
 			case 0x00000001: //LOAD
-				Memory.MainMem.Alloc(offset + phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz);
-				elf64_f.Seek(phdr_arr[i].p_offset);
-				elf64_f.Read(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
+				if(phdr_arr[i].p_memsz)
+				{
+					Memory.MainMem.Alloc(offset + phdr_arr[i].p_vaddr, phdr_arr[i].p_memsz);
+
+					if(phdr_arr[i].p_filesz)
+					{
+						elf64_f.Seek(phdr_arr[i].p_offset);
+						elf64_f.Read(&Memory[offset + phdr_arr[i].p_vaddr], phdr_arr[i].p_filesz);
+					}
+				}
 			break;
 
 			case 0x00000007: //TLS
@@ -280,8 +288,9 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						ConLog.Write("*** text: 0x%x", stub.s_text);
 #endif
 						static const u32 section = 4 * 3;
-						u64 dst = Memory.MainMem.Alloc(stub.s_imports * section);
 						u64 tbl = Memory.MainMem.Alloc(stub.s_imports * 4 * 2);
+						u64 dst = Memory.MainMem.Alloc(stub.s_imports * section);
+
 						for(u32 i=0; i<stub.s_imports; ++i)
 						{
 							const u32 nid = Memory.Read32(stub.s_nid + i*4);

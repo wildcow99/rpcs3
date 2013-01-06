@@ -33,7 +33,7 @@ private:
 	virtual void LNOP()
 	{
 	}
-	virtual void SPU_SYNC(OP_uIMM Cbit)
+	virtual void SYNC(OP_uIMM Cbit)
 	{
 		// TODO
 	}
@@ -41,7 +41,7 @@ private:
 	{
 		// TODO
 	}
-	virtual void SPU_MFSPR(OP_REG rt, OP_REG sa)
+	virtual void MFSPR(OP_REG rt, OP_REG sa)
 	{
 		// TODO
 	}
@@ -61,7 +61,7 @@ private:
 		CPU.GPR[rt]._u32[2] = CPU.GPR[rb]._u32[2] + ~CPU.GPR[ra]._u32[2] + 1;
 		CPU.GPR[rt]._u32[3] = CPU.GPR[rb]._u32[3] + ~CPU.GPR[ra]._u32[3] + 1;
 	}
-	virtual void SPU_OR(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void OR(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] | CPU.GPR[rb]._u32[0];
 		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._u32[1] | CPU.GPR[rb]._u32[1];
@@ -80,7 +80,7 @@ private:
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._u16[h] = CPU.GPR[rb]._u16[h] - CPU.GPR[ra]._u16[h];
 	}
-	virtual void SPU_NOR(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void NOR(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		CPU.GPR[rt]._u32[0] = ~(CPU.GPR[ra]._u32[0] | CPU.GPR[rb]._u32[0]);
 		CPU.GPR[rt]._u32[1] = ~(CPU.GPR[ra]._u32[1] | CPU.GPR[rb]._u32[1]);
@@ -216,7 +216,7 @@ private:
 		CPU.GPR[rt]._u32[2] = CPU.GPR[ra]._u32[2] + CPU.GPR[rb]._u32[2];
 		CPU.GPR[rt]._u32[3] = CPU.GPR[ra]._u32[3] + CPU.GPR[rb]._u32[3];
 	}
-	virtual void SPU_AND(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void AND(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		CPU.GPR[rt]._u32[0] = CPU.GPR[ra]._u32[0] & CPU.GPR[rb]._u32[0];
 		CPU.GPR[rt]._u32[1] = CPU.GPR[ra]._u32[1] & CPU.GPR[rb]._u32[1];
@@ -247,7 +247,7 @@ private:
 		for (int b = 0; b < 16; b++)
 			CPU.GPR[rt]._u8[b] = (CPU.GPR[ra]._u8[b] + CPU.GPR[rb]._u8[b] + 1) >> 1;
 	}
-	virtual void SPU_MTSPR(OP_REG rt, OP_REG sa)
+	virtual void MTSPR(OP_REG rt, OP_REG sa)
 	{
 		// TODO
 	}
@@ -583,7 +583,7 @@ private:
 			CPU.GPR[rt]._u8[b] = CPU.GPR[ra]._u8[b + s];
 		}
 	}
-	virtual void SPU_NOP(OP_REG rt)
+	virtual void NOP(OP_REG rt)
 	{
 	}
 	virtual void CGT(OP_REG rt, OP_REG ra, OP_REG rb)
@@ -591,7 +591,7 @@ private:
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._i32[w] > CPU.GPR[rb]._i32[w] ? 0xffffffff : 0;
 	}
-	virtual void SPU_XOR(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void XOR(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] ^ CPU.GPR[rb]._u32[w];
@@ -601,7 +601,7 @@ private:
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._i16[h] > CPU.GPR[rb]._i16[h] ? 0xffff : 0;
 	}
-	virtual void SPU_EQV(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void EQV(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._u32[w] = (CPU.GPR[ra]._u32[w] & CPU.GPR[rb]._u32[w]) | ~(CPU.GPR[ra]._u32[w] | CPU.GPR[rb]._u32[w]);
@@ -666,7 +666,7 @@ private:
 			CPU.GPR[rt]._u32[i] = (CPU.GPR[ra]._u32[i] > CPU.GPR[rb]._u32[i]) ? 0xffffffff : 0x00000000;
 		}
 	}
-	virtual void SPU_ANDC(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void ANDC(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] & (~CPU.GPR[rb]._u32[w]);
@@ -696,7 +696,7 @@ private:
 		for (int h = 0; h < 8; h++)
 			CPU.GPR[rt]._u16[h] = CPU.GPR[ra]._u16[h] > CPU.GPR[rb]._u16[h] ? 0xffff : 0;
 	}
-	virtual void SPU_ORC(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void ORC(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] | (~CPU.GPR[rb]._u32[w]);
@@ -1004,7 +1004,7 @@ private:
 	
 
 	//0 - 7
-	virtual void SPU_ORI(OP_REG rt, OP_REG ra, OP_sIMM i10)
+	virtual void ORI(OP_REG rt, OP_REG ra, OP_sIMM i10)
 	{
 		for(u32 i = 0; i < 4; ++i)
 		{
@@ -1070,7 +1070,7 @@ private:
 		CPU.LSA = branchTarget(0, i10 + CPU.GPR[ra]._u32[0]);
 		CPU.GPR[rt]._u128 = CPU.ReadLSA128();
 	}
-	virtual void SPU_XORI(OP_REG rt, OP_REG ra, OP_sIMM i10)
+	virtual void XORI(OP_REG rt, OP_REG ra, OP_sIMM i10)
 	{
 		for (int w = 0; w < 4; w++)
 			CPU.GPR[rt]._u32[w] = CPU.GPR[ra]._u32[w] ^ i10;

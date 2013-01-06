@@ -713,6 +713,10 @@ private:
 			}
 		}
 		/*0x1d6*///DCBI
+		void NAND(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
+		{
+			DisAsm_R3_RC("nand", rs, rs, rb, rc);
+		}
 		void DIVD(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
 			DisAsm_R3_OE_RC("divd", rd, ra, rb, oe, rc);

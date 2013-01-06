@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CompilerELF.h"
+using namespace PPU_opcodes;
 
 void Write8(wxFile& f, const u8 data)
 {

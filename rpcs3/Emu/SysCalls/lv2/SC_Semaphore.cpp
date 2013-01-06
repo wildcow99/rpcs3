@@ -85,12 +85,12 @@ int sys_semaphore_trywait(u32 sem)
 
 int sys_semaphore_post(u32 sem, int count)
 {
-	sys_sem.Warning("sys_semaphore_wait(sem=0x%x, count=%d)", sem, count);
+	sys_sem.Warning("sys_semaphore_post(sem=0x%x, count=%d)", sem, count);
 
 	semaphore* sem_data = nullptr;
 	if(!sys_sem.CheckId(sem, sem_data)) return CELL_ESRCH;
 
-	while(count-- > 0) sem_data->sem.Post();
+	while(count--) sem_data->sem.Post();
 
 	return CELL_OK;
 }

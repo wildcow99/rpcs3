@@ -58,7 +58,7 @@ private:
 	{
 		Write("lnop");
 	}
-	virtual void SPU_SYNC(OP_uIMM Cbit)
+	virtual void SYNC(OP_uIMM Cbit)
 	{
 		Write(wxString::Format("sync %d", Cbit));
 	}
@@ -66,7 +66,7 @@ private:
 	{
 		Write("dsync");
 	}
-	virtual void SPU_MFSPR(OP_REG rt, OP_REG sa)
+	virtual void MFSPR(OP_REG rt, OP_REG sa)
 	{
 		Write(wxString::Format("mfspr %s,%s", spu_reg_name[rt], spu_reg_name[sa]));   // Are SPR mapped on the GPR or are there 128 additional registers ?
 	}
@@ -82,7 +82,7 @@ private:
 	{
 		Write(wxString::Format("sf %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
-	virtual void SPU_OR(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void OR(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		Write(wxString::Format("or %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
@@ -94,7 +94,7 @@ private:
 	{
 		Write(wxString::Format("sfh %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
-	virtual void SPU_NOR(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void NOR(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		Write(wxString::Format("nor %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
@@ -170,7 +170,7 @@ private:
 	{
 		Write(wxString::Format("a %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
-	virtual void SPU_AND(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void AND(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		Write(wxString::Format("and %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
@@ -190,7 +190,7 @@ private:
 	{
 		Write(wxString::Format("avgb %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
-	virtual void SPU_MTSPR(OP_REG rt, OP_REG sa)
+	virtual void MTSPR(OP_REG rt, OP_REG sa)
 	{
 		Write(wxString::Format("mtspr %s,%s", spu_reg_name[rt], spu_reg_name[sa]));
 	}
@@ -374,7 +374,7 @@ private:
 	{
 		Write(wxString::Format("shlqbyi %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i7));
 	}
-	virtual void SPU_NOP(OP_REG rt)
+	virtual void NOP(OP_REG rt)
 	{
 		Write(wxString::Format("nop %s", spu_reg_name[rt]));
 	}
@@ -382,7 +382,7 @@ private:
 	{
 		Write(wxString::Format("cgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
-	virtual void SPU_XOR(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void XOR(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		Write(wxString::Format("xor %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
@@ -390,7 +390,7 @@ private:
 	{
 		Write(wxString::Format("cgth %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
-	virtual void SPU_EQV(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void EQV(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		Write(wxString::Format("eqv %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
@@ -430,7 +430,7 @@ private:
 	{
 		Write(wxString::Format("clgt %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
-	virtual void SPU_ANDC(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void ANDC(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		Write(wxString::Format("andc %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
@@ -458,7 +458,7 @@ private:
 	{
 		Write(wxString::Format("clgth %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
-	virtual void SPU_ORC(OP_REG rt, OP_REG ra, OP_REG rb)
+	virtual void ORC(OP_REG rt, OP_REG ra, OP_REG rb)
 	{
 		Write(wxString::Format("orc %s,%s,%s", spu_reg_name[rt], spu_reg_name[ra], spu_reg_name[rb]));
 	}
@@ -701,7 +701,7 @@ private:
 	
 
 	//0 - 7
-	virtual void SPU_ORI(OP_REG rt, OP_REG ra, OP_sIMM i10)
+	virtual void ORI(OP_REG rt, OP_REG ra, OP_sIMM i10)
 	{
 		Write(wxString::Format("ori %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
 	}
@@ -749,7 +749,7 @@ private:
 	{
 		Write(wxString::Format("lqd %s,%d(%s)", spu_reg_name[rt], i10, spu_reg_name[ra]));
 	}
-	virtual void SPU_XORI(OP_REG rt, OP_REG ra, OP_sIMM i10)
+	virtual void XORI(OP_REG rt, OP_REG ra, OP_sIMM i10)
 	{
 		Write(wxString::Format("xori %s,%s,%d", spu_reg_name[rt], spu_reg_name[ra], i10));
 	}

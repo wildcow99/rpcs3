@@ -8,6 +8,8 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Gui/CompilerELF.h"
 
+using namespace PPU_opcodes;
+
 //SysCalls SysCallsManager;
 
 Emulator::Emulator()
@@ -120,7 +122,6 @@ void Emulator::Run()
 		return;
 	}
 
-	Memory.MainMem.Alloc(0x10000000, 0x10010000);
 	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64);
 
 	thread.SetPc(l.GetEntry());
@@ -138,7 +139,7 @@ void Emulator::Run()
 	callback_data += ToOpcode(SC) | ToSYS(2);
 	callback_data += ToOpcode(G_13) | SetField(BCLR, 21, 30) | ToBO(0x10 | 0x04) | ToBI(0) | ToLK(0);
 
-	m_ppu_thr_exit = Memory.Alloc(4 * 3, 4);
+	m_ppu_thr_exit = Memory.MainMem.Alloc(4 * 3);
 	
 	mem32_t ppu_thr_exit_data(m_ppu_thr_exit);
 	ppu_thr_exit_data += ToOpcode(ADDI) | ToRD(11) | ToRA(0) | ToIMM16(41);

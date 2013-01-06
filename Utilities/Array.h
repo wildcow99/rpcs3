@@ -23,6 +23,7 @@ public:
 		const u32 to = from + count;
 		if(to > GetCount()) return false;
 		
+		for(u32 i=0; i<count; ++i) m_array[from + i].~T();
 		memmove(m_array + from, m_array + to, (m_count-to) * sizeof(T));
 		m_count -= count;
 		
@@ -102,6 +103,8 @@ public:
 
 	inline void Clear()
 	{
+		for(u32 i=0; i<m_count; ++i) m_array[i].~T();
+
 		m_count = 0;
 		safe_delete(m_array);
 	}
@@ -179,7 +182,6 @@ template<typename T> struct Stack : public Array<T>
 		return ret;
 	}
 };
-
 
 template<typename T> class ArrayF
 {

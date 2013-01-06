@@ -70,10 +70,10 @@ static const SC_FUNC sc_table[1024] =
 	0, 0, 0, 0, 0, //319
 	0, 0, 0, 0, SC_FUNC_SW_UW_UW<sys_memory_container_create>, //324
 	SC_FUNC_SW_UW<sys_memory_container_destroy>, 0, 0, 0, 0, //329
-	0, 0, 0, 0, 0, //334
+	SC_FUNC_SW_UW_UD_UW_UW<sys_mmapper_allocate_address>, 0, 0, 0, 0, //334
 	0, 0, 0, 0, 0, //339
 	0, 0, 0, 0, 0, //344
-	0, 0, 0, SC_FUNC_SW_UW_UW_UW<sys_memory_allocate>, 0, //349
+	0, 0, 0, SC_FUNC_SW_UW_UW_UW<sys_memory_allocate>, SC_FUNC_SW_UW<sys_memory_free>, //349
 	0, 0, SC_FUNC_SW_UW<sys_memory_get_user_memory_size>, 0, 0, //354
 	0, 0, 0, 0, 0, //359
 	0, 0, 0, 0, 0, //364

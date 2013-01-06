@@ -8,254 +8,256 @@
 #define ADD_NULL_OPCODE(name) virtual void(##name##)()=0
 #define END_OPCODES_GROUP(x) /*x*/
 
-enum PPU_MainOpcodes
+namespace PPU_opcodes
 {
-	TDI 	= 0x02, //Trap Doubleword Immediate 
-	TWI 	= 0x03, //Trap Word Immediate
-	G_04 	= 0x04,
-	MULLI 	= 0x07, //Multiply Low Immediate
-	SUBFIC 	= 0x08, //Subtract from Immediate Carrying
-	//DOZI	= 0x09,
-	CMPLI 	= 0x0a, //Compare Logical Immediate
-	CMPI 	= 0x0b, //Compare Immediate
-	ADDIC 	= 0x0c, //Add Immediate Carrying
-	ADDIC_ 	= 0x0d, //Add Immediate Carrying and Record
-	ADDI 	= 0x0e, //Add Immediate
-	ADDIS 	= 0x0f, //Add Immediate Shifted
-	BC 		= 0x10, //Branch Conditional
-	SC 		= 0x11, //System Call
-	B 		= 0x12, //Branch
-	G_13 	= 0x13,
-	RLWIMI 	= 0x14, //Rotate Left Word Immediate then Mask Insert
-	RLWINM 	= 0x15, //Rotate Left Word Immediate then AND with Mask
-	RLWNM 	= 0x17, //Rotate Left Word then AND with Mask
-	ORI 	= 0x18, //OR Immediate
-	ORIS 	= 0x19, //OR Immediate Shifted
-	XORI 	= 0x1a, //XOR Immediate
-	XORIS 	= 0x1b, //XOR Immediate Shifted
-	ANDI_ 	= 0x1c, //AND Immediate
-	ANDIS_ 	= 0x1d, //AND Immediate Shifted
-	G_1e 	= 0x1e,
-	G_1f 	= 0x1f,
-	LWZ 	= 0x20, //Load Word and Zero Indexed
-	LWZU 	= 0x21, //Load Word and Zero with Update Indexed
-	LBZ 	= 0x22, //Load Byte and Zero
-	LBZU 	= 0x23, //Load Byte and Zero with Update
-	STW 	= 0x24, //Store Word
-	STWU 	= 0x25, //Store Word with Update
-	STB 	= 0x26, //Store Byte
-	STBU 	= 0x27, //Store Byte with Update
-	LHZ 	= 0x28, //Load Halfword and Zero
-	LHZU 	= 0x29, //Load Halfword and Zero with Update
-	LHA		= 0x2a, //Load Halfword Algebraic with Update
-	LHAU 	= 0x2b, //Load Halfword Algebraic
-	STH 	= 0x2c, //Store Halfword
-	STHU 	= 0x2d, //Store Halfword with Update
-	LMW 	= 0x2e, //Load Multiple Word
-	STMW 	= 0x2f, //Store Multiple Word
-	LFS 	= 0x30, //Load Floating-Point Single
-	LFSU 	= 0x31, //Load Floating-Point Single with Update
-	LFD 	= 0x32, //Load Floating-Point Double
-	LFDU 	= 0x33, //Load Floating-Point Double with Update
-	STFS 	= 0x34, //Store Floating-Point Single
-	STFSU 	= 0x35, //Store Floating-Point Single with Update
-	STFD 	= 0x36, //Store Floating-Point Double
-	STFDU 	= 0x37, //Store Floating-Point Double with Update
-	LFQ 	= 0x38, //
-	LFQU 	= 0x39, //
-	G_3a 	= 0x3a,
-	G_3b 	= 0x3b,
-	G_3e 	= 0x3e,
-	G_3f 	= 0x3f,
-};
+	enum PPU_MainOpcodes
+	{
+		TDI 	= 0x02, //Trap Doubleword Immediate 
+		TWI 	= 0x03, //Trap Word Immediate
+		G_04 	= 0x04,
+		MULLI 	= 0x07, //Multiply Low Immediate
+		SUBFIC 	= 0x08, //Subtract from Immediate Carrying
+		//DOZI	= 0x09,
+		CMPLI 	= 0x0a, //Compare Logical Immediate
+		CMPI 	= 0x0b, //Compare Immediate
+		ADDIC 	= 0x0c, //Add Immediate Carrying
+		ADDIC_ 	= 0x0d, //Add Immediate Carrying and Record
+		ADDI 	= 0x0e, //Add Immediate
+		ADDIS 	= 0x0f, //Add Immediate Shifted
+		BC 		= 0x10, //Branch Conditional
+		SC 		= 0x11, //System Call
+		B 		= 0x12, //Branch
+		G_13 	= 0x13,
+		RLWIMI 	= 0x14, //Rotate Left Word Immediate then Mask Insert
+		RLWINM 	= 0x15, //Rotate Left Word Immediate then AND with Mask
+		RLWNM 	= 0x17, //Rotate Left Word then AND with Mask
+		ORI 	= 0x18, //OR Immediate
+		ORIS 	= 0x19, //OR Immediate Shifted
+		XORI 	= 0x1a, //XOR Immediate
+		XORIS 	= 0x1b, //XOR Immediate Shifted
+		ANDI_ 	= 0x1c, //AND Immediate
+		ANDIS_ 	= 0x1d, //AND Immediate Shifted
+		G_1e 	= 0x1e,
+		G_1f 	= 0x1f,
+		LWZ 	= 0x20, //Load Word and Zero Indexed
+		LWZU 	= 0x21, //Load Word and Zero with Update Indexed
+		LBZ 	= 0x22, //Load Byte and Zero
+		LBZU 	= 0x23, //Load Byte and Zero with Update
+		STW 	= 0x24, //Store Word
+		STWU 	= 0x25, //Store Word with Update
+		STB 	= 0x26, //Store Byte
+		STBU 	= 0x27, //Store Byte with Update
+		LHZ 	= 0x28, //Load Halfword and Zero
+		LHZU 	= 0x29, //Load Halfword and Zero with Update
+		LHA		= 0x2a, //Load Halfword Algebraic with Update
+		LHAU 	= 0x2b, //Load Halfword Algebraic
+		STH 	= 0x2c, //Store Halfword
+		STHU 	= 0x2d, //Store Halfword with Update
+		LMW 	= 0x2e, //Load Multiple Word
+		STMW 	= 0x2f, //Store Multiple Word
+		LFS 	= 0x30, //Load Floating-Point Single
+		LFSU 	= 0x31, //Load Floating-Point Single with Update
+		LFD 	= 0x32, //Load Floating-Point Double
+		LFDU 	= 0x33, //Load Floating-Point Double with Update
+		STFS 	= 0x34, //Store Floating-Point Single
+		STFSU 	= 0x35, //Store Floating-Point Single with Update
+		STFD 	= 0x36, //Store Floating-Point Double
+		STFDU 	= 0x37, //Store Floating-Point Double with Update
+		LFQ 	= 0x38, //
+		LFQU 	= 0x39, //
+		G_3a 	= 0x3a,
+		G_3b 	= 0x3b,
+		G_3e 	= 0x3e,
+		G_3f 	= 0x3f,
+	};
 
-enum G_04Opcodes
-{
-	VXOR = 0x262,
-};
+	enum G_04Opcodes
+	{
+		VXOR = 0x262,
+	};
 
-enum G_13Opcodes //Field 21 - 30
-{
-	MCRF 	= 0x000,
-	BCLR 	= 0x010,
-	CRNOR 	= 0x021,
-	CRANDC 	= 0x081,
-	ISYNC 	= 0x096,
-	CRXOR 	= 0x0c1,
-	CRNAND 	= 0x0e1,
-	CRAND 	= 0x101,
-	CREQV 	= 0x121,
-	CRORC 	= 0x1a1,
-	CROR 	= 0x1c1,
-	BCCTR 	= 0x210,
-};
+	enum G_13Opcodes //Field 21 - 30
+	{
+		MCRF 	= 0x000,
+		BCLR 	= 0x010,
+		CRNOR 	= 0x021,
+		CRANDC 	= 0x081,
+		ISYNC 	= 0x096,
+		CRXOR 	= 0x0c1,
+		CRNAND 	= 0x0e1,
+		CRAND 	= 0x101,
+		CREQV 	= 0x121,
+		CRORC 	= 0x1a1,
+		CROR 	= 0x1c1,
+		BCCTR 	= 0x210,
+	};
 
-enum G_1eOpcodes //Field 27 - 29
-{
-	RLDICL 	= 0x0,
-	RLDICR 	= 0x1,
-	RLDIC 	= 0x2,
-	RLDIMI 	= 0x3,
-};
+	enum G_1eOpcodes //Field 27 - 29
+	{
+		RLDICL 	= 0x0,
+		RLDICR 	= 0x1,
+		RLDIC 	= 0x2,
+		RLDIMI 	= 0x3,
+	};
 
-enum G_1fOpcodes //Field 21 - 30
-{
-	CMP 	= 0x000,
-	TW 		= 0x004,
-	LVEBX 	= 0x007, //Load Vector Element Byte Indexed
-	SUBFC 	= 0x008, //Subtract from Carrying
-	MULHDU 	= 0x009,
-	ADDC 	= 0x00a,
-	MULHWU 	= 0x00b,
-	MFOCRF 	= 0x013,
-	LWARX 	= 0x014,
-	LDX 	= 0x015,
-	LWZX 	= 0x017,
-	SLW 	= 0x018,
-	CNTLZW 	= 0x01a,
-	SLD 	= 0x01b,
-	AND 	= 0x01c,
-	CMPL 	= 0x020,
-	LVEHX 	= 0x027, //Load Vector Element Halfword Indexed
-	SUBF 	= 0x028,
-	LDUX 	= 0x035, //Load Doubleword with Update Indexed
-	DCBST 	= 0x036,
-	CNTLZD 	= 0x03a,
-	ANDC 	= 0x03c,
-	LVEWX 	= 0x047, //Load Vector Element Word Indexed
-	MULHD 	= 0x049,
-	MULHW 	= 0x04b,
-	LDARX 	= 0x054,
-	DCBF 	= 0x056,
-	LBZX 	= 0x057,
-	LVX 	= 0x067,
-	NEG 	= 0x068,
-	LBZUX 	= 0x077,
-	NOR 	= 0x07c,
-	SUBFE 	= 0x088, //Subtract from Extended
-	ADDE 	= 0x08a,
-	MTOCRF 	= 0x090,
-	STDX 	= 0x095,
-	STWCX_ 	= 0x096,
-	STWX 	= 0x097,
-	STDUX 	= 0x0b5,
-	ADDZE 	= 0x0ca,
-	STDCX_ 	= 0x0d6,
-	STBX 	= 0x0d7,
-	STVX 	= 0x0e7,
-	MULLD 	= 0x0e9,
-	ADDME 	= 0x0ea,
-	MULLW 	= 0x0eb,
-	DCBTST 	= 0x0f6,
-	DOZ 	= 0x108,
-	ADD 	= 0x10a,
-	DCBT 	= 0x116,
-	LHZX 	= 0x117,
-	EQV 	= 0x11c,
-	ECIWX 	= 0x136,
-	LHZUX 	= 0x137,
-	XOR 	= 0x13c,
-	MFSPR 	= 0x153,
-	LHAX 	= 0x157,
-	ABS 	= 0x168,
-	MFTB 	= 0x173,
-	LHAUX 	= 0x177,
-	STHX	= 0x197, //Store Halfword Indexed
-	ORC 	= 0x19c, //OR with Complement
-	ECOWX 	= 0x1b6,
-	OR 		= 0x1bc,
-	DIVDU 	= 0x1c9,
-	DIVWU 	= 0x1cb,
-	MTSPR 	= 0x1d3,
-	DCBI 	= 0x1d6,
-	DIVD 	= 0x1e9,
-	DIVW 	= 0x1eb,
-	LWBRX 	= 0x216,
-	LFSX 	= 0x217,
-	SRW 	= 0x218,
-	SRD 	= 0x21b,
-	LFSUX 	= 0x237,
-	SYNC 	= 0x256,
-	LFDX 	= 0x257,
-	LFDUX	= 0x277,
-	STFSX 	= 0x297,
-	STFDX	= 0x2d7, //Store Floating-Point Double Indexed
-	LHBRX 	= 0x316,
-	SRAW 	= 0x318,
-	SRAD 	= 0x31a,
-	SRAWI 	= 0x338,
-	SRADI1 	= 0x33a, //sh_5 == 0
-	SRADI2 	= 0x33b, //sh_5 != 0
-	EIEIO	= 0x356,
-	EXTSH 	= 0x39a,
-	EXTSB 	= 0x3ba,
-	STFIWX 	= 0x3d7,
-	EXTSW 	= 0x3da,
-	ICBI 	= 0x3d6,
-	DCBZ 	= 0x3f6,
-};
+	enum G_1fOpcodes //Field 21 - 30
+	{
+		CMP 	= 0x000,
+		TW 		= 0x004,
+		LVEBX 	= 0x007, //Load Vector Element Byte Indexed
+		SUBFC 	= 0x008, //Subtract from Carrying
+		MULHDU 	= 0x009,
+		ADDC 	= 0x00a,
+		MULHWU 	= 0x00b,
+		MFOCRF 	= 0x013,
+		LWARX 	= 0x014,
+		LDX 	= 0x015,
+		LWZX 	= 0x017,
+		SLW 	= 0x018,
+		CNTLZW 	= 0x01a,
+		SLD 	= 0x01b,
+		AND 	= 0x01c,
+		CMPL 	= 0x020,
+		LVEHX 	= 0x027, //Load Vector Element Halfword Indexed
+		SUBF 	= 0x028,
+		LDUX 	= 0x035, //Load Doubleword with Update Indexed
+		DCBST 	= 0x036,
+		CNTLZD 	= 0x03a,
+		ANDC 	= 0x03c,
+		LVEWX 	= 0x047, //Load Vector Element Word Indexed
+		MULHD 	= 0x049,
+		MULHW 	= 0x04b,
+		LDARX 	= 0x054,
+		DCBF 	= 0x056,
+		LBZX 	= 0x057,
+		LVX 	= 0x067,
+		NEG 	= 0x068,
+		LBZUX 	= 0x077,
+		NOR 	= 0x07c,
+		SUBFE 	= 0x088, //Subtract from Extended
+		ADDE 	= 0x08a,
+		MTOCRF 	= 0x090,
+		STDX 	= 0x095,
+		STWCX_ 	= 0x096,
+		STWX 	= 0x097,
+		STDUX 	= 0x0b5,
+		ADDZE 	= 0x0ca,
+		STDCX_ 	= 0x0d6,
+		STBX 	= 0x0d7,
+		STVX 	= 0x0e7,
+		MULLD 	= 0x0e9,
+		ADDME 	= 0x0ea,
+		MULLW 	= 0x0eb,
+		DCBTST 	= 0x0f6,
+		DOZ 	= 0x108,
+		ADD 	= 0x10a,
+		DCBT 	= 0x116,
+		LHZX 	= 0x117,
+		EQV 	= 0x11c,
+		ECIWX 	= 0x136,
+		LHZUX 	= 0x137,
+		XOR 	= 0x13c,
+		MFSPR 	= 0x153,
+		LHAX 	= 0x157,
+		ABS 	= 0x168,
+		MFTB 	= 0x173,
+		LHAUX 	= 0x177,
+		STHX	= 0x197, //Store Halfword Indexed
+		ORC 	= 0x19c, //OR with Complement
+		ECOWX 	= 0x1b6,
+		OR 		= 0x1bc,
+		DIVDU 	= 0x1c9,
+		DIVWU 	= 0x1cb,
+		MTSPR 	= 0x1d3,
+		DCBI 	= 0x1d6,
+		NAND	= 0x1dc,
+		DIVD 	= 0x1e9,
+		DIVW 	= 0x1eb,
+		LWBRX 	= 0x216,
+		LFSX 	= 0x217,
+		SRW 	= 0x218,
+		SRD 	= 0x21b,
+		LFSUX 	= 0x237,
+		SYNC 	= 0x256,
+		LFDX 	= 0x257,
+		LFDUX	= 0x277,
+		STFSX 	= 0x297,
+		STFDX	= 0x2d7, //Store Floating-Point Double Indexed
+		LHBRX 	= 0x316,
+		SRAW 	= 0x318,
+		SRAD 	= 0x31a,
+		SRAWI 	= 0x338,
+		SRADI1 	= 0x33a, //sh_5 == 0
+		SRADI2 	= 0x33b, //sh_5 != 0
+		EIEIO	= 0x356,
+		EXTSH 	= 0x39a,
+		EXTSB 	= 0x3ba,
+		STFIWX 	= 0x3d7,
+		EXTSW 	= 0x3da,
+		ICBI 	= 0x3d6,
+		DCBZ 	= 0x3f6,
+	};
 
-enum G_3aOpcodes //Field 30 - 31
-{
-	LD 	= 0x0,
-	LDU	= 0x1,
-};
+	enum G_3aOpcodes //Field 30 - 31
+	{
+		LD 	= 0x0,
+		LDU	= 0x1,
+	};
 
-enum G_3bOpcodes //Field 26 - 30
-{
-	FDIVS 	= 0x12,
-	FSUBS 	= 0x14,
-	FADDS 	= 0x15,
-	FSQRTS 	= 0x16,
-	FRES 	= 0x18,
-	FMULS 	= 0x19,
-	FMSUBS 	= 0x1c,
-	FMADDS 	= 0x1d,
-	FNMSUBS	= 0x1e,
-	FNMADDS	= 0x1f,
-};
+	enum G_3bOpcodes //Field 26 - 30
+	{
+		FDIVS 	= 0x12,
+		FSUBS 	= 0x14,
+		FADDS 	= 0x15,
+		FSQRTS 	= 0x16,
+		FRES 	= 0x18,
+		FMULS 	= 0x19,
+		FMSUBS 	= 0x1c,
+		FMADDS 	= 0x1d,
+		FNMSUBS	= 0x1e,
+		FNMADDS	= 0x1f,
+	};
 
-enum G_3eOpcodes //Field 30 - 31
-{
-	STD		= 0x0,
-	STDU	= 0x1,
-};
+	enum G_3eOpcodes //Field 30 - 31
+	{
+		STD		= 0x0,
+		STDU	= 0x1,
+	};
 
-enum G_3fOpcodes //Field 21 - 30
-{	
-	MTFSB1	= 0x026,
-	MCRFS	= 0x040,
-	MTFSB0	= 0x046,
-	MTFSFI 	= 0x086,
-	MFFS 	= 0x247,
-	MTFSF	= 0x2c7,
+	enum G_3fOpcodes //Field 21 - 30
+	{	
+		MTFSB1	= 0x026,
+		MCRFS	= 0x040,
+		MTFSB0	= 0x046,
+		MTFSFI 	= 0x086,
+		MFFS 	= 0x247,
+		MTFSF	= 0x2c7,
 
-	FCMPU 	= 0x000,
-	FRSP 	= 0x00c,
-	FCTIW 	= 0x00e,
-	FCTIWZ 	= 0x00f,
-	FDIV 	= 0x012,
-	FSUB 	= 0x014,
-	FADD 	= 0x015,
-	FSQRT 	= 0x016,
-	FSEL 	= 0x017,
-	FMUL 	= 0x019,
-	FRSQRTE	= 0x01a,
-	FMSUB	= 0x01c,
-	FMADD 	= 0x01d,
-	FNMSUB 	= 0x01e,
-	FNMADD 	= 0x01f,
-	FCMPO 	= 0x020,
-	FNEG 	= 0x028,
-	FMR 	= 0x048,
-	FNABS 	= 0x088,
-	FABS 	= 0x108,
-	FCTID 	= 0x32e,
-	FCTIDZ 	= 0x32f,
-	FCFID 	= 0x34e,
-};
-
-//118
+		FCMPU 	= 0x000,
+		FRSP 	= 0x00c,
+		FCTIW 	= 0x00e,
+		FCTIWZ 	= 0x00f,
+		FDIV 	= 0x012,
+		FSUB 	= 0x014,
+		FADD 	= 0x015,
+		FSQRT 	= 0x016,
+		FSEL 	= 0x017,
+		FMUL 	= 0x019,
+		FRSQRTE	= 0x01a,
+		FMSUB	= 0x01c,
+		FMADD 	= 0x01d,
+		FNMSUB 	= 0x01e,
+		FNMADD 	= 0x01f,
+		FCMPO 	= 0x020,
+		FNEG 	= 0x028,
+		FMR 	= 0x048,
+		FNABS 	= 0x088,
+		FABS 	= 0x108,
+		FCTID 	= 0x32e,
+		FCTIDZ 	= 0x32f,
+		FCFID 	= 0x34e,
+	};
+}
 
 class PPU_Opcodes
 {
@@ -389,6 +391,7 @@ public:
 		/*0x1cb*/ADD_OPCODE(DIVWU,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x1d3*/ADD_OPCODE(MTSPR,(OP_REG spr, OP_REG rs));
 		/*0x1d6*///DCBI
+		/*0x1dc*/ADD_OPCODE(NAND,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x1e9*/ADD_OPCODE(DIVD,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x1eb*/ADD_OPCODE(DIVW,(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc));
 		/*0x216*/ADD_OPCODE(LWBRX,(OP_REG rd, OP_REG ra, OP_REG rb));
@@ -403,7 +406,7 @@ public:
 		/*0x2d7*/ADD_OPCODE(STFDX,(OP_REG frs, OP_REG ra, OP_REG rb));
 		/*0x316*/ADD_OPCODE(LHBRX,(OP_REG rd, OP_REG ra, OP_REG rb));
 		/*0x318*/ADD_OPCODE(SRAW,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
-		/*0x31A*/ADD_OPCODE(SRAD,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
+		/*0x31a*/ADD_OPCODE(SRAD,(OP_REG ra, OP_REG rs, OP_REG rb, bool rc));
 		/*0x338*/ADD_OPCODE(SRAWI,(OP_REG ra, OP_REG rs, OP_REG sh, bool rc));
 		/*0x33a*/ADD_OPCODE(SRADI1,(OP_REG ra, OP_REG rs, OP_REG sh, bool rc));
 		/*0x33b*/ADD_OPCODE(SRADI2,(OP_REG ra, OP_REG rs, OP_REG sh, bool rc));

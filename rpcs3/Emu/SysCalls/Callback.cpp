@@ -23,6 +23,8 @@ void Callback::Handle(u64 _a1, u64 _a2, u64 _a3)
 
 void Callback::Branch()
 {
+	m_has_data = false;
+
 	PPCThread& new_thread = Emu.GetCPU().AddThread(true);
 
 	new_thread.SetPc(m_addr);

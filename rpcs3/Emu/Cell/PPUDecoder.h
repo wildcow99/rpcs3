@@ -234,6 +234,8 @@ public:
 
 	virtual void Decode(const u32 code)
 	{
+		using namespace PPU_opcodes;
+
 		if(code == 0)
 		{
 			m_op.NULL_OP();
@@ -363,6 +365,7 @@ public:
 			/*0x1cb*/ADD_OPCODE(DIVWU,	RD(), RA(), RB(), OE(), RC());
 			/*0x1d3*/ADD_OPCODE(MTSPR,	SPR(), RS());
 			/*0x1d6*///DCBI
+			/*0x1dc*/ADD_OPCODE(NAND,	RA(), RS(), RB(), RC());
 			/*0x1e9*/ADD_OPCODE(DIVD,	RD(), RA(), RB(), OE(), RC());
 			/*0x1eb*/ADD_OPCODE(DIVW,	RD(), RA(), RB(), OE(), RC());
 			/*0x216*/ADD_OPCODE(LWBRX,	RD(), RA(), RB());
@@ -377,7 +380,7 @@ public:
 			/*0x2d7*/ADD_OPCODE(STFDX,	RS(), RA(), RB());
 			/*0x316*/ADD_OPCODE(LHBRX,	RD(), RA(), RB());
 			/*0x318*/ADD_OPCODE(SRAW,	RA(), RS(), RB(), RC());
-			/*0x31A*/ADD_OPCODE(SRAD,	RA(), RS(), RB(), RC());
+			/*0x31a*/ADD_OPCODE(SRAD,	RA(), RS(), RB(), RC());
 			/*0x338*/ADD_OPCODE(SRAWI,	RA(), RS(), sh(), RC());
 			/*0x33a*/ADD_OPCODE(SRADI1,	RA(), RS(), sh(), RC());
 			/*0x33b*/ADD_OPCODE(SRADI2,	RA(), RS(), sh(), RC());

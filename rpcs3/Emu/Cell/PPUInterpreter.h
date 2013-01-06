@@ -863,6 +863,12 @@ private:
 			GetRegBySPR(spr) = CPU.GPR[rs];
 		}
 		/*0x1d6*///DCBI
+		void NAND(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
+		{
+			CPU.GPR[ra] = ~(CPU.GPR[rs] & CPU.GPR[rb]);
+
+			if(rc) CPU.UpdateCR0<s64>(CPU.GPR[ra]);
+		}
 		void DIVD(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
 			const s64 RA = CPU.GPR[ra];
