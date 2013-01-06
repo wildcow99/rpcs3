@@ -120,10 +120,12 @@ struct VertexDecompilerThread : public wxThread
 	{
 	}
 
-	wxString GetMask();
-	wxString GetDST();
-	wxString GetSRC(const u32 n);
-	void AddCode(wxString code, bool src_mask = true);
+	wxString GetVecMask();
+	wxString GetScaMask();
+	wxString GetDST(bool isSca = false);
+	wxString GetSRC(const u32 n, bool isSca = false);
+	void AddVecCode(wxString code, bool src_mask = true);
+	void AddScaCode(wxString code, bool src_mask = true);
 	wxString BuildCode();
 
 	ExitCode Entry();
