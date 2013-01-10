@@ -163,7 +163,65 @@ wxThread::ExitCode FragmentDecompilerThread::Entry()
 		case 0x02: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + ")"); break; //MUL
 		case 0x03: AddCode("(" + GetSRC(src0) + " + " + GetSRC(src1) + ")"); break; //ADD
 		case 0x04: AddCode("(" + GetSRC(src0) + " * " + GetSRC(src1) + " + " + GetSRC(src2) + ")"); break; //MAD
+		case 0x05: AddCode("dot(" + GetSRC(src0) + ".xyz, " + GetSRC(src1) + ".xyz)"); break; // DP3
+		case 0x06: AddCode("dot(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // DP4
+		case 0x07: break; // DST
+		case 0x08: AddCode("min(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MIN
+		case 0x09: AddCode("max(" + GetSRC(src0) + ", " + GetSRC(src1) + ")"); break; // MAX
+		case 0x0a: break; // SLT
+		case 0x0b: break; // SGE
+		case 0x0c: break; // SLE
+		case 0x0d: break; // SGT
+		case 0x0e: break; // SNE
+		case 0x0f: break; // SEQ
+		
+		case 0x10: break; // FRC
+		case 0x11: break; // FLR
+		case 0x12: break; // KIL
+		case 0x13: break; // PK4
+		case 0x14: break; // UP4
+		case 0x15: AddCode("ddx(" + GetSRC(src0) + ")"); break; // DDX
+		case 0x16: AddCode("ddy(" + GetSRC(src0) + ")"); break; // DDY
 		case 0x17: AddCode("texture(" + AddTex() + ", (" + GetSRC(src0) + ").xy)"); break; //TEX
+		case 0x18: break; // TXP
+		case 0x19: break; // TXD
+		case 0x1a: AddCode("1 / (" + GetSRC(src0) + ")"); break; // RCP
+		case 0x1b: AddCode("inversesqrt(" + GetSRC(src0) + ")"); break; // RSQ
+		case 0x1c: AddCode("exp2(" + GetSRC(src0) + ")"); break; // EX2
+		case 0x1d: AddCode("log2(" + GetSRC(src0) + ")"); break; // LG2
+		case 0x1e: break; // LIT
+		case 0x1f: break; // LRP
+
+		case 0x20: break; // STR
+		case 0x21: break; // SFL
+		case 0x22: AddCode("cos(" + GetSRC(src0) + ")"); break; // COS
+		case 0x23: AddCode("sin(" + GetSRC(src0) + ")"); break; // SIN
+		case 0x24: break; // PK2
+		case 0x25: break; // UP2
+		case 0x26: break; // POW
+		case 0x27: break; // PKB
+		case 0x28: break; // UPB
+		case 0x29: break; // PK16
+		case 0x2a: break; // UP16
+		case 0x2b: break; // BEM
+		case 0x2c: break; // PKG
+		case 0x2d: break; // UPG
+		case 0x2e: break; // DP2A
+		case 0x2f: break; // TXL
+
+		case 0x31: break; // TXB
+		case 0x33: break; // TEXBEM
+		case 0x34: break; // TXPBEM
+		case 0x35: break; // BEMLUM
+		case 0x36: break; // REFL
+		case 0x37: break; // TIMESWTEX
+		case 0x38: break; // DP2
+		case 0x39: break; // NRM
+		case 0x3a: break; // DIV
+		case 0x3b: break; // DIVSQ
+		case 0x3c: break; // LIF
+		case 0x3d: break; // FENCT
+		case 0x3e: break; // FENCB
 
 		default:
 			ConLog.Error("Unknown opcode 0x%x", dst.opcode);
