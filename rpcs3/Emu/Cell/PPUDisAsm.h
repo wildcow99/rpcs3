@@ -67,6 +67,630 @@ private:
 	}
 
 	START_OPCODES_GROUP(G_04)
+		void MFVSCR(OP_REG vrd)
+		{
+			DisAsm_V1("mfvscr", vrd);
+		}
+		void MTVSCR(OP_REG vrb)
+		{
+			DisAsm_V1("mtvscr", vrb);
+		}
+		void VADDCUW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vaddcuw", vrd, vra, vrb);
+		}
+		void VADDFP(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vaddfp", vrd, vra, vrb);
+		}
+		void VADDSBS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vaddsbs", vrd, vra, vrb);
+		}
+		void VADDSHS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vaddshs", vrd, vra, vrb);
+		}
+		void VADDSWS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vaddsws", vrd, vra, vrb);
+		}
+		void VADDUBM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vaddubm", vrd, vra, vrb);
+		}
+		void VADDUBS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vaddubs", vrd, vra, vrb);
+		}
+		void VADDUHM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vadduhm", vrd, vra, vrb);
+		}
+		void VADDUHS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vadduhs", vrd, vra, vrb);
+		}
+		void VADDUWM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vadduwm", vrd, vra, vrb);
+		}
+		void VADDUWS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vadduws", vrd, vra, vrb);
+		}
+		void VAND(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vand", vrd, vra, vrb);
+		}
+		void VANDC(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vandc", vrd, vra, vrb);
+		}
+		void VAVGSB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vavgsb", vrd, vra, vrb);
+		}
+		void VAVGSH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vavgsh", vrd, vra, vrb);
+		}
+		void VAVGSW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vavgsw", vrd, vra, vrb);
+		}
+		void VAVGUB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vavgub", vrd, vra, vrb);
+		}
+		void VAVGUH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vavguh", vrd, vra, vrb);
+		}
+		void VAVGUW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vavguw", vrd, vra, vrb);
+		}
+		void VCFSX(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		{
+			DisAsm_V2_UIMM("vcfsx", vrd, vrb, uimm5);
+		}
+		void VCFUX(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		{
+			DisAsm_V2_UIMM("vcfux", vrd, vrb, uimm5);
+		}
+		void VCMPBFP(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpbfp", vrd, vra, vrb);
+		}
+		void VCMPBFP_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpbfp.", vrd, vra, vrb);
+		}
+		void VCMPEQFP(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpeqfp", vrd, vra, vrb);
+		}
+		void VCMPEQFP_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpeqfp.", vrd, vra, vrb);
+		}
+		void VCMPEQUB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpequb", vrd, vra, vrb);
+		}
+		void VCMPEQUB_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpequb.", vrd, vra, vrb);
+		}
+		void VCMPEQUH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpequh", vrd, vra, vrb);
+		}
+		void VCMPEQUH_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpequh.", vrd, vra, vrb);
+		}
+		void VCMPEQUW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpequw", vrd, vra, vrb);
+		}
+		void VCMPEQUW_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpequw.", vrd, vra, vrb);
+		}
+		void VCMPGEFP(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgefp", vrd, vra, vrb);
+		}
+		void VCMPGEFP_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgefp.", vrd, vra, vrb);
+		}
+		void VCMPGTFP(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtfp", vrd, vra, vrb);
+		}
+		void VCMPGTFP_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtfp.", vrd, vra, vrb);
+		}
+		void VCMPGTSB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtsb", vrd, vra, vrb);
+		}
+		void VCMPGTSB_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtsb.", vrd, vra, vrb);
+		}
+		void VCMPGTSH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtsh", vrd, vra, vrb);
+		}
+		void VCMPGTSH_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtsh.", vrd, vra, vrb);
+		}
+		void VCMPGTSW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtsw", vrd, vra, vrb);
+		}
+		void VCMPGTSW_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtsw.", vrd, vra, vrb);
+		}
+		void VCMPGTUB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtub", vrd, vra, vrb);
+		}
+		void VCMPGTUB_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtub.", vrd, vra, vrb);
+		}
+		void VCMPGTUH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtuh", vrd, vra, vrb);
+		}
+		void VCMPGTUH_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtuh.", vrd, vra, vrb);
+		}
+		void VCMPGTUW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtuw", vrd, vra, vrb);
+		}
+		void VCMPGTUW_(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vcmpgtuw.", vrd, vra, vrb);
+		}
+		void VCTSXS(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		{
+			DisAsm_V2_UIMM("vctsxs", vrd, vrb, uimm5);
+		}
+		void VCTUXS(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		{
+			DisAsm_V2_UIMM("vctuxs", vrd, vrb, uimm5);
+		}
+		void VEXPTEFP(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vexptefp", vrd, vrb);
+		}
+		void VLOGEFP(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vlogefp", vrd, vrb);
+		}
+		void VMADDFP(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmaddfp", vrd, vra, vrb, vrc);
+		}
+		void VMAXFP(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmaxfp", vrd, vra, vrb);
+		}
+		void VMAXSB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmaxsb", vrd, vra, vrb);
+		}
+		void VMAXSH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmaxsh", vrd, vra, vrb);
+		}
+		void VMAXSW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmaxsw", vrd, vra, vrb);
+		}
+		void VMAXUB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmaxub", vrd, vra, vrb);
+		}
+		void VMAXUH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmaxuh", vrd, vra, vrb);
+		}
+		void VMAXUW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmaxuw", vrd, vra, vrb);
+		}
+		void VMHADDSHS(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmhaddshs", vrd, vra, vrb, vrc);
+		}
+		void VMHRADDSHS(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmhraddshs", vrd, vra, vrb, vrc);
+		}
+		void VMINFP(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vminfp", vrd, vra, vrb);
+		}
+		void VMINSB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vminsb", vrd, vra, vrb);
+		}
+		void VMINSH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vminsh", vrd, vra, vrb);
+		}
+		void VMINSW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vminsw", vrd, vra, vrb);
+		}
+		void VMINUB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vminub", vrd, vra, vrb);
+		}
+		void VMINUH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vminuh", vrd, vra, vrb);
+		}
+		void VMINUW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vminuw", vrd, vra, vrb);
+		}
+		void VMLADDUHM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmladduhm", vrd, vra, vrb, vrc);
+		}
+		void VMRGHB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmrghb", vrd, vra, vrb);
+		}
+		void VMRGHH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmrghh", vrd, vra, vrb);
+		}
+		void VMRGHW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmrghw", vrd, vra, vrb);
+		}
+		void VMRGLB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmrglb", vrd, vra, vrb);
+		}
+		void VMRGLH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmrglh", vrd, vra, vrb);
+		}
+		void VMRGLW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmrglw", vrd, vra, vrb);
+		}
+		void VMSUMMBM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmsummbm", vrd, vra, vrb, vrc);
+		}
+		void VMSUMSHM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmsumshm", vrd, vra, vrb, vrc);
+		}
+		void VMSUMSHS(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmsumshs", vrd, vra, vrb, vrc);
+		}
+		void VMSUMUBM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmsumubm", vrd, vra, vrb, vrc);
+		}
+		void VMSUMUHM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmsumuhm", vrd, vra, vrb, vrc);
+		}
+		void VMSUMUHS(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vmsumuhs", vrd, vra, vrb, vrc);
+		}
+		void VMULESB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmulesb", vrd, vra, vrb);
+		}
+		void VMULESH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmulesh", vrd, vra, vrb);
+		}
+		void VMULEUB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmuleub", vrd, vra, vrb);
+		}
+		void VMULEUH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmuleuh", vrd, vra, vrb);
+		}
+		void VMULOSB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmulosb", vrd, vra, vrb);
+		}
+		void VMULOSH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmulosh", vrd, vra, vrb);
+		}
+		void VMULOUB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmuloub", vrd, vra, vrb);
+		}
+		void VMULOUH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vmulouh", vrd, vra, vrb);
+		}
+		void VNMSUBFP(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vnmsubfp", vrd, vra, vrb, vrc);
+		}
+		void VNOR(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vnor", vrd, vra, vrb);
+		}
+		void VOR(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vor", vrd, vra, vrb);
+		}
+		void VPERM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vperm", vrd, vra, vrb, vrc);
+		}
+		void VPKPX(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vpkpx", vrd, vra, vrb);
+		}
+		void VPKSHSS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vpkshss", vrd, vra, vrb);
+		}
+		void VPKSHUS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vpkshus", vrd, vra, vrb);
+		}
+		void VPKSWSS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vpkswss", vrd, vra, vrb);
+		}
+		void VPKSWUS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vpkswus", vrd, vra, vrb);
+		}
+		void VPKUHUM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vpkuhum", vrd, vra, vrb);
+		}
+		void VPKUHUS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vpkuhus", vrd, vra, vrb);
+		}
+		void VPKUWUM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vpkuwum", vrd, vra, vrb);
+		}
+		void VPKUWUS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vpkuwus", vrd, vra, vrb);
+		}
+		void VREFP(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vrefp", vrd, vrb);
+		}
+		void VRFIM(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vrfim", vrd, vrb);
+		}
+		void VRFIN(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vrfin", vrd, vrb);
+		}
+		void VRFIP(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vrfip", vrd, vrb);
+		}
+		void VRFIZ(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vrfiz", vrd, vrb);
+		}
+		void VRLB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vrlb", vrd, vra, vrb);
+		}
+		void VRLH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vrlh", vrd, vra, vrb);
+		}
+		void VRLW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vrlw", vrd, vra, vrb);
+		}
+		void VRSQRTEFP(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vrsqrtefp", vrd, vrb);
+		}
+		void VSEL(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		{
+			DisAsm_V4("vsel", vrd, vra, vrb, vrc);
+		}
+		void VSL(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsl", vrd, vra, vrb);
+		}
+		void VSLB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vslb", vrd, vra, vrb);
+		}
+		void VSLDOI(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_uIMM sh)
+		{
+			DisAsm_V3_UIMM("vsel", vrd, vra, vrb, sh);
+		}
+		void VSLH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vslh", vrd, vra, vrb);
+		}
+		void VSLO(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vslo", vrd, vra, vrb);
+		}
+		void VSLW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vslw", vrd, vra, vrb);
+		}
+		void VSPLTB(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		{
+			DisAsm_V2_UIMM("vspltb", vrd, vrb, uimm5);
+		}
+		void VSPLTH(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		{
+			DisAsm_V2_UIMM("vsplth", vrd, vrb, uimm5);
+		}
+		void VSPLTISB(OP_REG vrd, OP_sIMM simm5)
+		{
+			DisAsm_V1_SIMM("vspltisb", vrd, simm5);
+		}
+		void VSPLTISH(OP_REG vrd, OP_sIMM simm5)
+		{
+			DisAsm_V1_SIMM("vspltish", vrd, simm5);
+		}
+		void VSPLTISW(OP_REG vrd, OP_sIMM simm5)
+		{
+			DisAsm_V1_SIMM("vspltisw", vrd, simm5);
+		}
+		void VSPLTW(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		{
+			DisAsm_V2_UIMM("vspltw", vrd, vrb, uimm5);
+		}
+		void VSR(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsr", vrd, vra, vrb);
+		}
+		void VSRAB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsrab", vrd, vra, vrb);
+		}
+		void VSRAH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsrah", vrd, vra, vrb);
+		}
+		void VSRAW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsraw", vrd, vra, vrb);
+		}
+		void VSRB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsrb", vrd, vra, vrb);
+		}
+		void VSRH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsrh", vrd, vra, vrb);
+		}
+		void VSRO(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsro", vrd, vra, vrb);
+		}
+		void VSRW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsrw", vrd, vra, vrb);
+		}
+		void VSUBCUW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsubcuw", vrd, vra, vrb);
+		}
+		void VSUBFP(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsubfp", vrd, vra, vrb);
+		}
+		void VSUBSBS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsubsbs", vrd, vra, vrb);
+		}
+		void VSUBSHS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsubshs", vrd, vra, vrb);
+		}
+		void VSUBSWS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsubsws", vrd, vra, vrb);
+		}
+		void VSUBUBM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsububm", vrd, vra, vrb);
+		}
+		void VSUBUBS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsububs", vrd, vra, vrb);
+		}
+		void VSUBUHM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsubuhm", vrd, vra, vrb);
+		}
+		void VSUBUHS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsubuhs", vrd, vra, vrb);
+		}
+		void VSUBUWM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsubuwm", vrd, vra, vrb);
+		}
+		void VSUBUWS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsubuws", vrd, vra, vrb);
+		}
+		void VSUMSWS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsumsws", vrd, vra, vrb);
+		}
+		void VSUM2SWS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsum2sws", vrd, vra, vrb);
+		}
+		void VSUM4SBS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsum4sbs", vrd, vra, vrb);
+		}
+		void VSUM4SHS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsum4shs", vrd, vra, vrb);
+		}
+		void VSUM4UBS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		{
+			DisAsm_V3("vsum4ubs", vrd, vra, vrb);
+		}
+		void VUPKHPX(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vupkhpx", vrd, vrb);
+		}
+		void VUPKHSB(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vupkhsb", vrd, vrb);
+		}
+		void VUPKHSH(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vupkhsh", vrd, vrb);
+		}
+		void VUPKLPX(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vupklpx", vrd, vrb);
+		}
+		void VUPKLSB(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vupklsb", vrd, vrb);
+		}
+		void VUPKLSH(OP_REG vrd, OP_REG vrb)
+		{
+			DisAsm_V2("vupklsh", vrd, vrb);
+		}
 		void VXOR(OP_REG vrd, OP_REG vra, OP_REG vrb)
 		{
 			DisAsm_V3("vxor", vrd, vra, vrb);
@@ -414,6 +1038,10 @@ private:
 		{
 			DisAsm_INT1_R2("tw", to, ra, rb);
 		}
+		void LVSL(OP_REG vd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("lvsl", vd, ra, rb);
+		}
 		void LVEBX(OP_REG vd, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_V1_R2("lvebx", vd, ra, rb);
@@ -477,6 +1105,10 @@ private:
 		{
 			DisAsm_CR1_R2(wxString::Format("cmpl%s", l ? "d" : "w"), crfd, ra, rb);
 		}
+		void LVSR(OP_REG vd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("lvsr", vd, ra, rb);
+		}
 		void LVEHX(OP_REG vd, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_V1_R2("lvehx", vd, ra, rb);
@@ -525,9 +1157,9 @@ private:
 		{
 			DisAsm_R3("lbzx", rd, ra, rb);
 		}
-		void LVX(OP_REG vrd, OP_REG ra, OP_REG rb)
+		void LVX(OP_REG vd, OP_REG ra, OP_REG rb)
 		{
-			DisAsm_V1_R2("lvx", vrd, ra, rb);
+			DisAsm_V1_R2("lvx", vd, ra, rb);
 		}
 		void NEG(OP_REG rd, OP_REG ra, OP_REG oe, bool rc)
 		{
@@ -547,6 +1179,10 @@ private:
 			{
 				DisAsm_R3_RC("nor", ra, rs, rb, rc);
 			}
+		}
+		void STVEBX(OP_REG vs, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("stvebx", vs, ra, rb);
 		}
 		void SUBFE(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
@@ -572,9 +1208,17 @@ private:
 		{
 			DisAsm_R3("stwx", rs, ra, rb);
 		}
+		void STVEHX(OP_REG vs, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("stvehx", vs, ra, rb);
+		}
 		void STDUX(OP_REG rs, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_R3("stdux", rs, ra, rb);
+		}
+		void STVEWX(OP_REG vs, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("stvewx", vs, ra, rb);
 		}
 		void ADDZE(OP_REG rd, OP_REG ra, OP_REG oe, bool rc)
 		{
@@ -588,9 +1232,9 @@ private:
 		{
 			DisAsm_R3("stbx", rs, ra, rb);
 		}
-		void STVX(OP_REG vrd, OP_REG ra, OP_REG rb)
+		void STVX(OP_REG vd, OP_REG ra, OP_REG rb)
 		{
-			DisAsm_V1_R2("stvx", vrd, ra, rb);
+			DisAsm_V1_R2("stvx", vd, ra, rb);
 		}
 		void MULLD(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
@@ -647,9 +1291,24 @@ private:
 			default: DisAsm_R1_IMM("mfspr", rd, spr); break;
 			}
 		}
+		void DST(OP_REG ra, OP_REG rb, OP_uIMM strm, OP_uIMM t)
+		{
+			if(t)
+			{
+				DisAsm_R2_INT1("dstt", ra, rb, strm);
+			}
+			else
+			{
+				DisAsm_R2_INT1("dst", ra, rb, strm);
+			}
+		}
 		void LHAX(OP_REG rd, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_R3("lhax", rd, ra, rb);
+		}
+		void LVXL(OP_REG vd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("lvxl", vd, ra, rb);
 		}
 		void ABS(OP_REG rd, OP_REG ra, OP_REG oe, bool rc)
 		{
@@ -663,6 +1322,17 @@ private:
 			case 268: DisAsm_R1("mftb", rd); break;
 			case 269: DisAsm_R1("mftbu", rd); break;
 			default: DisAsm_R1_IMM("mftb", rd, spr); break;
+			}
+		}
+		void DSTST(OP_REG ra, OP_REG rb, OP_uIMM strm, OP_uIMM t)
+		{
+			if(t)
+			{
+				DisAsm_R2_INT1("dststt", ra, rb, strm);
+			}
+			else
+			{
+				DisAsm_R2_INT1("dstst", ra, rb, strm);
 			}
 		}
 		void LHAUX(OP_REG rd, OP_REG ra, OP_REG rb)
@@ -717,6 +1387,10 @@ private:
 		{
 			DisAsm_R3_RC("nand", rs, rs, rb, rc);
 		}
+		void STVXL(OP_REG vs, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("stvxl", vs, ra, rb);
+		}
 		void DIVD(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
 			DisAsm_R3_OE_RC("divd", rd, ra, rb, oe, rc);
@@ -724,6 +1398,10 @@ private:
 		void DIVW(OP_REG rd, OP_REG ra, OP_REG rb, OP_REG oe, bool rc)
 		{
 			DisAsm_R3_OE_RC("divw", rd, ra, rb, oe, rc);
+		}
+		void LVLX(OP_REG vd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("lvlx", vd, ra, rb);
 		}
 		void LWBRX(OP_REG rd, OP_REG ra, OP_REG rb)
 		{
@@ -741,6 +1419,10 @@ private:
 		{
 			DisAsm_R3_RC("srd", ra, rs, rb, rc);
 		}
+		void LVRX(OP_REG vd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("lvrx", vd, ra, rb);
+		}
 		void LFSUX(OP_REG frd, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_F1_R2("lfsux", frd, ra, rb);
@@ -757,13 +1439,25 @@ private:
 		{
 			DisAsm_F1_R2("lfdux", frd, ra, rb);
 		}
+		void STVLX(OP_REG sd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("stvlx", sd, ra, rb);
+		}
 		void STFSX(OP_REG frs, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_F1_R2("stfsx", frs, ra, rb);
 		}
+		void STVRX(OP_REG sd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("stvrx", sd, ra, rb);
+		}
 		void STFDX(OP_REG frs, OP_REG ra, OP_REG rb)
 		{
 			DisAsm_F1_R2("stfdx", frs, ra, rb);
+		}
+		void LVLXL(OP_REG vd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("lvlxl", vd, ra, rb);
 		}
 		void LHBRX(OP_REG rd, OP_REG ra, OP_REG rb)
 		{
@@ -776,6 +1470,21 @@ private:
 		void SRAD(OP_REG ra, OP_REG rs, OP_REG rb, bool rc)
 		{
 			DisAsm_R3_RC("srad", ra, rs, rb, rc);
+		}
+		void LVRXL(OP_REG vd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("lvrxl", vd, ra, rb);
+		}
+		void DSS(OP_uIMM strm, OP_uIMM a)
+		{
+			if(a)
+			{
+				Write("dssall");
+			}
+			else
+			{
+				DisAsm_INT1("dss", strm);
+			}
 		}
 		void SRAWI(OP_REG ra, OP_REG rs, OP_REG sh, bool rc)
 		{
@@ -793,9 +1502,17 @@ private:
 		{
 			Write("eieio");
 		}
+		void STVLXL(OP_REG sd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("stvlxl", sd, ra, rb);
+		}
 		void EXTSH(OP_REG ra, OP_REG rs, bool rc)
 		{
 			DisAsm_R2_RC("extsh", ra, rs, rc);
+		}
+		void STVRXL(OP_REG sd, OP_REG ra, OP_REG rb)
+		{
+			DisAsm_V1_R2("stvrxl", sd, ra, rb);
 		}
 		void EXTSB(OP_REG ra, OP_REG rs, bool rc)
 		{

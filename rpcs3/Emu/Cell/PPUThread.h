@@ -627,94 +627,24 @@ union VPR_reg
 {
 	//__m128i _m128i;
 	u128 _u128;
-	s128 _i128;
+	s128 _s128;
 	u64 _u64[2];
-	s64 _i64[2];
+	s64 _s64[2];
 	u32 _u32[4];
-	s32 _i32[4];
+	s32 _s32[4];
 	u16 _u16[8];
-	s16 _i16[8];
+	s16 _s16[8];
 	u8  _u8[16];
-	s8  _i8[16];
-
-	//struct { float x, y, z, w; };
+	s8  _s8[16];
+	double _d[2];
+	float  _f[4];
 
 	VPR_reg() { Clear(); }
-
-	VPR_reg(const __m128i val){_u128._u64[0] = val.m128i_u64[0]; _u128._u64[1] = val.m128i_u64[1];}
-	VPR_reg(const u128 val) {			_u128	= val; }
-	VPR_reg(const u64  val) { Clear();	_u64[0] = val; }
-	VPR_reg(const u32  val) { Clear();	_u32[0] = val; }
-	VPR_reg(const u16  val) { Clear();	_u16[0] = val; }
-	VPR_reg(const u8   val) { Clear();	_u8[0]	= val; }
-	VPR_reg(const s128 val) {			_i128	= val; }
-	VPR_reg(const s64  val) { Clear();	_i64[0] = val; }
-	VPR_reg(const s32  val) { Clear();	_i32[0] = val; }
-	VPR_reg(const s16  val) { Clear();	_i16[0] = val; }
-	VPR_reg(const s8   val) { Clear();	_i8[0]	= val; }
-
-	operator u128() const { return _u128; }
-	operator s128() const { return _i128; }
-	operator u64() const { return _u64[0]; }
-	operator s64() const { return _i64[0]; }
-	operator u32() const { return _u32[0]; }
-	operator s32() const { return _i32[0]; }
-	operator u16() const { return _u16[0]; }
-	operator s16() const { return _i16[0]; }
-	operator u8() const { return _u8[0]; }
-	operator s8() const { return _i8[0]; }
-	operator __m128i() { __m128i ret; ret.m128i_u64[0]=_u128._u64[0]; ret.m128i_u64[1]=_u128._u64[1]; return ret; }
-	operator bool() const { return _u64[0] != 0 || _u64[1] != 0; }
 
 	wxString ToString() const
 	{
 		return wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 	}
-
-	VPR_reg operator ^  (VPR_reg right) { return _mm_xor_si128(*this, right); }
-	VPR_reg operator |  (VPR_reg right) { return _mm_or_si128 (*this, right); }
-	VPR_reg operator &  (VPR_reg right) { return _mm_and_si128(*this, right); }
-
-	VPR_reg operator ^  (__m128i right) { return _mm_xor_si128(*this, right); }
-	VPR_reg operator |  (__m128i right) { return _mm_or_si128 (*this, right); }
-	VPR_reg operator &  (__m128i right) { return _mm_and_si128(*this, right); }
-
-	bool operator == (const VPR_reg& right){ return _u64[0] == right._u64[0] && _u64[1] == right._u64[1]; }
-
-	bool operator == (const u128 right)	{ return _u64[0] == right._u64[0] && _u64[1] == right._u64[1]; }
-	bool operator == (const s128 right)	{ return _i64[0] == right._i64[0] && _i64[1] == right._i64[1]; }
-	bool operator == (const u64 right)	{ return _u64[0] == (u64)right && _u64[1] == 0; }
-	bool operator == (const s64 right)	{ return _i64[0] == (s64)right && _i64[1] == 0; }
-	bool operator == (const u32 right)	{ return _u64[0] == (u64)right && _u64[1] == 0; }
-	bool operator == (const s32 right)	{ return _i64[0] == (s64)right && _i64[1] == 0; }
-	bool operator == (const u16 right)	{ return _u64[0] == (u64)right && _u64[1] == 0; }
-	bool operator == (const s16 right)	{ return _i64[0] == (s64)right && _i64[1] == 0; }
-	bool operator == (const u8 right)	{ return _u64[0] == (u64)right && _u64[1] == 0; }
-	bool operator == (const s8 right)	{ return _i64[0] == (s64)right && _i64[1] == 0; }
-
-	bool operator != (const VPR_reg& right){ return !(*this == right); }
-	bool operator != (const u128 right)	{ return !(*this == right); }
-	bool operator != (const u64 right)	{ return !(*this == right); }
-	bool operator != (const u32 right)	{ return !(*this == right); }
-	bool operator != (const u16 right)	{ return !(*this == right); }
-	bool operator != (const u8 right)	{ return !(*this == right); }
-	bool operator != (const s128 right)	{ return !(*this == right); }
-	bool operator != (const s64 right)	{ return !(*this == right); }
-	bool operator != (const s32 right)	{ return !(*this == right); }
-	bool operator != (const s16 right)	{ return !(*this == right); }
-	bool operator != (const s8 right)	{ return !(*this == right); }
-
-	s64& d(const u32 c) { return _i64[1 - c]; }
-	u64& ud(const u32 c) { return _u64[1 - c]; }
-
-	s32& w(const u32 c) { return _i32[3 - c]; }
-	u32& uw(const u32 c) { return _u32[3 - c]; }
-
-	s16& h(const u32 c) { return _i16[7 - c]; }
-	u16& uh(const u32 c) { return _u16[7 - c]; }
-
-	s8& b(const u32 c) { return _i8[15 - c]; }
-	u8& ub(const u32 c) { return _u8[15 - c]; }
 
 	void Clear() { memset(this, 0, sizeof(*this)); }
 };
