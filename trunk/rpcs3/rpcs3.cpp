@@ -19,7 +19,7 @@ bool Rpcs3App::OnInit()
 	ConLogFrame = new LogFrame();
 	ConLogFrame->Show();
 
-	(new CompilerELF(nullptr))->Show();
+	//(new CompilerELF(nullptr))->Show();
 
 	m_MainFrame = new MainFrame();
 	SetTopWindow(m_MainFrame);
