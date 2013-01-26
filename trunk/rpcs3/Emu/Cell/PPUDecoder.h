@@ -519,6 +519,7 @@ public:
 			/*0x036*/ADD_OPCODE(DCBST,	RA(), RB());
 			/*0x03a*/ADD_OPCODE(CNTLZD,	RA(), RS(), RC());
 			/*0x03c*/ADD_OPCODE(ANDC,	RA(), RS(), RB(), RC());
+			/*0x047*/ADD_OPCODE(LVEWX,	VD(), RA(), RB());
 			/*0x049*/ADD_OPCODE(MULHD,	RD(), RA(), RB(), RC());
 			/*0x04b*/ADD_OPCODE(MULHW,	RD(), RA(), RB(), RC());
 			/*0x054*/ADD_OPCODE(LDARX,	RD(), RA(), RB());

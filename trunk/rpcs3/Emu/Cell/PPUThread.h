@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Emu/Cell/PPCThread.h"
 #include "Emu/SysCalls/SysCalls.h"
+#include "rpcs3.h"
 
 enum
 {
@@ -237,6 +238,19 @@ union XERhdr
 		u64 CA	: 1;
 		u64 OV	: 1;
 		u64 SO	: 1;
+	};
+};
+
+union VSCRhdr
+{
+	u32 VSCR;
+
+	struct
+	{
+		u32 SAT	: 1;
+		u32 X		: 15;
+		u32 NJ	: 1;
+		u32 Y		: 15;
 	};
 };
 
@@ -636,8 +650,42 @@ union VPR_reg
 	s16 _s16[8];
 	u8  _u8[16];
 	s8  _s8[16];
-	double _d[2];
-	float  _f[4];
+
+	// Byte Order :
+	// When we load the register, we revert the bytes
+	// So, the bytes in this register respect the normal order
+	// However, this means the halfwords/words/doublewords are reverted :
+	// We want : HalfWord 0 = Byte 0 << 8 + Byte 1
+	// But we have : HalfWord 0 = Byte 0 + Byte 1 << 8
+	// So any access to a halfword/word/doubleword must revert the bytes when loading, and do it again when writing
+
+	float _f(int n)
+	{
+		u32 f = re(_u32[n]);
+
+		return *((float*)&f);
+	}
+
+	double _d(int n)
+	{
+		u64 d = re(_u64[n]);
+
+		return *((double*)&d);
+	}
+
+	void setFloat(float f, int n)
+	{
+		u32 result = *((u32*)&f);
+
+		_u32[n] = re(result);
+	}
+
+	void setDouble(double d, int n)
+	{
+		u64 result = *((u64*)&d);
+
+		_u64[n] = re(result);
+	}
 
 	VPR_reg() { Clear(); }
 
@@ -723,6 +771,8 @@ public:
 
 	MSRhdr MSR; //Machine State Register
 	PVRhdr PVR; //Processor Version Register
+
+	VSCRhdr VSCR; // Vector Status and Control Register
 
 	u64 LR;		//SPR 0x008 : Link Register
 	u64 CTR;	//SPR 0x009 : Count Register
