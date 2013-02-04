@@ -1009,241 +1009,730 @@ private:
 				CPU.VPR[vd]._u16[h] = re((u16)(result & 0xffff));
 			}
 		}
-		void VMRGHB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMRGHB(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+			{
+				CPU.VPR[vd]._u8[h*2] = CPU.VPR[va]._u8[h];
+				CPU.VPR[vd]._u8[h*2 + 1] = CPU.VPR[vb]._u8[h];
+			}
 		}
-		void VMRGHH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMRGHH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				CPU.VPR[vd]._u16[w*2] = CPU.VPR[va]._u16[w];
+				CPU.VPR[vd]._u16[w*2 + 1] = CPU.VPR[vb]._u16[w];
+			}
 		}
-		void VMRGHW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMRGHW(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int d = 0; d < 2; d++)
+			{
+				CPU.VPR[vd]._u32[d*2] = CPU.VPR[va]._u32[d];
+				CPU.VPR[vd]._u32[d*2 + 1] = CPU.VPR[vb]._u32[d];
+			}
 		}
-		void VMRGLB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMRGLB(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+			{
+				CPU.VPR[vd]._u8[h*2] = CPU.VPR[va]._u8[h + 8];
+				CPU.VPR[vd]._u8[h*2 + 1] = CPU.VPR[vb]._u8[h + 8];
+			}
 		}
-		void VMRGLH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMRGLH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				CPU.VPR[vd]._u16[w*2] = CPU.VPR[va]._u16[w + 4];
+				CPU.VPR[vd]._u16[w*2 + 1] = CPU.VPR[vb]._u16[w + 4];
+			}
 		}
-		void VMRGLW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMRGLW(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int d = 0; d < 2; d++)
+			{
+				CPU.VPR[vd]._u32[d*2] = CPU.VPR[va]._u32[d + 2];
+				CPU.VPR[vd]._u32[d*2 + 1] = CPU.VPR[vb]._u32[d + 2];
+			}
 		}
-		void VMSUMMBM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		void VMSUMMBM(OP_REG vd, OP_REG va, OP_REG vb, OP_REG vc)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				s32 result = 0;
+
+				for (int b = 0; b < 4; b++)
+				{
+					result += CPU.VPR[va]._s8[w*4 + b] * CPU.VPR[vb]._u8[w*4 + b];
+				}
+
+				result += re(CPU.VPR[vc]._s32[w]);
+				CPU.VPR[vd]._s32[w] = re(result);
+			}
 		}
-		void VMSUMSHM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		void VMSUMSHM(OP_REG vd, OP_REG va, OP_REG vb, OP_REG vc)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				s32 result = 0;
+
+				for (int h = 0; h < 2; h++)
+				{
+					result += re(CPU.VPR[va]._s16[w*2 + h]) * re(CPU.VPR[vb]._s16[w*2 + h]);
+				}
+
+				result += re(CPU.VPR[vc]._s32[w]);
+				CPU.VPR[vd]._s32[w] = re(result);
+			}
 		}
-		void VMSUMSHS(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		void VMSUMSHS(OP_REG vd, OP_REG va, OP_REG vb, OP_REG vc)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				s64 result = 0;
+				s32 saturated = 0;
+
+				for (int h = 0; h < 2; h++)
+				{
+					result += re(CPU.VPR[va]._s16[w*2 + h]) * re(CPU.VPR[vb]._s16[w*2 + h]);
+				}
+
+				result += re(CPU.VPR[vc]._s32[w]);
+
+				if (result > INT_MAX)
+				{
+					saturated = INT_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < INT_MIN)
+				{
+					saturated = INT_MIN;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					saturated = (s32)result;
+
+				CPU.VPR[vd]._s32[w] = re(saturated);
+			}
 		}
-		void VMSUMUBM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		void VMSUMUBM(OP_REG vd, OP_REG va, OP_REG vb, OP_REG vc)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				u32 result = 0;
+
+				for (int b = 0; b < 4; b++)
+				{
+					result += CPU.VPR[va]._u8[w*4 + b] * CPU.VPR[vb]._u8[w*4 + b];
+				}
+
+				result += re(CPU.VPR[vc]._u32[w]);
+				CPU.VPR[vd]._u32[w] = re(result);
+			}
 		}
-		void VMSUMUHM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		void VMSUMUHM(OP_REG vd, OP_REG va, OP_REG vb, OP_REG vc)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				u32 result = 0;
+
+				for (int h = 0; h < 2; h++)
+				{
+					result += re(CPU.VPR[va]._u16[w*2 + h]) * re(CPU.VPR[vb]._u16[w*2 + h]);
+				}
+
+				result += re(CPU.VPR[vc]._u32[w]);
+				CPU.VPR[vd]._u32[w] = re(result);
+			}
 		}
-		void VMSUMUHS(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		void VMSUMUHS(OP_REG vd, OP_REG va, OP_REG vb, OP_REG vc)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				u64 result = 0;
+				u32 saturated = 0;
+
+				for (int h = 0; h < 2; h++)
+				{
+					result += re(CPU.VPR[va]._u16[w*2 + h]) * re(CPU.VPR[vb]._u16[w*2 + h]);
+				}
+
+				result += re(CPU.VPR[vc]._u32[w]);
+
+				if (result > UINT_MAX)
+				{
+					saturated = UINT_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					saturated = (u32)result;
+
+				CPU.VPR[vd]._u32[w] = re(saturated);
+			}
 		}
-		void VMULESB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMULESB(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+			{
+				s16 result = CPU.VPR[va]._s8[h*2] * CPU.VPR[vb]._s8[h*2];
+				CPU.VPR[vd]._s16[h] = re(result);
+			}
 		}
-		void VMULESH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMULESH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				s32 result = re(CPU.VPR[va]._s16[w*2]) * re(CPU.VPR[vb]._s16[w*2]);
+				CPU.VPR[vd]._s32[w] = re(result);
+			}
 		}
-		void VMULEUB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMULEUB(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+			{
+				u16 result = CPU.VPR[va]._u8[h*2] * CPU.VPR[vb]._u8[h*2];
+				CPU.VPR[vd]._u16[h] = re(result);
+			}
 		}
-		void VMULEUH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMULEUH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				u32 result = re(CPU.VPR[va]._u16[w*2]) * re(CPU.VPR[vb]._u16[w*2]);
+				CPU.VPR[vd]._u32[w] = re(result);
+			}
 		}
-		void VMULOSB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMULOSB(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+			{
+				s16 result = CPU.VPR[va]._s8[h*2 + 1] * CPU.VPR[vb]._s8[h*2 + 1];
+				CPU.VPR[vd]._s16[h] = re(result);
+			}
 		}
-		void VMULOSH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMULOSH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				s32 result = re(CPU.VPR[va]._s16[w*2 + 1]) * re(CPU.VPR[vb]._s16[w*2 + 1]);
+				CPU.VPR[vd]._s32[w] = re(result);
+			}
 		}
-		void VMULOUB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMULOUB(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+			{
+				u16 result = CPU.VPR[va]._u8[h*2 + 1] * CPU.VPR[vb]._u8[h*2 + 1];
+				CPU.VPR[vd]._u16[h] = re(result);
+			}
 		}
-		void VMULOUH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VMULOUH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				u32 result = re(CPU.VPR[va]._u16[w*2 + 1]) * re(CPU.VPR[vb]._u16[w*2 + 1]);
+				CPU.VPR[vd]._u32[w] = re(result);
+			}
 		}
-		void VNMSUBFP(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		void VNMSUBFP(OP_REG vd, OP_REG va, OP_REG vb, OP_REG vc)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				double result = CPU.VPR[va]._f(w) * CPU.VPR[vc]._f(w);
+				result = CPU.VPR[vb]._f(w) - result;
+
+				CPU.VPR[vd].setFloat((float)result, w);
+			}
 		}
-		void VNOR(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VNOR(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+				CPU.VPR[vd]._u32[w] = ~(CPU.VPR[va]._u32[w] | CPU.VPR[vb]._u32[w]);
 		}
-		void VOR(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VOR(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+				CPU.VPR[vd]._u32[w] = CPU.VPR[va]._u32[w] | CPU.VPR[vb]._u32[w];
 		}
-		void VPERM(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		void VPERM(OP_REG vd, OP_REG va, OP_REG vb, OP_REG vc)
 		{
-			// TODO
+			for (int b = 0; b < 16; b++)
+			{
+				int index = CPU.VPR[vc]._u8[b] & 0x1f;
+				
+				if (index < 0x10)
+					CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[index];
+				else
+					CPU.VPR[vd]._u8[b] = CPU.VPR[vb]._u8[index - 0x10];
+			}
 		}
-		void VPKPX(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VPKPX(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 4; h++)
+			{
+				int b7  = CPU.VPR[va]._u8[h*4] & 1;
+				int b8  = (CPU.VPR[va]._u8[h*4 + 1] >> 3);
+				int b16 = (CPU.VPR[va]._u8[h*4 + 2] >> 3);
+				int b24 = (CPU.VPR[va]._u8[h*4 + 3] >> 3);
+
+				u16 result = (b7 << 15) | (b8 << 10) | (b16 << 5) | b24;
+
+				CPU.VPR[vd]._u16[h] = re(result);
+			}
+
+			for (int h = 0; h < 4; h++)
+			{
+				int b7  = CPU.VPR[vb]._u8[h*4] & 1;
+				int b8  = (CPU.VPR[vb]._u8[h*4 + 1] >> 3);
+				int b16 = (CPU.VPR[vb]._u8[h*4 + 2] >> 3);
+				int b24 = (CPU.VPR[vb]._u8[h*4 + 3] >> 3);
+
+				u16 result = (b7 << 15) | (b8 << 10) | (b16 << 5) | b24;
+
+				CPU.VPR[vd]._u16[h + 4] = re(result);
+			}
 		}
-		void VPKSHSS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VPKSHSS(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int b = 0; b < 8; b++)
+			{
+				s16 result = re(CPU.VPR[va]._s16[b]);
+
+				if (result > INT8_MAX)
+				{
+					CPU.VPR[vd]._s8[b] = INT8_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < INT8_MIN)
+				{
+					CPU.VPR[vd]._s8[b] = INT8_MIN;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._s8[b] = (s8)result;
+			}
+			for (int b = 0; b < 8; b++)
+			{
+				s16 result = re(CPU.VPR[vb]._s16[b]);
+
+				if (result > INT8_MAX)
+				{
+					CPU.VPR[vd]._s8[b+8] = INT8_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < INT8_MIN)
+				{
+					CPU.VPR[vd]._s8[b+8] = INT8_MIN;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._s8[b+8] = (s8)result;
+			}
 		}
-		void VPKSHUS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VPKSHUS(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int b = 0; b < 8; b++)
+			{
+				s16 result = re(CPU.VPR[va]._s16[b]);
+
+				if (result > UINT8_MAX)
+				{
+					CPU.VPR[vd]._u8[b] = UINT8_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < 0)
+				{
+					CPU.VPR[vd]._u8[b] = 0;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u8[b] = (u8)result;
+			}
+			for (int b = 0; b < 8; b++)
+			{
+				s16 result = re(CPU.VPR[vb]._s16[b]);
+
+				if (result > UINT8_MAX)
+				{
+					CPU.VPR[vd]._u8[b+8] = UINT8_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < 0)
+				{
+					CPU.VPR[vd]._u8[b+8] = 0;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u8[b+8] = (u8)result;
+			}
 		}
-		void VPKSWSS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VPKSWSS(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 4; h++)
+			{
+				s32 result = re(CPU.VPR[va]._s32[h]);
+
+				if (result > INT16_MAX)
+				{
+					CPU.VPR[vd]._s16[h] = INT16_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < INT16_MIN)
+				{
+					CPU.VPR[vd]._s16[h] = INT16_MIN;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._s16[h] = (s16)result;
+			}
+			for (int h = 0; h < 4; h++)
+			{
+				s32 result = re(CPU.VPR[vb]._s32[h]);
+
+				if (result > INT16_MAX)
+				{
+					CPU.VPR[vd]._s16[h+4] = INT16_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < INT16_MIN)
+				{
+					CPU.VPR[vd]._s16[h+4] = INT16_MIN;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._s16[h+4] = (s16)result;
+			}
 		}
-		void VPKSWUS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VPKSWUS(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 4; h++)
+			{
+				s32 result = re(CPU.VPR[va]._s32[h]);
+
+				if (result > UINT16_MAX)
+				{
+					CPU.VPR[vd]._u16[h] = UINT16_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < 0)
+				{
+					CPU.VPR[vd]._u16[h] = 0;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u16[h] = (u16)result;
+			}
+			for (int h = 0; h < 4; h++)
+			{
+				s32 result = re(CPU.VPR[vb]._s32[h]);
+
+				if (result > UINT16_MAX)
+				{
+					CPU.VPR[vd]._u16[h+4] = UINT16_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else if (result < 0)
+				{
+					CPU.VPR[vd]._u16[h+4] = 0;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u16[h+4] = (u16)result;
+			}
 		}
-		void VPKUHUM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VPKUHUM(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int b = 0; b < 8; b++)
+				CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[b*2+1];
+			for (int b = 0; b < 8; b++)
+				CPU.VPR[vd]._u8[b+8] = CPU.VPR[vb]._u8[b*2+1];
 		}
-		void VPKUHUS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VPKUHUS(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int b = 0; b < 8; b++)
+			{
+				u16 result = re(CPU.VPR[va]._u16[b]);
+
+				if (result > UINT8_MAX)
+				{
+					CPU.VPR[vd]._u8[b] = UINT8_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u8[b] = (u8)result;
+			}
+			for (int b = 0; b < 8; b++)
+			{
+				u16 result = re(CPU.VPR[vb]._u16[b]);
+
+				if (result > UINT8_MAX)
+				{
+					CPU.VPR[vd]._u8[b+8] = UINT8_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u8[b+8] = (u8)result;
+			}
 		}
-		void VPKUWUM(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VPKUWUM(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 4; h++)
+				CPU.VPR[vd]._u16[h] = CPU.VPR[va]._u16[h*2+1];
+			for (int h = 0; h < 4; h++)
+				CPU.VPR[vd]._u16[h+4] = CPU.VPR[vb]._u16[h*2+1];
 		}
-		void VPKUWUS(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VPKUWUS(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 4; h++)
+			{
+				u32 result = re(CPU.VPR[va]._u32[h]);
+
+				if (result > UINT16_MAX)
+				{
+					CPU.VPR[vd]._u16[h] = UINT16_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u16[h] = (u16)result;
+			}
+			for (int h = 0; h < 4; h++)
+			{
+				u32 result = re(CPU.VPR[vb]._u32[h]);
+
+				if (result > UINT16_MAX)
+				{
+					CPU.VPR[vd]._u16[h+4] = UINT16_MAX;
+					CPU.VSCR.SAT = 1;
+				}
+				else
+					CPU.VPR[vd]._u16[h+4] = (u16)result;
+			}
 		}
-		void VREFP(OP_REG vrd, OP_REG vrb)
+		void VREFP(OP_REG vd, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				float f = 1 / CPU.VPR[vb]._f(w);
+				CPU.VPR[vd].setFloat(f, w);
+			}
 		}
-		void VRFIM(OP_REG vrd, OP_REG vrb)
+		void VRFIM(OP_REG vd, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				float f = CPU.VPR[vb]._f(w);
+				CPU.VPR[vd].setFloat(floor(f), w);
+			}
 		}
-		void VRFIN(OP_REG vrd, OP_REG vrb)
+		void VRFIN(OP_REG vd, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				float f = CPU.VPR[vb]._f(w);
+				CPU.VPR[vd].setFloat(floor(f + 0.5f), w);
+			}
 		}
-		void VRFIP(OP_REG vrd, OP_REG vrb)
+		void VRFIP(OP_REG vd, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				float f = CPU.VPR[vb]._f(w);
+				CPU.VPR[vd].setFloat(ceil(f), w);
+			}
 		}
-		void VRFIZ(OP_REG vrd, OP_REG vrb)
+		void VRFIZ(OP_REG vd, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				float f;
+				modf(CPU.VPR[vb]._f(w), &f);
+				CPU.VPR[vd].setFloat(f, w);
+			}
 		}
-		void VRLB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VRLB(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int b = 0; b < 16; b++)
+			{
+				int nRot = CPU.VPR[vb]._u8[b] & 0x7;
+
+				CPU.VPR[vd]._u8[b] = ((CPU.VPR[va]._u8[b] << nRot) & 0xff) | (CPU.VPR[va]._u8[b] >> (8 - nRot));
+			}
 		}
-		void VRLH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VRLH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+			{
+				int nRot = CPU.VPR[vb]._u8[h*2 + 1] & 0xf;
+
+				u16 a = re(CPU.VPR[va]._u16[h]);
+
+				u16 result = ((a << nRot) & 0xffff) | (a >> (16 - nRot));
+
+				CPU.VPR[vd]._u16[h] = re(result);
+			}
 		}
-		void VRLW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VRLW(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				int nRot = CPU.VPR[vb]._u8[w*4 + 3] & 0x1f;
+
+				u32 a = re(CPU.VPR[va]._u32[w]);
+
+				u32 result = ((a << nRot) & 0xffffffff) | (a >> (32 - nRot));
+
+				CPU.VPR[vd]._u32[w] = re(result);
+			}
 		}
-		void VRSQRTEFP(OP_REG vrd, OP_REG vrb)
+		void VRSQRTEFP(OP_REG vd, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				float f = 1 / sqrtf(CPU.VPR[vb]._f(w));
+
+				CPU.VPR[vd].setFloat(f, w);
+			}
 		}
-		void VSEL(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_REG vrc)
+		void VSEL(OP_REG vd, OP_REG va, OP_REG vb, OP_REG vc)
 		{
-			// TODO
+			for (int b = 0; b < 16; b++)
+			{
+				u8 mask = CPU.VPR[vc]._u8[b];
+
+				CPU.VPR[vd]._u8[b] = (CPU.VPR[vb]._u8[b] & mask) | (CPU.VPR[va]._u8[b] & (~mask));
+			}
 		}
-		void VSL(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VSL(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			int nShift = CPU.VPR[vb]._u8[15] & 0x7;
+
+			for (int b = 0; b < 15; b++)
+			{
+				CPU.VPR[vd]._u8[b] = ((CPU.VPR[va]._u8[b] << nShift) & 0xff) | (CPU.VPR[va]._u8[b + 1] >> (8 - nShift));
+			}
+
+			CPU.VPR[vd]._u8[15] = (CPU.VPR[va]._u8[15] << nShift) & 0xff;
 		}
-		void VSLB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VSLB(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int b = 0; b < 16; b++)
+				CPU.VPR[vd]._u8[b] = (CPU.VPR[va]._u8[b] << (CPU.VPR[vb]._u8[b] & 0x7)) & 0xff;
 		}
-		void VSLDOI(OP_REG vrd, OP_REG vra, OP_REG vrb, OP_uIMM sh)
+		void VSLDOI(OP_REG vd, OP_REG va, OP_REG vb, OP_uIMM sh)
 		{
-			// TODO
+			for (int b = 0; b < 16 - sh; b++)
+				CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[b + sh];
+			for (int b = 16 - sh; b < 16; b++)
+				CPU.VPR[vd]._u8[b] = CPU.VPR[vb]._u8[b - (16 - sh)];
 		}
-		void VSLH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VSLH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+			{
+				int nShift = CPU.VPR[vb]._u8[h*2 + 1] & 0xf;
+				
+				u16 result = (re(CPU.VPR[va]._u16[h]) << nShift) & 0xffff;
+
+				CPU.VPR[vd]._u16[h] = re(result);
+			}
 		}
-		void VSLO(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VSLO(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			int nShift = (CPU.VPR[vb]._u8[15] >> 3) & 0xf;
+
+			CPU.VPR[vd].Clear();
+
+			for (int b = 0; b < 16 - nShift; b++)
+				CPU.VPR[vd]._u8[b] = CPU.VPR[va]._u8[b + nShift];
 		}
-		void VSLW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VSLW(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				int nShift = (CPU.VPR[vb]._u8[w*4 + 3] >> 3) & 0x1f;
+
+				u32 result = re(CPU.VPR[va]._u32[w]) << nShift;
+
+				CPU.VPR[vd]._u32[w] = re(result);
+			}
 		}
-		void VSPLTB(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		void VSPLTB(OP_REG vd, OP_uIMM uimm5, OP_REG vb)
 		{
-			// TODO
+			u8 byte = CPU.VPR[vb]._u8[uimm5];
+			
+			for (int b = 0; b < 16; b++)
+				CPU.VPR[vd]._u8[b] = byte;
 		}
-		void VSPLTH(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		void VSPLTH(OP_REG vd, OP_uIMM uimm5, OP_REG vb)
 		{
-			// TODO
+			assert(uimm5 < 8);
+			
+			u16 hword = CPU.VPR[vb]._u16[uimm5];
+
+			for (int h = 0; h < 8; h++)
+				CPU.VPR[vd]._u16[h] = hword;
 		}
-		void VSPLTISB(OP_REG vrd, OP_sIMM simm5)
+		void VSPLTISB(OP_REG vd, OP_sIMM simm5)
 		{
-			// TODO
+			for (int b = 0; b < 16; b++)
+				CPU.VPR[vd]._u8[b] = (s8)simm5;
 		}
-		void VSPLTISH(OP_REG vrd, OP_sIMM simm5)
+		void VSPLTISH(OP_REG vd, OP_sIMM simm5)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+				CPU.VPR[vd]._u16[h] = (s16)simm5;
 		}
-		void VSPLTISW(OP_REG vrd, OP_sIMM simm5)
+		void VSPLTISW(OP_REG vd, OP_sIMM simm5)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+				CPU.VPR[vd]._u32[w] = (s32)simm5;
 		}
-		void VSPLTW(OP_REG vrd, OP_uIMM uimm5, OP_REG vrb)
+		void VSPLTW(OP_REG vd, OP_uIMM uimm5, OP_REG vb)
 		{
-			// TODO
+			assert(uimm5 < 4);
+
+			u32 word = CPU.VPR[vb]._u32[uimm5];
+			
+			for (int w = 0; w < 4; w++)
+				CPU.VPR[vd]._u32[w] = word;
 		}
-		void VSR(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VSR(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			int sh = CPU.VPR[vb]._u8[15] & 0x7;
+
+			CPU.VPR[vd]._u32[0] = CPU.VPR[va]._u32[0] >> sh;
+
+			for (int w = 1; w < 4; w++)
+				CPU.VPR[vd]._u32[w] = (CPU.VPR[va]._u32[w] >> sh) | ((CPU.VPR[va]._u32[w - 1] << (32 - sh)) & 0xffffffff);
 		}
-		void VSRAB(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VSRAB(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int b = 0; b < 16; b++)
+			{
+				int nShift = CPU.VPR[vb]._u8[b] & 0x7;
+
+				CPU.VPR[vd]._s8[b] = CPU.VPR[va]._s8[b] >> nShift;
+			}
 		}
-		void VSRAH(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VSRAH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int h = 0; h < 8; h++)
+			{
+				int nShift = CPU.VPR[vb]._u8[h*2 + 1] & 0xf;
+
+				CPU.VPR[vd]._s16[h] = CPU.VPR[va]._s16[h] >> nShift;
+			}
 		}
-		void VSRAW(OP_REG vrd, OP_REG vra, OP_REG vrb)
+		void VSRAW(OP_REG vd, OP_REG va, OP_REG vb)
 		{
-			// TODO
+			for (int w = 0; w < 4; w++)
+			{
+				int nShift = CPU.VPR[vb]._u8[w*4 + 3] & 0x1f;
+
+				CPU.VPR[vd]._s32[w] = CPU.VPR[va]._s32[w] >> nShift;
+			}
 		}
 		void VSRB(OP_REG vrd, OP_REG vra, OP_REG vrb)
 		{
