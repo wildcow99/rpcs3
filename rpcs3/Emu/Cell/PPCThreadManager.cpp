@@ -26,6 +26,7 @@ PPCThread& PPCThreadManager::AddThread(bool isPPU)
 	);
 
 	m_threads.Add(new_thread);
+	wxGetApp().SendDbgCommand(DID_CREATE_THREAD, new_thread);
 
 	return *new_thread;
 }
@@ -36,6 +37,7 @@ void PPCThreadManager::RemoveThread(const u32 id)
 	{
 		if(m_threads[i].GetId() != id) continue;
 
+		wxGetApp().SendDbgCommand(DID_REMOVE_THREAD, &m_threads[i]);
 		m_threads[i].Close();
 		m_threads.RemoveAt(i);
 

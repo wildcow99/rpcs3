@@ -23,6 +23,18 @@ public:
 		const u32 to = from + count;
 		if(to > GetCount()) return false;
 		
+		memmove(m_array + from, m_array + to, (m_count-to) * sizeof(T));
+		m_count -= count;
+		
+		return true;
+	}
+
+	inline bool RemoveAtD(const u32 from, const u32 count = 1)
+	{
+		if(!GetCount()) return false;
+		const u32 to = from + count;
+		if(to > GetCount()) return false;
+		
 		for(u32 i=0; i<count; ++i) m_array[from + i].~T();
 		memmove(m_array + from, m_array + to, (m_count-to) * sizeof(T));
 		m_count -= count;
@@ -101,10 +113,14 @@ public:
 		return AddCpy(&data);
 	}
 
-	inline void Clear()
+	inline void ClearD()
 	{
 		for(u32 i=0; i<m_count; ++i) m_array[i].~T();
+		Clear();
+	}
 
+	inline void Clear()
+	{
 		m_count = 0;
 		safe_delete(m_array);
 	}

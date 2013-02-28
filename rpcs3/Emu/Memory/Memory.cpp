@@ -369,7 +369,7 @@ MemoryBlock* DynamicMemoryBlock::SetRange(const u64 start, const u32 size)
 
 void DynamicMemoryBlock::Delete()
 {
-	m_used_mem.Clear();
+	m_used_mem.ClearD();
 	m_max_size = 0;
 
 	MemoryBlock::Delete();
@@ -441,7 +441,7 @@ bool DynamicMemoryBlock::Free(u64 addr)
 	{
 		if(addr == m_used_mem[i].addr)
 		{
-			m_used_mem.RemoveAt(i);
+			m_used_mem.RemoveAtD(i);
 			return true;
 		}
 	}

@@ -1,28 +1,24 @@
 #pragma once
-#include "vfsStream.h"
+#include "vfsDevice.h"
 
-enum vfsFileOpenMode
-{
-	vfsFileRead,
-	vfsFileWrite,
-	vfsFileReadWrite,
-	vfsFileWriteExcl,
-	vfsFileWriteAppend,
-};
-
-struct vfsFileBase : public vfsStream
+struct vfsFileBase : public vfsDevice
 {
 protected:
 	wxString m_path;
-	vfsFileOpenMode m_mode;
+	vfsOpenMode m_mode;
 
 public:
 	vfsFileBase();
 	virtual ~vfsFileBase();
 
-	virtual bool Open(const wxString& path, vfsFileOpenMode mode);
+	virtual bool Open(const wxString& path, vfsOpenMode mode);
 	virtual bool Close();
-
+	/*
+	virtual bool Create(const wxString& path)=0;
+	virtual bool Exists(const wxString& path)=0;
+	virtual bool Rename(const wxString& from, const wxString& to)=0;
+	virtual bool Remove(const wxString& path)=0;
+	*/
 	wxString GetPath() const;
-	vfsFileOpenMode GetOpenMode() const;
+	vfsOpenMode GetOpenMode() const;
 };

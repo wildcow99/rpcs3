@@ -41,6 +41,9 @@
     <Filter Include="Emu\FS">
       <UniqueIdentifier>{fd7cea02-e77f-41b1-8b61-f78e7d280e04}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\SysCalls\Modules">
+      <UniqueIdentifier>{dfd581c4-aed0-4229-bb30-7ee5816049e1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="rpcs3.cpp">
@@ -216,6 +219,30 @@
     </ClCompile>
     <ClCompile Include="Emu\SysCalls\lv2\SC_SysUtil_MsgDialog.cpp">
       <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\FS\vfsDevice.cpp">
+      <Filter>Emu\FS</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Condition.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\lv2\SC_Mutex.cpp">
+      <Filter>Emu\SysCalls\lv2</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_io.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sys_fs.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\sysPrxForUser.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\SysCalls\Modules\cellGcmSys.cpp">
+      <Filter>Emu\SysCalls\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Gui\Debugger.cpp">
+      <Filter>Gui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

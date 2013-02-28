@@ -3,15 +3,14 @@
 #include "Gui/ConLog.h"
 #include <wx/listctrl.h>
 #include "Ini.h"
+#include <fstream>
+#include <vector>
 
 LogWriter ConLog;
 LogFrame* ConLogFrame;
-wxMutex mtx_wait;
 
 static const uint max_item_count = 500;
 static const uint buffer_size = 1024 * 64;
-
-wxSemaphore m_conlog_sem;
 
 struct LogPacket
 {
@@ -24,6 +23,7 @@ struct LogPacket
 		, m_text(text)
 		, m_colour(colour)
 	{
+		
 	}
 
 	LogPacket()
@@ -109,15 +109,13 @@ void LogWriter::WriteToLog(wxString prefix, wxString value, wxString colour/*, w
 {
 	if(PPCThread* thr = GetCurrentPPCThread())
 	{
-		prefix = (prefix.IsEmpty() ? "" : prefix + " : ") + thr->GetFName();
+		prefix = (prefix.IsEmpty() ? "" : prefix + " : ") + thr->GetFName() + wxString::Format("[0x%08llx]", thr->PC);
 	}
 
 	if(m_logfile.IsOpened())
 		m_logfile.Write((prefix.IsEmpty() ? wxEmptyString : "[" + prefix + "]: ") + value + "\n");
 
 	if(!ConLogFrame) return;
-
-	wxMutexLocker locker(mtx_wait);
 
 	while(LogBuffer.IsBusy()) Sleep(1);
 
@@ -184,26 +182,20 @@ void LogWriter::SkipLn()
 	WriteToLog(wxEmptyString, wxEmptyString, "Black");
 }
 
-BEGIN_EVENT_TABLE(LogFrame, FrameBase)
+BEGIN_EVENT_TABLE(LogFrame, wxPanel)
 	EVT_CLOSE(LogFrame::OnQuit)
 END_EVENT_TABLE()
 
-LogFrame::LogFrame()
-	: FrameBase(NULL, wxID_ANY, "Log Console", wxEmptyString, wxSize(600, 450), wxDefaultPosition)
+LogFrame::LogFrame(wxWindow* parent)
+	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(600, 500))
 	, ThreadBase(false, "LogThread")
 	, m_log(*new wxListView(this))
 {
-	wxBoxSizer& s_panel( *new wxBoxSizer(wxHORIZONTAL) );
-
-	s_panel.Add(&m_log, wxSizerFlags().Expand());
-
 	m_log.InsertColumn(0, wxEmptyString);
 	m_log.InsertColumn(1, "Log");
 	m_log.SetBackgroundColour(wxColour("Black"));
 
 	m_log.SetColumnWidth(0, -1);
-
-	SetSizerAndFit( &s_panel );
 
 	Connect( wxEVT_SIZE, wxSizeEventHandler(LogFrame::OnResize) );
 	Connect( m_log.GetId(), wxEVT_COMMAND_LIST_COL_BEGIN_DRAG, wxListEventHandler( LogFrame::OnColBeginDrag ));
@@ -220,7 +212,7 @@ bool LogFrame::Close(bool force)
 {
 	Stop();
 	ConLogFrame = NULL;
-	return FrameBase::Close(force);
+	return wxWindowBase::Close(force);
 }
 
 void LogFrame::Task()

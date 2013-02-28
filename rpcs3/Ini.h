@@ -55,7 +55,7 @@ template<typename T> struct IniEntry : public Ini
 		m_Config->SetPath(path);
 	}
 
-	void SetValue(const T value)
+	void SetValue(const T& value)
 	{
 		m_value = value;
 	}
@@ -65,9 +65,14 @@ template<typename T> struct IniEntry : public Ini
 		return m_value;
 	}
 
-	T LoadValue(const T defvalue)
+	T LoadValue(const T& defvalue)
 	{
 		return Ini::Load(m_key, defvalue);
+	}
+
+	void SaveValue(const T& value)
+	{
+		Ini::Save(m_key, value);
 	}
 
 	void Save()
@@ -75,7 +80,7 @@ template<typename T> struct IniEntry : public Ini
 		Ini::Save(m_key, m_value);
 	}
 
-	T Load(const T defvalue)
+	T Load(const T& defvalue)
 	{
 		return (m_value = Ini::Load(m_key, defvalue));
 	}

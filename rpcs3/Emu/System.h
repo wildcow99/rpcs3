@@ -3,8 +3,9 @@
 #include "Gui/MemoryViewer.h"
 #include "Emu/Cell/PPCThreadManager.h"
 #include "Emu/Io/Pad.h"
-#include "Emu/DbgConsole.h"
 #include "Emu/GS/GSManager.h"
+#include "Emu/FS/VFS.h"
+#include "Emu/DbgConsole.h"
 #include "Loader/Loader.h"
 #include "SysCalls/Callback.h"
 
@@ -68,6 +69,7 @@ class Emulator
 	DbgConsole* m_dbg_console;
 	GSManager m_gs_manager;
 	CallbackManager m_callback_manager;
+	VFS m_vfs;
 
 	EmuInfo m_info;
 
@@ -87,6 +89,7 @@ public:
 	DbgConsole&			GetDbgCon()				{ return *m_dbg_console; }
 	GSManager&			GetGSManager()			{ return m_gs_manager; }
 	CallbackManager&	GetCallbackManager()	{ return m_callback_manager; }
+	VFS&				GetVFS()				{ return m_vfs; }
 
 	void SetTLSData(const u64 addr, const u64 filesz, const u64 memsz)
 	{

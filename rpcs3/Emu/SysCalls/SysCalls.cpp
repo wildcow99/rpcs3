@@ -2,6 +2,127 @@
 #include "SysCalls.h"
 #include "SC_FUNC.h"
 
+ArrayF<ModuleFunc> g_modules_funcs_list;
+ArrayF<Module> g_modules_list;
+
+bool IsLoadedFunc(u32 id)
+{
+	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
+	{
+		if(g_modules_funcs_list[i].id == id) return true;
+	}
+
+	return false;
+}
+
+bool CallFunc(u32 id, s64& ret)
+{
+	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
+	{
+		if(g_modules_funcs_list[i].id == id)
+		{
+			ret = g_modules_funcs_list[i].func();
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UnloadFunc(u32 id)
+{
+	for(u32 i=0; i<g_modules_funcs_list.GetCount(); ++i)
+	{
+		if(g_modules_funcs_list[i].id == id)
+		{
+			g_modules_funcs_list.RemoveAt(i);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void UnloadModules()
+{
+	for(u32 i=0; i<g_modules_list.GetCount(); ++i)
+	{
+		g_modules_list[i].SetLoaded(false);
+	}
+
+	g_modules_funcs_list.Clear();
+}
+
+Module* GetModuleByName(const wxString& name)
+{
+	for(u32 i=0; i<g_modules_list.GetCount(); ++i)
+	{
+		if(g_modules_list[i].GetName().Cmp(name) == 0) return &g_modules_list[i];
+	}
+
+	return nullptr;
+}
+
+Module* GetModuleById(u16 id)
+{
+	for(u32 i=0; i<g_modules_list.GetCount(); ++i)
+	{
+		if(g_modules_list[i].GetID() == id) return &g_modules_list[i];
+	}
+
+	return nullptr;
+}
+
+Module::Module(const char* name, u16 id)
+	: m_is_loaded(false)
+	, m_name(name)
+	, m_id(id)
+{
+	g_modules_list.Add(this);
+}
+
+void Module::Load()
+{
+	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
+	{
+		if(IsLoadedFunc(m_funcs_list[i].id)) continue;
+
+		g_modules_funcs_list.Add(m_funcs_list[i]);
+	}
+}
+
+void Module::UnLoad()
+{
+	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
+	{
+		UnloadFunc(m_funcs_list[i].id);
+	}
+}
+
+bool Module::Load(u32 id)
+{
+	if(IsLoadedFunc(id)) return false;
+
+	for(u32 i=0; i<m_funcs_list.GetCount(); ++i)
+	{
+		if(m_funcs_list[i].id == id)
+		{
+			g_modules_funcs_list.Add(m_funcs_list[i]);
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool Module::UnLoad(u32 id)
+{
+	return UnloadFunc(id);
+}
+
 static const SC_FUNC sc_table[1024] = 
 {
 	0, SC_FUNC_SW<sys_process_getpid>, 0, SC_FUNC_SW_SW<sys_process_exit>, 0, //4
@@ -12,9 +133,9 @@ static const SC_FUNC sc_table[1024] =
 	0, 0, 0, 0, 0, //29
 	0, 0, 0, 0, 0, //34
 	0, 0, 0, 0, 0, //39
-	0, SC_FUNC_SW_SW<sys_ppu_thread_exit>, 0, 0, 0, //44
-	0, 0, 0, 0, 0, //49
-	0, 0, 0, 0, 0, //54
+	0, SC_FUNC_SW_SW<sys_ppu_thread_exit>, 0, SC_FUNC_SW<sys_ppu_thread_yield>, SC_FUNC_SW_UW_UW<sys_ppu_thread_join>, //44
+	SC_FUNC_SW_UW<sys_ppu_thread_detach>, SC_FUNC_SW_UW<sys_ppu_thread_detach>, SC_FUNC_V_UW<sys_ppu_thread_get_join_state>, SC_FUNC_SW_UW_SW<sys_ppu_thread_set_priority>, SC_FUNC_SW_UW_UW<sys_ppu_thread_get_priority>, //49
+	SC_FUNC_SW_UW<sys_ppu_thread_stop>, SC_FUNC_SW_UW<sys_ppu_thread_restart>, SC_FUNC_SW_UW_UW_UW_SW_UW_UD_UW<sys_ppu_thread_create>, 0, 0, //54
 	0, 0, 0, 0, 0, //59
 	0, 0, 0, 0, 0, //64
 	0, 0, 0, 0, 0, //69
@@ -24,8 +145,8 @@ static const SC_FUNC sc_table[1024] =
 	0, 0, 0, 0, 0, //89
 	SC_FUNC_SW_UW_UW_SW_SW<sys_semaphore_create>, SC_FUNC_SW_UW<sys_semaphore_destroy>, SC_FUNC_SW_UW_UD<sys_semaphore_wait>, SC_FUNC_SW_UW<sys_semaphore_trywait>, SC_FUNC_SW_UW_SW<sys_semaphore_post>, //94
 	SC_FUNC_SW_UD_UD<sys_lwmutex_create>, SC_FUNC_SW_UD<sys_lwmutex_destroy>, SC_FUNC_SW_UD_UD<sys_lwmutex_lock>, SC_FUNC_SW_UD<sys_lwmutex_trylock>, SC_FUNC_SW_UD<sys_lwmutex_unlock>, //99
-	0, 0, 0, 0, 0, //104
-	0, 0, 0, 0, 0, //109
+	SC_FUNC_SW_UW_UW<sys_mutex_create>, SC_FUNC_SW_UW<sys_mutex_destroy>, SC_FUNC_SW_UW_UD<sys_mutex_lock>, SC_FUNC_SW_UW<sys_mutex_trylock>, SC_FUNC_SW_UW<sys_mutex_unlock>, //104
+	SC_FUNC_SW_UW_UW_UW<sys_cond_create>, SC_FUNC_SW_UW<sys_cond_destroy>, SC_FUNC_SW_UW_UD<sys_cond_wait>, SC_FUNC_SW_UW<sys_cond_signal>, SC_FUNC_SW_UW<sys_cond_signal_all>, //109
 	0, 0, 0, 0, 0, //114
 	0, 0, 0, 0, 0, //119
 	0, 0, 0, 0, 0, //124
@@ -228,32 +349,16 @@ s64 SysCalls::DoSyscall(u32 code)
 		//TODO: remove this
 		switch(code)
 		{
-			//=== lv2 ===
 			//process
 			case 2: return lv2ProcessWaitForChild(CPU);
-			//case 3: return sys_process_exit(SC_ARGS_1);
 			case 4: return lv2ProcessGetStatus(CPU);
 			case 5: return lv2ProcessDetachChild(CPU);
 			case 12: return lv2ProcessGetNumberOfObject(CPU);
 			case 13: return lv2ProcessGetId(CPU);
 			case 18: return lv2ProcessGetPpid(CPU);
 			case 19: return lv2ProcessKill(CPU);
-			//case 22: return sys_process_exit(SC_ARGS_1);
 			case 23: return lv2ProcessWaitForChild2(CPU);
 			case 25: return lv2ProcessGetSdkVersion(CPU);
-			//ppu thread
-			//case ?: return lv2PPUThreadCreate(CPU);
-			case 43: return lv2PPUThreadYield(CPU);
-			case 44: return lv2PPUThreadJoin(CPU);
-			case 45: return lv2PPUThreadDetach(CPU);
-			case 46: return lv2PPUThreadGetJoinState(CPU);
-			case 47: return lv2PPUThreadSetPriority(CPU);
-			case 48: return lv2PPUThreadGetPriority(CPU);
-			case 49: return lv2PPUThreadGetStackInformation(CPU);
-			case 56: return lv2PPUThreadRename(CPU);
-			case 57: return lv2PPUThreadRecoverPageFault(CPU);
-			case 58: return lv2PPUThreadGetPageFaultContext(CPU);
-			//case ?: return lv2PPUThreadGetId(CPU);
 			//timer
 			case 141:
 			case 142:
@@ -275,5 +380,12 @@ s64 SysCalls::DoSyscall(u32 code)
 		return 0;
 	}
 	
+	s64 ret;
+	if(CallFunc(code, ret)) return ret;
+
+	//ConLog.Error("Unknown function 0x%08x", code);
+	//return 0;
+
+	//TODO: remove this
 	return DoFunc(code);
 }

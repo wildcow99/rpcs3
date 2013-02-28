@@ -58,7 +58,90 @@ int cellVideoOutGetResolution(u32 resolutionId, u32 resolution_addr)
 	re(res.height, ResolutionTable[num].height);
 
 	Memory.WriteData(resolution_addr, res);
-	return CELL_OK;
+	return CELL_VIDEO_OUT_SUCCEEDED;
+}
+
+int cellVideoOutConfigure(u32 videoOut, u32 config_addr, u32 option_addr, u32 waitForEvent)
+{
+	sc_v.Warning("cellVideoOutConfigure(videoOut=%d, config_addr=0x%x, option_addr=0x%x, waitForEvent=0x%x)",
+		videoOut, config_addr, option_addr, waitForEvent);
+
+	if(!Memory.IsGoodAddr(config_addr, sizeof(CellVideoOutConfiguration))) return CELL_EFAULT;
+
+	CellVideoOutConfiguration& config = (CellVideoOutConfiguration&)Memory[config_addr];
+
+	switch(videoOut)
+	{
+	case CELL_VIDEO_OUT_PRIMARY:
+		if(config.resolutionId) Emu.GetGSManager().GetInfo().mode.resolutionId = config.resolutionId;
+		Emu.GetGSManager().GetInfo().mode.format = config.format;
+		if(config.aspect) Emu.GetGSManager().GetInfo().mode.aspect = config.aspect;
+		if(config.pitch) Emu.GetGSManager().GetInfo().mode.pitch = re(config.pitch);
+	return CELL_VIDEO_OUT_SUCCEEDED;
+
+	case CELL_VIDEO_OUT_SECONDARY:
+	return CELL_VIDEO_OUT_SUCCEEDED;
+	}
+
+	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+}
+
+int cellVideoOutGetConfiguration(u32 videoOut, u32 config_addr, u32 option_addr)
+{
+	sc_v.Warning("cellVideoOutGetConfiguration(videoOut=%d, config_addr=0x%x, option_addr=0x%x)",
+		videoOut, config_addr, option_addr);
+
+	if(!Memory.IsGoodAddr(config_addr, sizeof(CellVideoOutConfiguration))) return CELL_EFAULT;
+
+	CellVideoOutConfiguration config;
+	memset(&config, 0, sizeof(CellVideoOutConfiguration));
+
+	switch(videoOut)
+	{
+	case CELL_VIDEO_OUT_PRIMARY:
+		config.resolutionId = Emu.GetGSManager().GetInfo().mode.resolutionId;
+		config.format = Emu.GetGSManager().GetInfo().mode.format;
+		config.aspect = Emu.GetGSManager().GetInfo().mode.aspect;
+		config.pitch = re(Emu.GetGSManager().GetInfo().mode.pitch);
+
+		Memory.WriteData(config_addr, config);
+	return CELL_VIDEO_OUT_SUCCEEDED;
+
+	case CELL_VIDEO_OUT_SECONDARY:
+		Memory.WriteData(config_addr, config);
+	return CELL_VIDEO_OUT_SUCCEEDED;
+	}
+
+	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+}
+
+int cellVideoOutGetNumberOfDevice(u32 videoOut)
+{
+	sc_v.Warning("cellVideoOutGetNumberOfDevice(videoOut=%d)", videoOut);
+
+	switch(videoOut)
+	{
+	case CELL_VIDEO_OUT_PRIMARY: return 1;
+	case CELL_VIDEO_OUT_SECONDARY: return 0;
+	}
+
+	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
+}
+
+int cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId, u32 aspect, u32 option)
+{
+	sc_v.Warning("cellVideoOutGetResolutionAvailability(videoOut=%d, resolutionId=0x%x, option_addr=0x%x, aspect=0x%x, option=0x%x)",
+		videoOut, resolutionId, aspect, option);
+
+	if(!ResolutionIdToNum(resolutionId)) return CELL_EINVAL;
+
+	switch(videoOut)
+	{
+	case CELL_VIDEO_OUT_PRIMARY: return 1;
+	case CELL_VIDEO_OUT_SECONDARY: return 0;
+	}
+
+	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
 SysCallBase sc_sysutil("cellSysutil");

@@ -1,10 +1,17 @@
 #pragma once
 
+enum
+{
+	CELL_GCM_DISPLAY_HSYNC				= 1,
+	CELL_GCM_DISPLAY_VSYNC				= 2,
+	CELL_GCM_DISPLAY_HSYNC_WITH_NOISE	= 3,
+};
+
 struct CellGcmControl
 {
-	volatile u32 put;
-	volatile u32 get;
-	volatile u32 ref;
+	u32 put;
+	u32 get;
+	u32 ref;
 };
 
 struct CellGcmConfig

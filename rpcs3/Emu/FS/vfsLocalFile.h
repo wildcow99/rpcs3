@@ -8,10 +8,11 @@ private:
 
 public:
 	vfsLocalFile();
-	vfsLocalFile(const wxString path, vfsFileOpenMode mode = vfsFileRead);
+	vfsLocalFile(const wxString path, vfsOpenMode mode = vfsRead);
+	vfsDevice* GetNew();
 
-	static bool Access(const wxString& path, vfsFileOpenMode mode = vfsFileRead);
-	virtual bool Open(const wxString& path, vfsFileOpenMode mode = vfsFileRead);
+	virtual bool Open(const wxString& path, vfsOpenMode mode = vfsRead);
+	virtual bool Create(const wxString& path);
 	virtual bool Close();
 
 	virtual u64 GetSize();

@@ -6,6 +6,7 @@
 #include "Ini.h"
 #include "svnrev.h"
 #include "Emu/GS/sysutil_video.h"
+#include <wx/dynlib.h>
 
 BEGIN_EVENT_TABLE(MainFrame, FrameBase)
 	EVT_CLOSE(MainFrame::OnQuit)
@@ -20,9 +21,19 @@ enum IDs
 	id_sys_stop,
 	id_sys_send_exit,
 	id_config_emu,
+	id_update_dbg,
 };
 
-MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 180))
+wxString GetPaneName()
+{
+	static int pane_num = 0;
+
+	return wxString::Format("Pane_%d", pane_num++);
+}
+
+MainFrame::MainFrame()
+	: FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 180))
+	, m_aui_mgr(this)
 {
 	SetLabel(wxString::Format(_PRGNAME_ " " _PRGVER_ " r%d" SVN_MOD " (" SVN_DATE ")", SVN_REV));
 	wxMenuBar& menubar(*new wxMenuBar());
@@ -41,7 +52,7 @@ MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 
 	//menu_boot.Append(id_boot_self, "Boot Self");
 
 	menu_sys.Append(id_sys_pause, "Pause");
-	menu_sys.Append(id_sys_stop, "Stop");
+	menu_sys.Append(id_sys_stop, "Stop\tCtrl + S");
 	menu_sys.AppendSeparator();
 	menu_sys.Append(id_sys_send_exit, "Send exit cmd");
 
@@ -49,15 +60,9 @@ MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 
 
 	SetMenuBar(&menubar);
 
-	wxBoxSizer& s_panel( *new wxBoxSizer(wxHORIZONTAL) );
-
 	m_game_viewer = new GameViewer(this);
-	s_panel.Add( m_game_viewer, wxSizerFlags().Expand() );
-
-	SetSizerAndFit( &s_panel );
-
-	Connect(wxEVT_SIZE, wxSizeEventHandler(MainFrame::OnResize));
-
+	AddPane(m_game_viewer, "Game List", wxAUI_DOCK_BOTTOM);
+	
 	Connect( id_boot_game,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootGame) );
 	Connect( id_boot_elf,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootElf) );
 	Connect( id_boot_self,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::BootSelf) );
@@ -65,6 +70,7 @@ MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 
 	Connect( id_sys_pause,  wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Pause) );
 	Connect( id_sys_stop,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Stop) );
 	Connect( id_sys_send_exit,   wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::SendExit) );
+	Connect( id_update_dbg, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::UpdateUI) );
 
 	Connect( id_config_emu, wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler(MainFrame::Config) );
 	wxGetApp().Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(MainFrame::OnKeyDown), (wxObject*)0, this);
@@ -72,10 +78,29 @@ MainFrame::MainFrame() : FrameBase(NULL, wxID_ANY, "", "MainFrame", wxSize(280, 
 	UpdateUI();
 }
 
-void MainFrame::OnResize(wxSizeEvent& event)
+MainFrame::~MainFrame()
 {
-	m_game_viewer->DoResize(GetClientSize());
-	event.Skip();
+	m_aui_mgr.UnInit();
+}
+
+void MainFrame::AddPane(wxWindow* wind, const wxString& caption, int flags)
+{
+	m_aui_mgr.AddPane(wind, wxAuiPaneInfo().Name(GetPaneName()).Caption(caption).Direction(flags).CloseButton(false).MaximizeButton());
+}
+
+void MainFrame::DoSettings(bool load)
+{
+	IniEntry<wxString> ini;
+	ini.Init("Settings", "MainFrameAui");
+
+	if(load)
+	{
+		m_aui_mgr.LoadPerspective(ini.LoadValue(m_aui_mgr.SavePerspective()));
+	}
+	else
+	{
+		ini.SaveValue(m_aui_mgr.SavePerspective());
+	}
 }
 
 void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
@@ -88,7 +113,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 		stoped = true;
 	}
 
-	wxDirDialog ctrl( this, L"Select game folder", wxEmptyString);
+	wxDirDialog ctrl(this, L"Select game folder", wxEmptyString);
 
 	if(ctrl.ShowModal() == wxID_CANCEL)
 	{
@@ -245,28 +270,28 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		paused = true;
 	}
 
-	wxDialog* diag = new wxDialog(this, wxID_ANY, "Settings", wxDefaultPosition);
+	wxDialog diag(this, wxID_ANY, "Settings", wxDefaultPosition);
 
 	wxBoxSizer* s_panel(new wxBoxSizer(wxVERTICAL));
 
-	wxStaticBoxSizer* s_round_cpu( new wxStaticBoxSizer( wxVERTICAL, diag, _("CPU") ) );
-	wxStaticBoxSizer* s_round_cpu_decoder( new wxStaticBoxSizer( wxVERTICAL, diag, _("Decoder") ) );
+	wxStaticBoxSizer* s_round_cpu( new wxStaticBoxSizer( wxVERTICAL, &diag, _("CPU") ) );
+	wxStaticBoxSizer* s_round_cpu_decoder( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Decoder") ) );
 
-	wxStaticBoxSizer* s_round_gs( new wxStaticBoxSizer( wxVERTICAL, diag, _("GS") ) );
-	wxStaticBoxSizer* s_round_gs_render( new wxStaticBoxSizer( wxVERTICAL, diag, _("Render") ) );
-	wxStaticBoxSizer* s_round_gs_res( new wxStaticBoxSizer( wxVERTICAL, diag, _("Default resolution") ) );
-	wxStaticBoxSizer* s_round_gs_aspect( new wxStaticBoxSizer( wxVERTICAL, diag, _("Default aspect ratio") ) );
+	wxStaticBoxSizer* s_round_gs( new wxStaticBoxSizer( wxVERTICAL, &diag, _("GS") ) );
+	wxStaticBoxSizer* s_round_gs_render( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Render") ) );
+	wxStaticBoxSizer* s_round_gs_res( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Default resolution") ) );
+	wxStaticBoxSizer* s_round_gs_aspect( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Default aspect ratio") ) );
 
-	wxStaticBoxSizer* s_round_pad( new wxStaticBoxSizer( wxVERTICAL, diag, _("Pad") ) );
-	wxStaticBoxSizer* s_round_pad_handler( new wxStaticBoxSizer( wxVERTICAL, diag, _("Handler") ) );
+	wxStaticBoxSizer* s_round_pad( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Pad") ) );
+	wxStaticBoxSizer* s_round_pad_handler( new wxStaticBoxSizer( wxVERTICAL, &diag, _("Handler") ) );
 
-	wxComboBox* cbox_cpu_decoder = new wxComboBox(diag, wxID_ANY);
-	wxComboBox* cbox_gs_render = new wxComboBox(diag, wxID_ANY);
-	wxComboBox* cbox_gs_resolution = new wxComboBox(diag, wxID_ANY);
-	wxComboBox* cbox_gs_aspect = new wxComboBox(diag, wxID_ANY);
-	wxComboBox* cbox_pad_handler = new wxComboBox(diag, wxID_ANY);
+	wxComboBox* cbox_cpu_decoder = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_gs_render = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_gs_resolution = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_gs_aspect = new wxComboBox(&diag, wxID_ANY);
+	wxComboBox* cbox_pad_handler = new wxComboBox(&diag, wxID_ANY);
 
-	wxCheckBox* chbox_gs_vsync = new wxCheckBox(diag, wxID_ANY, "VSync");
+	wxCheckBox* chbox_gs_vsync = new wxCheckBox(&diag, wxID_ANY, "VSync");
 
 	//cbox_cpu_decoder->Append("DisAsm");
 	cbox_cpu_decoder->Append("Interpreter & DisAsm");
@@ -312,8 +337,8 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 
 	wxBoxSizer* s_b_panel(new wxBoxSizer(wxHORIZONTAL));
 
-	s_b_panel->Add(new wxButton(diag, wxID_OK), wxSizerFlags().Border(wxALL, 5).Center());
-	s_b_panel->Add(new wxButton(diag, wxID_CANCEL), wxSizerFlags().Border(wxALL, 5).Center());
+	s_b_panel->Add(new wxButton(&diag, wxID_OK), wxSizerFlags().Border(wxALL, 5).Center());
+	s_b_panel->Add(new wxButton(&diag, wxID_CANCEL), wxSizerFlags().Border(wxALL, 5).Center());
 
 	//wxBoxSizer* s_conf_panel(new wxBoxSizer(wxHORIZONTAL));
 
@@ -322,9 +347,9 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 	s_panel->Add(s_round_pad, wxSizerFlags().Border(wxALL, 5).Expand());
 	s_panel->Add(s_b_panel, wxSizerFlags().Border(wxALL, 8).Expand());
 
-	diag->SetSizerAndFit( s_panel );
+	diag.SetSizerAndFit( s_panel );
 	
-	if(diag->ShowModal() == wxID_OK)
+	if(diag.ShowModal() == wxID_OK)
 	{
 		Ini.CPUDecoderMode.SetValue(cbox_cpu_decoder->GetSelection() + 1);
 		Ini.GSRenderMode.SetValue(cbox_gs_render->GetSelection());
@@ -336,13 +361,17 @@ void MainFrame::Config(wxCommandEvent& WXUNUSED(event))
 		Ini.Save();
 	}
 
-	delete diag;
-
 	if(paused) Emu.Resume();
+}
+
+void MainFrame::UpdateUI(wxCommandEvent& WXUNUSED(event))
+{
+	wxGetApp().m_debugger_frame->UpdateUI();
 }
 
 void MainFrame::OnQuit(wxCloseEvent& event)
 {
+	DoSettings(false);
 	TheApp->Exit();
 }
 
@@ -410,9 +439,14 @@ void MainFrame::UpdateUI()
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
 	wxMenuItem& send_exit  = *menubar.FindItem( id_sys_send_exit );
 
-	pause.SetText(Emu.IsRunned() ? "Pause" : "Resume");
+	pause.SetText(Emu.IsRunned() ? "Pause\tCtrl + P" : "Resume\tCtrl + C");
 	pause.Enable(!Emu.IsStopped());
 	stop.Enable(!Emu.IsStopped());
 	//send_exit.Enable(false);
 	send_exit.Enable(!Emu.IsStopped() && Emu.GetCallbackManager().m_exit_callback.m_callbacks.GetCount());
+
+	m_aui_mgr.Update();
+
+	wxCommandEvent refit( wxEVT_COMMAND_MENU_SELECTED, id_update_dbg );
+	GetEventHandler()->AddPendingEvent( refit );
 }

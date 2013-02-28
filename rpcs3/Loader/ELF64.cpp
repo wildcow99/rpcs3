@@ -276,6 +276,17 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						stub.s_nid = re(stub.s_nid);
 						stub.s_text = re(stub.s_text);
 
+						const wxString& module_name = Memory.ReadString(stub.s_modulename);
+						Module* module = GetModuleByName(module_name);
+						if(module)
+						{
+							module->SetLoaded();
+						}
+						else
+						{
+							ConLog.Warning("Unknown module '%s'", module_name);
+						}
+
 #ifdef LOADER_DEBUG
 						ConLog.SkipLn();
 						ConLog.Write("*** size: 0x%x", stub.s_size);
@@ -283,7 +294,7 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						ConLog.Write("*** unk0: 0x%x", stub.s_unk0);
 						ConLog.Write("*** unk1: 0x%x", stub.s_unk1);
 						ConLog.Write("*** imports: %d", stub.s_imports);
-						ConLog.Write("*** module name: %s [0x%x]", Memory.ReadString(stub.s_modulename), stub.s_modulename);
+						ConLog.Write("*** module name: %s [0x%x]", module_name, stub.s_modulename);
 						ConLog.Write("*** nid: 0x%x", stub.s_nid);
 						ConLog.Write("*** text: 0x%x", stub.s_text);
 #endif
@@ -295,6 +306,14 @@ bool ELF64Loader::LoadPhdrData(u64 offset)
 						{
 							const u32 nid = Memory.Read32(stub.s_nid + i*4);
 							const u32 text = Memory.Read32(stub.s_text + i*4);
+
+							if(module)
+							{
+								if(!module->Load(nid))
+								{
+									ConLog.Warning("Unknown function 0x%08x in '%s' module", nid, module_name);
+								}
+							}
 #ifdef LOADER_DEBUG
 							ConLog.Write("import %d:", i+1);
 							ConLog.Write("*** nid: 0x%x (0x%x)", nid, stub.s_nid + i*4);

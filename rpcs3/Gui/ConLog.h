@@ -23,13 +23,13 @@ public:
 };
 
 class LogFrame 
-	: public FrameBase
+	: public wxPanel
 	, public ThreadBase
 {
 	wxListView& m_log;
 
 public:
-	LogFrame();
+	LogFrame(wxWindow* parent);
 	~LogFrame();
 
 	bool Close(bool force = false);

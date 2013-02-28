@@ -1,15 +1,15 @@
 #include "stdafx.h"
 #include "vfsLocalFile.h"
 
-static const wxFile::OpenMode vfs2wx_mode(vfsFileOpenMode mode)
+static const wxFile::OpenMode vfs2wx_mode(vfsOpenMode mode)
 {
 	switch(mode)
 	{
-	case vfsFileRead:			return wxFile::read;
-	case vfsFileWrite:			return wxFile::write;
-	case vfsFileReadWrite:		return wxFile::read_write;
-	case vfsFileWriteExcl:		return wxFile::write_excl;
-	case vfsFileWriteAppend:	return wxFile::write_append;
+	case vfsRead:			return wxFile::read;
+	case vfsWrite:			return wxFile::write;
+	case vfsReadWrite:		return wxFile::read_write;
+	case vfsWriteExcl:		return wxFile::write_excl;
+	case vfsWriteAppend:	return wxFile::write_append;
 	}
 
 	return wxFile::read;
@@ -31,21 +31,32 @@ vfsLocalFile::vfsLocalFile() : vfsFileBase()
 {
 }
 
-vfsLocalFile::vfsLocalFile(const wxString path, vfsFileOpenMode mode) : vfsFileBase()
+vfsLocalFile::vfsLocalFile(const wxString path, vfsOpenMode mode) : vfsFileBase()
 {
 	Open(path, mode);
 }
 
-bool vfsLocalFile::Access(const wxString& path, vfsFileOpenMode mode)
+vfsDevice* vfsLocalFile::GetNew()
 {
-	return wxFile::Access(path, vfs2wx_mode(mode));
+	return new vfsLocalFile();
 }
 
-bool vfsLocalFile::Open(const wxString& path, vfsFileOpenMode mode)
+bool vfsLocalFile::Open(const wxString& path, vfsOpenMode mode)
 {
 	Close();
 
-	return m_file.Open(path, vfs2wx_mode(mode)) && vfsFileBase::Open(path, mode);
+	if(mode == vfsRead && !m_file.Access(vfsDevice::GetWinPath(GetLocalPath(), path), vfs2wx_mode(mode))) return false;
+
+	return m_file.Open(vfsDevice::GetWinPath(GetLocalPath(), path), vfs2wx_mode(mode)) &&
+		vfsFileBase::Open(vfsDevice::GetPs3Path(GetPs3Path(), path), mode);
+}
+
+bool vfsLocalFile::Create(const wxString& path)
+{
+	if(wxFileExists(path)) return false;
+
+	wxFile f;
+	return f.Create(path);
 }
 
 bool vfsLocalFile::Close()

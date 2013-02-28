@@ -217,14 +217,14 @@ union CRhdr
 
 	struct
 	{
-		u8 cr0	: 4;
-		u8 cr1	: 4;
-		u8 cr2	: 4;
-		u8 cr3	: 4;
-		u8 cr4	: 4;
-		u8 cr5	: 4;
-		u8 cr6	: 4;
 		u8 cr7	: 4;
+		u8 cr6	: 4;
+		u8 cr5	: 4;
+		u8 cr4	: 4;
+		u8 cr3	: 4;
+		u8 cr2	: 4;
+		u8 cr1	: 4;
+		u8 cr0	: 4;
 	};
 };
 
@@ -659,39 +659,64 @@ union VPR_reg
 	// But we have : HalfWord 0 = Byte 0 + Byte 1 << 8
 	// So any access to a halfword/word/doubleword must revert the bytes when loading, and do it again when writing
 
-	float _f(int n)
+	float _f(int n) const
 	{
 		u32 f = re(_u32[n]);
 
-		return *((float*)&f);
+		return (float&)f;
 	}
 
-	double _d(int n)
+	double _d(int n) const
 	{
 		u64 d = re(_u64[n]);
 
-		return *((double*)&d);
+		return (double&)d;
 	}
 
 	void setFloat(float f, int n)
 	{
-		u32 result = *((u32*)&f);
+		u32 result = (u32&)f;
 
 		_u32[n] = re(result);
 	}
 
 	void setDouble(double d, int n)
 	{
-		u64 result = *((u64*)&d);
+		u64 result = (u64&)d;
 
 		_u64[n] = re(result);
 	}
 
 	VPR_reg() { Clear(); }
 
-	wxString ToString() const
+	wxString ToString(bool hex=false) const
 	{
-		return wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+		if(hex) return wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
+
+		return wxString::Format("x: %g y: %g z: %g w: %g", _f(3), _f(2), _f(1), _f(0));
+	}
+
+	u8 GetBit(u8 bit)
+	{
+		if(bit < 64) return (_u64[0] >> bit) & 0x1;
+
+		return (_u64[1] >> (bit - 64)) & 0x1;
+	}
+
+	void SetBit(u8 bit, u8 value)
+	{
+		if(bit < 64)
+		{
+			_u64[0] &= ~(1 << bit);
+			_u64[0] |= (value & 0x1) << bit;
+
+			return;
+		}
+
+		bit -= 64;
+
+		_u64[1] &= ~(1 << bit);
+		_u64[1] |= (value & 0x1) << bit;
 	}
 
 	void Clear() { memset(this, 0, sizeof(*this)); }
@@ -806,14 +831,14 @@ public:
 	{
 		switch(n)
 		{
-		case 7: return CR.cr0;
-		case 6: return CR.cr1;
-		case 5: return CR.cr2;
-		case 4: return CR.cr3;
-		case 3: return CR.cr4;
-		case 2: return CR.cr5;
-		case 1: return CR.cr6;
-		case 0: return CR.cr7;
+		case 0: return CR.cr0;
+		case 1: return CR.cr1;
+		case 2: return CR.cr2;
+		case 3: return CR.cr3;
+		case 4: return CR.cr4;
+		case 5: return CR.cr5;
+		case 6: return CR.cr6;
+		case 7: return CR.cr7;
 		}
 
 		return 0;
@@ -823,14 +848,14 @@ public:
 	{
 		switch(n)
 		{
-		case 7: CR.cr0 = value; break;
-		case 6: CR.cr1 = value; break;
-		case 5: CR.cr2 = value; break;
-		case 4: CR.cr3 = value; break;
-		case 3: CR.cr4 = value; break;
-		case 2: CR.cr5 = value; break;
-		case 1: CR.cr6 = value; break;
-		case 0: CR.cr7 = value; break;
+		case 0: CR.cr0 = value; break;
+		case 1: CR.cr1 = value; break;
+		case 2: CR.cr2 = value; break;
+		case 3: CR.cr3 = value; break;
+		case 4: CR.cr4 = value; break;
+		case 5: CR.cr5 = value; break;
+		case 6: CR.cr6 = value; break;
+		case 7: CR.cr7 = value; break;
 		}
 	}
 
@@ -838,14 +863,14 @@ public:
 	{
 		switch(n)
 		{
-		case 7: value ? CR.cr0 |= bit : CR.cr0 &= ~bit; break;
-		case 6: value ? CR.cr1 |= bit : CR.cr1 &= ~bit; break;
-		case 5: value ? CR.cr2 |= bit : CR.cr2 &= ~bit; break;
-		case 4: value ? CR.cr3 |= bit : CR.cr3 &= ~bit; break;
-		case 3: value ? CR.cr4 |= bit : CR.cr4 &= ~bit; break;
-		case 2: value ? CR.cr5 |= bit : CR.cr5 &= ~bit; break;
-		case 1: value ? CR.cr6 |= bit : CR.cr6 &= ~bit; break;
-		case 0: value ? CR.cr7 |= bit : CR.cr7 &= ~bit; break;
+		case 0: value ? CR.cr0 |= bit : CR.cr0 &= ~bit; break;
+		case 1: value ? CR.cr1 |= bit : CR.cr1 &= ~bit; break;
+		case 2: value ? CR.cr2 |= bit : CR.cr2 &= ~bit; break;
+		case 3: value ? CR.cr3 |= bit : CR.cr3 &= ~bit; break;
+		case 4: value ? CR.cr4 |= bit : CR.cr4 &= ~bit; break;
+		case 5: value ? CR.cr5 |= bit : CR.cr5 &= ~bit; break;
+		case 6: value ? CR.cr6 |= bit : CR.cr6 &= ~bit; break;
+		case 7: value ? CR.cr7 |= bit : CR.cr7 &= ~bit; break;
 		}
 	}
 
@@ -904,13 +929,28 @@ public:
 	virtual wxString RegsToString()
 	{
 		wxString ret = PPCThread::RegsToString();
+
 		for(uint i=0; i<32; ++i) ret += wxString::Format("GPR[%d] = 0x%llx\n", i, GPR[i]);
 		for(uint i=0; i<32; ++i) ret += wxString::Format("FPR[%d] = %.6G\n", i, FPR[i]);
+		for(uint i=0; i<32; ++i) ret += wxString::Format("VPR[%d] = 0x%s [%s]\n", i, VPR[i].ToString(true), VPR[i].ToString());
 		ret += wxString::Format("CR = 0x%08x\n", CR);
 		ret += wxString::Format("LR = 0x%llx\n", LR);
 		ret += wxString::Format("CTR = 0x%llx\n", CTR);
-		ret += wxString::Format("XER = 0x%llx\n", XER);
-		ret += wxString::Format("FPSCR = 0x%x\n", FPSCR);
+		ret += wxString::Format("XER = 0x%llx [CA=%lld | OV=%lld | SO=%lld]\n", XER, XER.CA, XER.OV, XER.SO);
+		ret += wxString::Format("FPSCR = 0x%x "
+			"[RN=%d | NI=%d | XE=%d | ZE=%d | UE=%d | OE=%d | VE=%d | "
+			"VXCVI=%d | VXSQRT=%d | VXSOFT=%d | FPRF=%d | "
+			"FI=%d | FR=%d | VXVC=%d | VXIMZ=%d | "
+			"VXZDZ=%d | VXIDI=%d | VXISI=%d | VXSNAN=%d | "
+			"XX=%d | ZX=%d | UX=%d | OX=%d | VX=%d | FEX=%d | FX=%d]\n",
+			FPSCR,
+			FPSCR.RN,
+			FPSCR.NI, FPSCR.XE, FPSCR.ZE, FPSCR.UE, FPSCR.OE, FPSCR.VE,
+			FPSCR.VXCVI, FPSCR.VXSQRT, FPSCR.VXSOFT, FPSCR.FPRF,
+			FPSCR.FI, FPSCR.FR, FPSCR.VXVC, FPSCR.VXIMZ,
+			FPSCR.VXZDZ, FPSCR.VXIDI, FPSCR.VXISI, FPSCR.VXSNAN,
+			FPSCR.XX, FPSCR.ZX, FPSCR.UX, FPSCR.OX, FPSCR.VX, FPSCR.FEX, FPSCR.FX);
+
 		return ret;
 	}
 

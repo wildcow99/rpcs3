@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Gui/MainFrame.h"
+#include "Gui/Debugger.h"
 
 template<typename T> T min(const T a, const T b) { return a < b ? a : b; }
 template<typename T> T max(const T a, const T b) { return a > b ? a : b; }
@@ -13,13 +14,32 @@ template<typename T> T max(const T a, const T b) { return a > b ? a : b; }
 template<typename T> T re(const T val) { return MemoryBase::Reverse(val); }
 template<typename T1, typename T2> void re(T1& dst, const T2 val) { dst = MemoryBase::Reverse<T1>(val); }
 
+
+extern const wxEventType wxEVT_DBG_COMMAND;
+
+enum DbgCommand
+{
+	DID_FIRST_COMMAND = 0x500,
+	DID_CREATE_THREAD,
+	DID_REMOVE_THREAD,
+	DID_RENAME_THREAD,
+	DID_START_THREAD,
+	DID_STOP_THREAD,
+	DID_PAUSE_THREAD,
+	DID_RESUME_THREAD,
+	DID_EXEC_THREAD,
+};
+
 class Rpcs3App : public wxApp
 {
 public:
 	MainFrame* m_MainFrame;
+	DebuggerPanel* m_debugger_frame;
 
     virtual bool OnInit();
 	virtual void Exit();
+
+	void SendDbgCommand(DbgCommand id, PPCThread* thr);
 };
 
 DECLARE_APP(Rpcs3App)
