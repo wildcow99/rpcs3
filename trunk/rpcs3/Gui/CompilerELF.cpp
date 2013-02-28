@@ -1247,7 +1247,7 @@ struct CompileProgram
 			m_args.AddCpy(arg);
 		}
 
-		m_end_args = true;
+		m_end_args = m_args.GetCount() > 0;
 	}
 
 	u32 GetBranchValue(const wxString& branch)

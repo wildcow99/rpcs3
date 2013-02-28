@@ -76,9 +76,9 @@ int sys_raw_spu_create(u32 id_addr, u32 attr_addr)
 {
 	sc_spu.Warning("sys_raw_spu_create(id_addr=0x%x, attr_addr=0x%x)", id_addr, attr_addr);
 
-	PPCThread& new_thread = Emu.GetCPU().AddThread(false);
-	Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
-	Memory.Write32(id_addr, Emu.GetCPU().GetThreadNumById(false, new_thread.GetId()));
+	//PPCThread& new_thread = Emu.GetCPU().AddThread(false);
+	//Emu.GetIdManager().GetNewID("sys_raw_spu", new u32(attr_addr));
+	//Memory.Write32(id_addr, Emu.GetCPU().GetThreadNumById(false, new_thread.GetId()));
 
 	return CELL_OK;
 }

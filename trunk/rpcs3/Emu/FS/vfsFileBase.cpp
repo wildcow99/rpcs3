@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "vfsFileBase.h"
 
-vfsFileBase::vfsFileBase() : vfsStream()
+vfsFileBase::vfsFileBase() : vfsDevice()
 {
 }
 
@@ -10,12 +10,12 @@ vfsFileBase::~vfsFileBase()
 	Close();
 }
 
-bool Access(const wxString& path, vfsFileOpenMode mode)
+bool Access(const wxString& path, vfsOpenMode mode)
 {
 	return false;
 }
 
-bool vfsFileBase::Open(const wxString& path, vfsFileOpenMode mode)
+bool vfsFileBase::Open(const wxString& path, vfsOpenMode mode)
 {
 	m_path = path;
 	m_mode = mode;
@@ -37,7 +37,7 @@ wxString vfsFileBase::GetPath() const
 	return m_path;
 }
 
-vfsFileOpenMode vfsFileBase::GetOpenMode() const
+vfsOpenMode vfsFileBase::GetOpenMode() const
 {
 	return m_mode;
 }

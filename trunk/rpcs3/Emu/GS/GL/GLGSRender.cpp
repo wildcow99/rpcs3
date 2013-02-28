@@ -192,21 +192,24 @@ wxThread::ExitCode GLRSXThread::Entry()
 
 		if(cmd & CELL_GCM_METHOD_FLAG_JUMP)
 		{
-			p.m_ctrl->get = re32(cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT));
-			ConLog.Warning("rsx jump!");
+			u32 addr = cmd & ~(CELL_GCM_METHOD_FLAG_JUMP | CELL_GCM_METHOD_FLAG_NON_INCREMENT);
+			p.m_ctrl->get = re32(addr);
+			ConLog.Warning("rsx jump(0x%x)", addr);
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_CALL)
 		{
 			call_stack.Push(get + 4);
-			p.m_ctrl->get = re32(cmd & ~CELL_GCM_METHOD_FLAG_CALL);
-			ConLog.Warning("rsx call!");
+			u32 addr = cmd & ~CELL_GCM_METHOD_FLAG_CALL;
+			p.m_ctrl->get = re32(addr);
+			ConLog.Warning("rsx call(0x%x)", addr);
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_RETURN)
 		{
-			p.m_ctrl->get = re32(call_stack.Pop());
-			ConLog.Warning("rsx return!");
+			u32 addr = call_stack.Pop();
+			p.m_ctrl->get = re32(addr);
+			ConLog.Warning("rsx return(0x%x)", addr);
 			continue;
 		}
 		if(cmd & CELL_GCM_METHOD_FLAG_NON_INCREMENT)

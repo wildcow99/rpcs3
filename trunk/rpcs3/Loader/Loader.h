@@ -14,7 +14,7 @@ enum Elf_Machine
 
 enum ShdrType
 {
-	SHT_NULL, 
+	SHT_NULL,
 	SHT_PROGBITS,
 	SHT_SYMTAB,
 	SHT_STRTAB,

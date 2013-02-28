@@ -89,13 +89,16 @@ void Emulator::Run()
 	//ConLog.Write("run...");
 	m_status = Runned;
 
+	m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
+	m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
+
 	Memory.Init();
 	GetInfo().Reset();
 
 	Memory.Write64(Memory.PRXMem.Alloc(8), 0xDEADBEEFABADCAFE);
 
-	//SetTLSData(0, 0, 0);
-	//SetMallocPageSize(0x100000);
 	bool is_error;
 	vfsLocalFile f(m_path);
 	Loader l(f);
@@ -124,7 +127,7 @@ void Emulator::Run()
 
 	PPCThread& thread = GetCPU().AddThread(l.GetMachine() == MACHINE_PPC64);
 
-	thread.SetPc(l.GetEntry());
+	thread.SetEntry(l.GetEntry());
 	thread.SetArg(thread.GetId());
 	Memory.StackMem.Alloc(0x1000);
 	thread.InitStack();
@@ -161,10 +164,7 @@ void Emulator::Run()
 	GetGSManager().Init();
 	GetCallbackManager().Init();
 
-	if(Ini.CPUDecoderMode.GetValue() != 1)
-	{
-		GetCPU().Exec();
-	}
+	//if(Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
 }
 
 void Emulator::Pause()
@@ -208,6 +208,7 @@ void Emulator::Stop()
 	GetIdManager().Clear();
 	GetPadManager().Close();
 	GetCallbackManager().Clear();
+	UnloadModules();
 
 	CurGameInfo.Reset();
 	Memory.Close();

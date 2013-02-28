@@ -101,14 +101,14 @@ void PPCThread::SetId(const u32 id)
 	thread.m_name = GetName();
 
 	if(Ini.CPUDecoderMode.GetValue() != 1) return;
-	DisAsmFrame = new InterpreterDisAsmFrame(GetFName(), this);
-	(*(InterpreterDisAsmFrame*)DisAsmFrame).Show();
+	//DisAsmFrame = new InterpreterDisAsmFrame(GetFName(), this);
+	//(*(InterpreterDisAsmFrame*)DisAsmFrame).Show();
 }
 
 void PPCThread::SetName(const wxString& name)
 {
 	m_name = name;
-	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).SetTitle(GetFName());
+	//if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).SetTitle(GetFName());
 }
 
 void PPCThread::NextBranchPc()
@@ -137,6 +137,11 @@ void PPCThread::SetPc(const u64 pc)
 {
 	PC = pc;
 	nPC = PC + 4;
+}
+
+void PPCThread::SetEntry(const u64 pc)
+{
+	entry = pc;
 }
 
 void PPCThread::SetBranch(const u64 pc)
@@ -184,10 +189,13 @@ void PPCThread::Run()
 	
 	m_status = Runned;
 
+	SetPc(entry);
 	InitStack();
 	InitRegs();
 	DoRun();
 	Emu.CheckStatus();
+
+	wxGetApp().SendDbgCommand(DID_START_THREAD, this);
 
 	if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).DoUpdate();
 }
@@ -200,6 +208,8 @@ void PPCThread::Resume()
 	DoResume();
 	Emu.CheckStatus();
 
+	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, this);
+
 	ThreadBase::Start();
 }
 
@@ -210,6 +220,8 @@ void PPCThread::Pause()
 	m_status = Paused;
 	DoPause();
 	Emu.CheckStatus();
+
+	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, this);
 
 	ThreadBase::Stop(false);
 }
@@ -223,11 +235,14 @@ void PPCThread::Stop()
 	DoStop();
 	Emu.CheckStatus();
 
+	wxGetApp().SendDbgCommand(DID_STOP_THREAD, this);
+
 	ThreadBase::Stop();
 }
 
 void PPCThread::Exec()
 {
+	wxGetApp().SendDbgCommand(DID_EXEC_THREAD, this);
 	ThreadBase::Start();
 }
 

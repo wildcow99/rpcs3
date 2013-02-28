@@ -5,6 +5,8 @@
 #include <wx/msw/wrapwin.h>
 #include "Gui/CompilerELF.h"
 
+const wxEventType wxEVT_DBG_COMMAND = wxNewEventType();
+
 IMPLEMENT_APP(Rpcs3App)
 Rpcs3App* TheApp;
 
@@ -16,16 +18,20 @@ bool Rpcs3App::OnInit()
 
 	Ini.Load();
 
-	ConLogFrame = new LogFrame();
-	ConLogFrame->Show();
-
-	//(new CompilerELF(nullptr))->Show();
-
 	m_MainFrame = new MainFrame();
 	SetTopWindow(m_MainFrame);
 	Emu.Init();
+
+	(new CompilerELF(m_MainFrame))->Show();
+	m_debugger_frame = new DebuggerPanel(m_MainFrame);
+	ConLogFrame = new LogFrame(m_MainFrame);
+
+	m_MainFrame->AddPane(ConLogFrame, "Log", wxAUI_DOCK_BOTTOM);
+	m_MainFrame->AddPane(m_debugger_frame, "Debugger", wxAUI_DOCK_RIGHT);
+	//ConLogFrame->Show();
 	m_MainFrame->Show();
 
+	m_MainFrame->DoSettings(true);
 	return true;
 }
 
@@ -37,6 +43,13 @@ void Rpcs3App::Exit()
 	if(ConLogFrame && !ConLogFrame->IsBeingDeleted()) ConLogFrame->Close();
 
 	wxApp::Exit();
+}
+
+void Rpcs3App::SendDbgCommand(DbgCommand id, PPCThread* thr)
+{
+	wxCommandEvent event(wxEVT_DBG_COMMAND, id);
+	event.SetClientData(thr);
+	AddPendingEvent(event);
 }
 
 /*

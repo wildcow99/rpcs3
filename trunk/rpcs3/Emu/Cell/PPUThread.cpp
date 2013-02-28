@@ -35,12 +35,12 @@ void PPUThread::DoReset()
 	memset(GPR,  0, sizeof(GPR));
 	memset(SPRG, 0, sizeof(SPRG));
 	
-	CR.CR	= 0;
-	LR		= 0;
-	CTR		= 0;
-	USPRG0	= 0;
-	TB		= 0;
-	XER.XER	= 0;
+	CR.CR		= 0;
+	LR			= 0;
+	CTR			= 0;
+	USPRG0		= 0;
+	TB			= 0;
+	XER.XER		= 0;
 	FPSCR.FPSCR	= 0;
 
 	cycle = 0;

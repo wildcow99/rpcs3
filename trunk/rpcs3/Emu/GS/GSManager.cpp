@@ -32,9 +32,8 @@ void GSManager::Close()
 	if(m_render)
 	{
 		m_render->Close();
-		//free(m_render);
+		m_render = nullptr;
 	}
-	m_render = NULL;
 }
 
 u8 GSManager::GetState()

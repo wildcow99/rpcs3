@@ -46,6 +46,7 @@ struct GSRender
 	wxSemaphore m_sem_flush;
 	wxSemaphore m_sem_flip;
 	int m_flip_status;
+	int m_flip_mode;
 	volatile bool m_draw;
 
 	GSRender();

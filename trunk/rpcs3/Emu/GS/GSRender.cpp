@@ -80,6 +80,7 @@ void GSFrame::SetSize(int width, int height)
 GSRender::GSRender()
 	: m_ctrl(NULL)
 	, m_flip_status(0)
+	, m_flip_mode(CELL_GCM_DISPLAY_VSYNC)
 {
 }
 

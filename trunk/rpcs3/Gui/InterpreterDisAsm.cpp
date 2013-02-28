@@ -10,10 +10,9 @@ u32 FixPc(const u32 pc)
 	return pc - ((show_lines/2)*4);
 }
 
-InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread* cpu)
-	: FrameBase(NULL, wxID_ANY, title, "InterpreterDisAsmFrame", wxSize(500, 700))
+InterpreterDisAsmFrame::InterpreterDisAsmFrame(wxWindow* parent, PPCThread* cpu)
+	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(500, 700), wxTAB_TRAVERSAL)
 	, ThreadBase(false, "DisAsmFrame Thread")
-	, m_main_panel(*new wxPanel(this))
 	, CPU(*cpu)
 	, PC(0)
 {
@@ -33,14 +32,14 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread*
 	wxBoxSizer& s_p_main = *new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer& s_b_main = *new wxBoxSizer(wxHORIZONTAL);
 
-	m_list = new wxListView(&m_main_panel);
+	m_list = new wxListView(this);
 
-	wxButton& b_go_to_addr = *new wxButton(&m_main_panel, wxID_ANY, "Go To Address");
-	wxButton& b_go_to_pc = *new wxButton(&m_main_panel, wxID_ANY, "Go To PC");
+	wxButton& b_go_to_addr = *new wxButton(this, wxID_ANY, "Go To Address");
+	wxButton& b_go_to_pc = *new wxButton(this, wxID_ANY, "Go To PC");
 
-	m_btn_step = new wxButton(&m_main_panel, wxID_ANY, "Step");
-	m_btn_run = new wxButton(&m_main_panel, wxID_ANY, "Run");
-	m_btn_pause = new wxButton(&m_main_panel, wxID_ANY, "Pause");
+	m_btn_step = new wxButton(this, wxID_ANY, "Step");
+	m_btn_run = new wxButton(this, wxID_ANY, "Run");
+	m_btn_pause = new wxButton(this, wxID_ANY, "Pause");
 
 	s_b_main.Add(&b_go_to_addr,	wxSizerFlags().Border(wxALL, 5));
 	s_b_main.Add(&b_go_to_pc,	wxSizerFlags().Border(wxALL, 5));
@@ -48,7 +47,7 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread*
 	s_b_main.Add(m_btn_run,		wxSizerFlags().Border(wxALL, 5));
 	s_b_main.Add(m_btn_pause,	wxSizerFlags().Border(wxALL, 5));
 
-	m_regs = new wxTextCtrl(&m_main_panel, wxID_ANY, wxEmptyString,
+	m_regs = new wxTextCtrl(this, wxID_ANY, wxEmptyString,
 		wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_DONTWRAP|wxNO_BORDER|wxTE_RICH2);
 	m_regs->SetMinSize(wxSize(495, 100));
 	m_regs->SetEditable(false);
@@ -57,25 +56,14 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread*
 	m_regs->SetFont(wxFont(8, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
 	wxBoxSizer& s_w_list = *new wxBoxSizer(wxHORIZONTAL);
-	s_w_list.Add(m_list);
-	s_w_list.AddSpacer(5);
-	s_w_list.Add(m_regs);
+	s_w_list.Add(m_list, 2, wxEXPAND | wxLEFT | wxDOWN, 5);
+	s_w_list.Add(m_regs, 1, wxEXPAND | wxRIGHT | wxDOWN, 5);
 
-	s_p_main.AddSpacer(5);
-	s_p_main.Add(&s_b_main);
-	s_p_main.AddSpacer(5);
-	s_p_main.Add(&s_w_list);
-	s_p_main.AddSpacer(5);
+	s_p_main.Add(&s_b_main, 0, wxEXPAND | wxLEFT | wxRIGHT, 5);
+	s_p_main.Add(&s_w_list, 1, wxEXPAND | wxDOWN, 5);
 
-	wxBoxSizer& s_p_main_h = *new wxBoxSizer(wxVERTICAL);
-	s_p_main_h.AddSpacer(5);
-	s_p_main_h.Add(&s_p_main);
-	s_p_main_h.AddSpacer(5);
-	m_main_panel.SetSizerAndFit(&s_p_main_h);
-
-	wxBoxSizer& s_main = *new wxBoxSizer(wxVERTICAL);
-	s_main.Add(&m_main_panel);
-	SetSizerAndFit(&s_main);
+	SetSizer(&s_p_main);
+	Layout();
 
 	m_list->InsertColumn(0, "ASM");
 
@@ -91,12 +79,11 @@ InterpreterDisAsmFrame::InterpreterDisAsmFrame(const wxString& title, PPCThread*
 	Connect(m_btn_run->GetId(),		wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoRun));
 	Connect(m_btn_pause->GetId(),	wxEVT_COMMAND_BUTTON_CLICKED,	wxCommandEventHandler(InterpreterDisAsmFrame::DoPause));
 	Connect(m_list->GetId(),		wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler(InterpreterDisAsmFrame::DClick));
-	Connect(wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize));
+	//Connect(wxEVT_SIZE, wxSizeEventHandler(InterpreterDisAsmFrame::OnResize));
 	wxGetApp().Connect(m_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(InterpreterDisAsmFrame::MouseWheel), (wxObject*)0, this);
 	wxGetApp().Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(InterpreterDisAsmFrame::OnKeyDown), (wxObject*)0, this);
 
-	m_btn_pause->Disable();
-	//ShowPc(Loader.entry);
+	wxGetApp().Connect(wxEVT_DBG_COMMAND, wxCommandEventHandler(InterpreterDisAsmFrame::HandleCommand), (wxObject*)0, this);
 	WriteRegs();
 
 	Load(BreakPointsDBName);
@@ -229,7 +216,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 
 		wxColour colour;
 
-		if(PC == CPU.PC)
+		if((!CPU.IsRunned() || !Emu.IsRunned()) && PC == CPU.PC)
 		{
 			colour = wxColour("Green");
 		}
@@ -268,6 +255,7 @@ void InterpreterDisAsmFrame::ShowAddr(const u64 addr)
 		markedPC.RemoveAt(mpc);
 	}
 
+	m_list->SetColumnWidth(0, -1);
 	m_list->Thaw();
 }
 
@@ -277,6 +265,36 @@ void InterpreterDisAsmFrame::WriteRegs()
 	m_regs->Clear();
 	m_regs->WriteText(CPU.RegsToString());
 	m_regs->Thaw();
+}
+
+void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
+{
+	PPCThread* thr = (PPCThread*)event.GetClientData();
+	event.Skip();
+
+	if(thr->GetId() != CPU.GetId()) return;
+
+	switch(event.GetId())
+	{
+	case DID_EXEC_THREAD:
+	case DID_REMOVE_THREAD:
+	case DID_RESUME_THREAD:
+		m_btn_step->Disable();
+		m_btn_run->Disable();
+		m_btn_pause->Enable();
+	break;
+
+	case DID_START_THREAD:
+	case DID_CREATE_THREAD:
+	case DID_PAUSE_THREAD:
+	case DID_STOP_THREAD:
+		m_btn_step->Enable();
+		m_btn_run->Enable();
+		m_btn_pause->Disable();
+
+		DoUpdate();
+	break;
+	}
 }
 
 void InterpreterDisAsmFrame::OnUpdate(wxCommandEvent& event)
@@ -321,30 +339,20 @@ void InterpreterDisAsmFrame::Show_PC(wxCommandEvent& WXUNUSED(event))
 extern bool dump_enable;
 void InterpreterDisAsmFrame::DoRun(wxCommandEvent& WXUNUSED(event))
 {
+	if(CPU.IsPaused()) CPU.Resume();
 	if(Emu.IsPaused()) Emu.Resume();
-	ThreadBase::Start();
-	/*
-	bool dump_status = dump_enable;
-	if(Emu.IsPaused()) Emu.Run();
-	while(Emu.IsRunned())
-	{
-		CPU.Exec();
-		if(IsBreakPoint(CPU.PC) || dump_status != dump_enable) break;
-	}
 
-	DoUpdate();
-	*/
+	CPU.Exec();
+	//ThreadBase::Start();
 }
 
 void InterpreterDisAsmFrame::DoPause(wxCommandEvent& WXUNUSED(event))
 {
-	ThreadBase::Stop();
-	ConLog.Warning("STOPPED");
+	CPU.Pause();
 }
 
 void InterpreterDisAsmFrame::DoStep(wxCommandEvent& WXUNUSED(event))
 {
-	if(Emu.IsRunned()) Emu.Pause();
 	ThreadBase::Start();
 }
 
@@ -369,25 +377,6 @@ void InterpreterDisAsmFrame::DClick(wxListEvent& event)
 	}
 
 	ShowAddr(start_pc);
-}
-	
-void InterpreterDisAsmFrame::OnResize(wxSizeEvent& event)
-{
-	const wxSize& size( GetClientSize() );
-
-	wxTextCtrl& regs = *m_regs;
-	wxListView& list = *m_list;
-
-	const int list_size = size.GetWidth() * 0.75;
-	const int regs_size = size.GetWidth() * 0.25 - 5;
-	list.SetMinSize(wxSize(list_size,  size.GetHeight()-55));
-	regs.SetMinSize(wxSize(regs_size,  size.GetHeight()-55));
-	m_main_panel.SetSize( size );
-	m_main_panel.GetSizer()->RecalcSizes();
-
-	list.SetColumnWidth(0, list_size-8);
-
-	event.Skip();
 }
 
 void InterpreterDisAsmFrame::MouseWheel(wxMouseEvent& event)
@@ -433,9 +422,7 @@ bool InterpreterDisAsmFrame::RemoveBreakPoint(u64 pc)
 
 void InterpreterDisAsmFrame::Task()
 {
-	m_btn_step->Disable();
-	m_btn_run->Disable();
-	m_btn_pause->Enable();
+	wxGetApp().SendDbgCommand(DID_RESUME_THREAD, &CPU);
 
 	bool dump_status = dump_enable;
 
@@ -447,7 +434,7 @@ void InterpreterDisAsmFrame::Task()
 		{
 			CPU.ExecOnce();
 		}
-		while(Emu.IsRunned() && !TestDestroy() && !IsBreakPoint(CPU.PC) && dump_status == dump_enable);
+		while(CPU.IsRunned() && Emu.IsRunned() && !TestDestroy() && !IsBreakPoint(CPU.PC) && dump_status == dump_enable);
 	}
 	catch(const wxString& e)
 	{
@@ -459,11 +446,6 @@ void InterpreterDisAsmFrame::Task()
 	}
 
 	CPU.FreeTls();
-	Emu.Pause();
 
-	DoUpdate();
-
-	m_btn_step->Enable();
-	m_btn_run->Enable();
-	m_btn_pause->Disable();
+	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, &CPU);
 }

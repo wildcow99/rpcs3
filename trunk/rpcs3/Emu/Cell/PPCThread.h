@@ -73,6 +73,7 @@ public:
 public:
 	bool isBranch;
 
+	u64 entry;
 	u64 PC;
 	u64 nPC;
 	u64 cycle;
@@ -88,6 +89,7 @@ public:
 	void PrevPc();
 	void SetBranch(const u64 pc);
 	void SetPc(const u64 pc);
+	void SetEntry(const u64 entry);
 
 	void SetError(const u32 error);
 
