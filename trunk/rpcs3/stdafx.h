@@ -188,6 +188,8 @@ enum Status
 #include "Utilities/Timer.h"
 #include "Utilities/IdManager.h"
 
+#include "AppConnector.h"
+
 #include "Ini.h"
 #include "Gui/FrameBase.h"
 #include "Gui/ConLog.h"

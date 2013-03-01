@@ -6,6 +6,7 @@ class MainFrame : public FrameBase
 {
 	GameViewer* m_game_viewer;
 	wxAuiManager m_aui_mgr;
+	AppConnector m_app_connector;
 
 public:
 	MainFrame();

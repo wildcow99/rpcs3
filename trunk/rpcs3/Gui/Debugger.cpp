@@ -15,7 +15,7 @@ DebuggerPanel::DebuggerPanel(wxWindow* parent) : wxPanel(parent, wxID_ANY, wxDef
 	m_aui_mgr.AddPane(m_nb, wxAuiPaneInfo().Center().CaptionVisible(false).CloseButton().MaximizeButton());
 	m_aui_mgr.Update();
 
-	wxGetApp().Connect(wxEVT_DBG_COMMAND, wxCommandEventHandler(DebuggerPanel::HandleCommand), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_DBG_COMMAND, wxCommandEventHandler(DebuggerPanel::HandleCommand), (wxObject*)0, this);
 }
 
 DebuggerPanel::~DebuggerPanel()

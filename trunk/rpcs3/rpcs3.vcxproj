@@ -186,6 +186,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\Thread.cpp" />
+    <ClCompile Include="AppConnector.cpp" />
     <ClCompile Include="Emu\Cell\PPCThread.cpp" />
     <ClCompile Include="Emu\Cell\PPCThreadManager.cpp" />
     <ClCompile Include="Emu\Cell\PPUThread.cpp" />

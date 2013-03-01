@@ -54,7 +54,7 @@ DisAsmFrame::DisAsmFrame(PPCThread& cpu)
 
 	Connect( wxEVT_SIZE, wxSizeEventHandler(DisAsmFrame::OnResize) );
 
-	wxGetApp().Connect(m_disasm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(DisAsmFrame::MouseWheel), (wxObject*)0, this);
+	m_app_connector.Connect(m_disasm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(DisAsmFrame::MouseWheel), (wxObject*)0, this);
 
 	Connect(b_prev.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Prev));
 	Connect(b_next.GetId(),  wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(DisAsmFrame::Next));

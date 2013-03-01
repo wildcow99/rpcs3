@@ -6,11 +6,13 @@ class WindowsPadHandler
 	: public wxWindow
 	, public PadHandlerBase
 {
+	AppConnector m_app_connector;
+
 public:
 	WindowsPadHandler() : wxWindow()
 	{
-		wxGetApp().Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(WindowsPadHandler::KeyDown), (wxObject*)0, this);
-		wxGetApp().Connect(wxEVT_KEY_UP, wxKeyEventHandler(WindowsPadHandler::KeyUp), (wxObject*)0, this);
+		m_app_connector.Connect(wxEVT_KEY_DOWN, wxKeyEventHandler(WindowsPadHandler::KeyDown), (wxObject*)0, this);
+		m_app_connector.Connect(wxEVT_KEY_UP, wxKeyEventHandler(WindowsPadHandler::KeyUp), (wxObject*)0, this);
 	}
 
 	virtual void KeyDown(wxKeyEvent& event)	{ Key(event.GetKeyCode(), 1); event.Skip(); }
