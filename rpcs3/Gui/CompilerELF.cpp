@@ -421,18 +421,18 @@ CompilerELF::CompilerELF(wxWindow* parent)
 	asm_list->SetFont(wxFont(-1, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	hex_list->SetFont(wxFont(-1, wxFONTFAMILY_MODERN, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 
-	wxGetApp().Connect(wxEVT_SCROLLWIN_TOP,			wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	wxGetApp().Connect(wxEVT_SCROLLWIN_BOTTOM,		wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	wxGetApp().Connect(wxEVT_SCROLLWIN_LINEUP,		wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	wxGetApp().Connect(wxEVT_SCROLLWIN_LINEDOWN,	wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	wxGetApp().Connect(wxEVT_SCROLLWIN_THUMBTRACK,	wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
-	wxGetApp().Connect(wxEVT_SCROLLWIN_THUMBRELEASE,wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_TOP,			wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_BOTTOM,		wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_LINEUP,		wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_LINEDOWN,	wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_THUMBTRACK,	wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
+	m_app_connector.Connect(wxEVT_SCROLLWIN_THUMBRELEASE,wxScrollWinEventHandler(CompilerELF::OnScroll), (wxObject*)0, this);
 
-	wxGetApp().Connect(asm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(CompilerELF::MouseWheel), (wxObject*)0, this);
-	wxGetApp().Connect(hex_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(CompilerELF::MouseWheel), (wxObject*)0, this);
+	m_app_connector.Connect(asm_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(CompilerELF::MouseWheel), (wxObject*)0, this);
+	m_app_connector.Connect(hex_list->GetId(), wxEVT_MOUSEWHEEL, wxMouseEventHandler(CompilerELF::MouseWheel), (wxObject*)0, this);
 
-	wxGetApp().Connect(asm_list->GetId(), wxEVT_KEY_DOWN, wxKeyEventHandler(CompilerELF::OnKeyDown), (wxObject*)0, this);
-	wxGetApp().Connect(hex_list->GetId(), wxEVT_KEY_DOWN, wxKeyEventHandler(CompilerELF::OnKeyDown), (wxObject*)0, this);
+	m_app_connector.Connect(asm_list->GetId(), wxEVT_KEY_DOWN, wxKeyEventHandler(CompilerELF::OnKeyDown), (wxObject*)0, this);
+	m_app_connector.Connect(hex_list->GetId(), wxEVT_KEY_DOWN, wxKeyEventHandler(CompilerELF::OnKeyDown), (wxObject*)0, this);
 
 	asm_list->WriteText(
 		".int [sys_tty_write, 0x193]\n"

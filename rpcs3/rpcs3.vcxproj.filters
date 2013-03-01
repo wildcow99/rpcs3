@@ -244,6 +244,9 @@
     <ClCompile Include="Gui\Debugger.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="AppConnector.cpp">
+      <Filter>rpcs3</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />

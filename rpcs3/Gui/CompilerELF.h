@@ -42,6 +42,7 @@ class CompilerELF : public FrameBase
 	wxAuiManager m_aui_mgr;
 	wxStatusBar& m_status_bar;
 	bool m_disable_scroll;
+	AppConnector m_app_connector;
 
 public:
 	CompilerELF(wxWindow* parent);
