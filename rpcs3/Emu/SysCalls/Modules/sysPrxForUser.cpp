@@ -33,6 +33,13 @@ s64 sys_prx_exitspawn_with_level()
 	return 0;
 }
 
+s64 sys_strlen(u32 addr)
+{
+	const wxString& str = Memory.ReadString(addr);
+	sysPrxForUser.Log("sys_strlen(\"%s\")", str);
+	return str.Len();
+}
+
 struct _sysPrxForUser_init
 {
 	_sysPrxForUser_init()
@@ -57,5 +64,12 @@ struct _sysPrxForUser_init
 
 		sysPrxForUser.AddFunc(0x42b23552, sys_prx_register_library);
 		sysPrxForUser.AddFunc(0xa2c7ba64, sys_prx_exitspawn_with_level);
+
+		sysPrxForUser.AddFunc(0x2d36462b, SC_FUNC_SD_UW<sys_strlen>);
+
+		sysPrxForUser.AddFunc(0x35168520, SC_FUNC_SW_UW_UW<sys_heap_malloc>);
+		//sysPrxForUser.AddFunc(0xaede4b03, SC_FUNC_SW_UW<sys_heap_free>);
+		//sysPrxForUser.AddFunc(0x8a561d92, SC_FUNC_SW_UW<sys_heap_delete_heap>);
+		sysPrxForUser.AddFunc(0xb2fcf2c8, SC_FUNC_SW_UW_UW_UW<sys_heap_create_heap>);
 	}
 } sysPrxForUser_init;
