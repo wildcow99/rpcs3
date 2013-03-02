@@ -42,6 +42,7 @@ void PPUThread::DoReset()
 	TB			= 0;
 	XER.XER		= 0;
 	FPSCR.FPSCR	= 0;
+	VSCR.VSCR	= 0;
 
 	cycle = 0;
 
@@ -129,6 +130,7 @@ void PPUThread::InitRegs()
 
 	CTR = PC;
 	CR.CR = 0x22000082;
+	VSCR.NJ = 1;
 }
 
 u64 PPUThread::GetFreeStackSize() const

@@ -4,6 +4,7 @@
 #include "GLBuffers.h"
 #include "Program.h"
 #include "OpenGL.h"
+#include "ProgramBuffer.h"
 
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "gl.lib")
@@ -66,9 +67,6 @@ public:
 
 	void Init()
 	{
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-
 		if(!m_id)
 		{
 			glGenTextures(1, &m_id);
@@ -245,6 +243,19 @@ private:
 
 	IndexArrayData m_indexed_array;
 
+	ShaderProgram m_shader_prog;
+	VertexData m_vertex_data[16];
+	Array<u8> m_vdata;
+	VertexProgram m_vertex_progs[16];
+	VertexProgram* m_cur_vertex_prog;
+	Program m_program;
+	int m_fp_buf_num;
+	int m_vp_buf_num;
+	ProgramBuffer m_prog_buffer;
+
+	GLvao m_vao;
+	GLvbo m_vbo;
+
 public:
 	GLGSFrame* m_frame;
 	u32 m_draw_frames;
@@ -254,6 +265,11 @@ public:
 	~GLGSRender();
 
 private:
+	void EnableVertexData(bool indexed_draw=false);
+	void DisableVertexData();
+	void LoadVertexData(u32 first, u32 count);
+	void InitVertexData();
+
 	void Enable(bool enable, const u32 cap);
 	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
 	virtual void Draw();
@@ -261,4 +277,5 @@ private:
 
 public:
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count);
+	void CloseOpenGL();
 };

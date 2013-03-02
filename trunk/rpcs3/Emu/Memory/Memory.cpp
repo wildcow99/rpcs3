@@ -114,8 +114,8 @@ __forceinline const u64 MemoryBlock::FastRead64(const u64 addr) const
 __forceinline const u128 MemoryBlock::FastRead128(const u64 addr)
 {
 	u128 ret;
-	ret.hi = FastRead64(addr);
-	ret.lo = FastRead64(addr + 8);
+	ret.lo = FastRead64(addr);
+	ret.hi = FastRead64(addr + 8);
 	return ret;
 }
 
@@ -204,8 +204,8 @@ __forceinline void MemoryBlock::FastWrite64(const u64 addr, const u64 value)
 
 __forceinline void MemoryBlock::FastWrite128(const u64 addr, const u128 value)
 {
-	FastWrite64(addr, value.hi);
-	FastWrite64(addr+8, value.lo);
+	FastWrite64(addr, value.lo);
+	FastWrite64(addr+8, value.hi);
 }
 
 bool MemoryBlock::Write8(const u64 addr, const u8 value)

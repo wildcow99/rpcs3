@@ -208,13 +208,13 @@ public:
 	u64 Read64(const u64 addr);
 	u128 Read128(const u64 addr);
 
-	void Read(u8* dst, const u64 addr, const u32 size)
+	void ReadLeft(u8* dst, const u64 addr, const u32 size)
 	{
 		MemoryBlock& mem = GetMemByAddr(addr);
 
 		if(mem.IsNULL())
 		{
-			ConLog.Error("Read[%d] from null block (0x%llx)", size, addr);
+			ConLog.Error("ReadLeft[%d] from null block (0x%llx)", size, addr);
 			return;
 		}
 
@@ -223,19 +223,49 @@ public:
 		for(u32 i=0; i<size; ++i) dst[size - 1 - i] = mem.FastRead8(offs + i);
 	}
 
-	void Write(const u64 addr, const u32 size, const u8* src)
+	void WriteLeft(const u64 addr, const u32 size, const u8* src)
 	{
 		MemoryBlock& mem = GetMemByAddr(addr);
 
 		if(mem.IsNULL())
 		{
-			ConLog.Error("Write[%d] to null block (0x%llx)", size, addr);
+			ConLog.Error("WriteLeft[%d] to null block (0x%llx)", size, addr);
 			return;
 		}
 
 		u32 offs = mem.FixAddr(addr);
 
 		for(u32 i=0; i<size; ++i) mem.FastWrite8(offs + i, src[size - 1 - i]);
+	}
+
+	void ReadRight(u8* dst, const u64 addr, const u32 size)
+	{
+		MemoryBlock& mem = GetMemByAddr(addr);
+
+		if(mem.IsNULL())
+		{
+			ConLog.Error("ReadRight[%d] from null block (0x%llx)", size, addr);
+			return;
+		}
+
+		u32 offs = mem.FixAddr(addr);
+
+		for(u32 i=0; i<size; ++i) dst[i] = mem.FastRead8(offs + (size - 1 - i));
+	}
+
+	void WriteRight(const u64 addr, const u32 size, const u8* src)
+	{
+		MemoryBlock& mem = GetMemByAddr(addr);
+
+		if(mem.IsNULL())
+		{
+			ConLog.Error("WriteRight[%d] to null block (0x%llx)", size, addr);
+			return;
+		}
+
+		u32 offs = mem.FixAddr(addr);
+
+		for(u32 i=0; i<size; ++i) mem.FastWrite8(offs + (size - 1 - i), src[i]);
 	}
 
 	template<typename T> void WriteData(const u64 addr, const T* data)

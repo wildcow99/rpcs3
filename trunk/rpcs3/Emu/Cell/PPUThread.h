@@ -247,10 +247,40 @@ union VSCRhdr
 
 	struct
 	{
+		/*
+		Saturation. A sticky status bit indicating that some field in a saturating instruction saturated since the last
+		time SAT was cleared. In other words when SAT = ‘1’ it remains set to ‘1’ until it is cleared to ‘0’ by an
+		mtvscr instruction.
+		1	The vector saturate instruction implicitly sets when saturation has occurred on the results one of
+			the vector instructions having saturate in its name:
+			Move To VSCR (mtvscr)
+			Vector Add Integer with Saturation (vaddubs, vadduhs, vadduws, vaddsbs, vaddshs,
+			vaddsws)
+			Vector Subtract Integer with Saturation (vsububs, vsubuhs, vsubuws, vsubsbs, vsubshs,
+			vsubsws)
+			Vector Multiply-Add Integer with Saturation (vmhaddshs, vmhraddshs)
+			Vector Multiply-Sum with Saturation (vmsumuhs, vmsumshs, vsumsws)
+			Vector Sum-Across with Saturation (vsumsws, vsum2sws, vsum4sbs, vsum4shs,
+			vsum4ubs)
+			Vector Pack with Saturation (vpkuhus, vpkuwus, vpkshus, vpkswus, vpkshss, vpkswss)
+			Vector Convert to Fixed-Point with Saturation (vctuxs, vctsxs)
+		0	Indicates no saturation occurred; mtvscr can explicitly clear this bit.
+		*/
 		u32 SAT	: 1;
-		u32 X		: 15;
+		u32	X	: 15;
+
+		/*
+		Non-Java. A mode control bit that determines whether vector floating-point operations will be performed
+		in a Java-IEEE-C9X–compliant mode or a possibly faster non-Java/non-IEEE mode.
+		0	The Java-IEEE-C9X–compliant mode is selected. Denormalized values are handled as specified
+			by Java, IEEE, and C9X standard.
+		1	The non-Java/non-IEEE–compliant mode is selected. If an element in a source vector register
+			contains a denormalized value, the value ‘0’ is used instead. If an instruction causes an underflow
+			exception, the corresponding element in the target VR is cleared to ‘0’. In both cases, the ‘0’
+			has the same sign as the denormalized or underflowing value.
+		*/
 		u32 NJ	: 1;
-		u32 Y		: 15;
+		u32	Y	: 15;
 	};
 };
 
@@ -650,42 +680,8 @@ union VPR_reg
 	s16 _s16[8];
 	u8  _u8[16];
 	s8  _s8[16];
-
-	// Byte Order :
-	// When we load the register, we revert the bytes
-	// So, the bytes in this register respect the normal order
-	// However, this means the halfwords/words/doublewords are reverted :
-	// We want : HalfWord 0 = Byte 0 << 8 + Byte 1
-	// But we have : HalfWord 0 = Byte 0 + Byte 1 << 8
-	// So any access to a halfword/word/doubleword must revert the bytes when loading, and do it again when writing
-
-	float _f(int n) const
-	{
-		u32 f = re(_u32[n]);
-
-		return (float&)f;
-	}
-
-	double _d(int n) const
-	{
-		u64 d = re(_u64[n]);
-
-		return (double&)d;
-	}
-
-	void setFloat(float f, int n)
-	{
-		u32 result = (u32&)f;
-
-		_u32[n] = re(result);
-	}
-
-	void setDouble(double d, int n)
-	{
-		u64 result = (u64&)d;
-
-		_u64[n] = re(result);
-	}
+	float _f[4];
+	float _d[2];
 
 	VPR_reg() { Clear(); }
 
@@ -693,7 +689,7 @@ union VPR_reg
 	{
 		if(hex) return wxString::Format("%08x%08x%08x%08x", _u32[3], _u32[2], _u32[1], _u32[0]);
 
-		return wxString::Format("x: %g y: %g z: %g w: %g", _f(3), _f(2), _f(1), _f(0));
+		return wxString::Format("x: %g y: %g z: %g w: %g", _f[3], _f[2], _f[1], _f[0]);
 	}
 
 	u8 GetBit(u8 bit)
@@ -721,20 +717,6 @@ union VPR_reg
 
 	void Clear() { memset(this, 0, sizeof(*this)); }
 };
-
-/*
-struct VPR_table
-{
-	VPR_reg t[32];
-
-	operator VPR_reg*() { return t; }
-
-	VPR_reg& operator [] (int index)
-	{
-		return t[index];
-	}
-}
-*/
 
 static const s32 MAX_INT_VALUE = 0x7fffffff;
 
