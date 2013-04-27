@@ -95,25 +95,14 @@ void GLGSRender::Enable(bool enable, const u32 cap)
 }
 
 GLRSXThread::GLRSXThread(wxWindow* parent)
-	: wxThread(wxTHREAD_DETACHED)
+	: ThreadBase(true, "OpenGL Thread")
 	, m_parent(parent)
 {
 }
 
-void GLRSXThread::OnExit()
-{
-	call_stack.Clear();
-}
-
-void GLRSXThread::Start()
-{
-	Create();
-	Run();
-}
-
 extern CellGcmContextData current_context;
 
-wxThread::ExitCode GLRSXThread::Entry()
+void GLRSXThread::Task()
 {
 	ConLog.Write("GL RSX thread entry");
 
@@ -232,8 +221,6 @@ wxThread::ExitCode GLRSXThread::Entry()
 
 	call_stack.Clear();
 	p.CloseOpenGL();
-
-	return (ExitCode)0;
 }
 
 void GLGSRender::Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress)
@@ -262,7 +249,11 @@ void GLGSRender::Draw()
 
 void GLGSRender::Close()
 {
-	if(m_rsx_thread) m_rsx_thread->Delete();
+	if(m_rsx_thread)
+	{
+		m_rsx_thread->Stop();
+		delete m_rsx_thread;
+	}
 
 	if(m_frame->IsShown()) m_frame->Hide();
 	m_ctrl = NULL;

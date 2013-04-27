@@ -324,9 +324,10 @@ struct PPCdouble
 		};
 	};
 
-	FPRType type;
+	operator double&() { return _double; }
+	operator const double&() const { return _double; }
 
-	u32 GetType() const
+	FPRType GetType() const
 	{
 		switch(_fpclass(_double))
 		{
@@ -415,252 +416,15 @@ struct PPCdouble
 
 struct FPRdouble
 {
-	static PPCdouble ConvertToIntegerMode(const PPCdouble& d, FPSCRhdr& fpscr, bool is_64, u32 round_mode)
-	{
-		PPCdouble ret;
-
-		if(d.exp == 2047)
-		{
-			if (d.frac == 0)
-			{
-				ret.type = FPR_INF;
-
-				fpscr.FI = 0;
-				fpscr.FR = 0;
-				fpscr.VXCVI = 1;
-
-				if(fpscr.VE == 0)
-				{
-					if(is_64)
-					{
-						return d.sign ? 0x8000000000000000 : 0x7FFFFFFFFFFFFFFF;
-					}
-					else
-					{
-						return d.sign ? 0x80000000 : 0x7FFFFFFF;
-					}
-
-					fpscr.FPRF = 0;
-				}
-			}
-			else if(d.nan == 0)
-			{
-				ret.type = FPR_SNAN;
-
-				fpscr.FI = 0;
-				fpscr.FR = 0;
-				fpscr.VXCVI = 1;
-				fpscr.VXSNAN = 1;
-
-				if(fpscr.VE == 0)
-				{
-					return is_64 ? 0x8000000000000000 : 0x80000000;
-					fpscr.FPRF = 0;
-				}
-			}
-			else
-			{
-				ret.type = FPR_QNAN;
-
-				fpscr.FI = 0;
-				fpscr.FR = 0;
-				fpscr.VXCVI = 1;
-
-				if(fpscr.VE == 0)
-				{
-					return is_64 ? 0x8000000000000000 : 0x80000000;
-					fpscr.FPRF = 0;
-				}
-			}
-		}
-		else if(d.exp > 1054)
-		{
-			fpscr.FI = 0;
-			fpscr.FR = 0;
-			fpscr.VXCVI = 1;
-
-			if(fpscr.VE == 0)
-			{
-				if(is_64)
-				{
-					return d.sign ? 0x8000000000000000 : 0x7FFFFFFFFFFFFFFF;
-				}
-				else
-				{
-					return d.sign ? 0x80000000 : 0x7FFFFFFF;
-				}
-
-				fpscr.FPRF = 0;
-			}
-		}
-
-		ret.sign = d.sign;
-
-		if(d.exp > 0)
-		{
-			ret.exp = d.exp - 1023;
-			ret.frac = 1 | d.frac;
-		}
-		else if(d.exp == 0)
-		{
-			ret.exp = -1022;
-			ret.frac = d.frac;
-		}
-		/*
-		if(d.exp == 0)
-		{
-			if (d.frac == 0)
-			{
-				d.type = FPR_ZERO;
-			}
-			else
-			{
-				const u32 z = d.GetZerosCount() - 8;
-				d.frac <<= z + 3;
-				d.exp -= 1023 - 1 + z;
-				d.type = FPR_NORM;
-			}
-		}
-		else
-		{
-			d.exp -= 1023;
-			d.type = FPR_NORM;
-			d.nan = 1;
-			d.frac <<= 3;
-		}
-		*/
-
-		return ret;
-	}
-
-	static u32 ConvertToFloatMode(PPCdouble& d, u32 RN)
-	{
-	/*
-		u32 fpscr = 0;
-		switch (d.type)
-		{
-		case FPR_NORM:
-			d.exp += 1023;
-			if (d.exp > 0)
-			{
-				fpscr |= Round(d, RN);
-				if(d.nan)
-				{
-					d.exp++;
-					d.frac >>= 4;
-				}
-				else
-				{
-					d.frac >>= 3;
-				}
-
-				if(d.exp >= 2047)
-				{
-					d.exp = 2047;
-					d.frac = 0;
-					fpscr |= FPSCR_OX;
-				}
-			}
-			else
-			{
-				d.exp = -(s64)d.exp + 1;
-
-				if(d.exp <= 56)
-				{
-					d.frac >>= d.exp;
-					fpscr |= Round(d, RN);
-					d.frac <<= 1;
-					if(d.nan)
-					{
-						d.exp = 1;
-						d.frac = 0;
-					}
-					else
-					{
-						d.exp = 0;
-						d.frac >>= 4;
-						fpscr |= FPSCR_UX;
-					}
-				}
-				else
-				{
-					d.exp = 0;
-					d.frac = 0;
-					fpscr |= FPSCR_UX;
-				}
-			}
-		break;
-
-		case FPR_ZERO:
-			d.exp = 0;
-			d.frac = 0;
-		break;
-
-		case FPR_NAN:
-			d.exp = 2047;
-			d.frac = 1;		
-		break;
-
-		case FPR_INF:
-			d.exp = 2047;
-			d.frac = 0;
-		break;
-		}
-
-		return fpscr;
-		*/
-		return 0;
-	}
-
-	static u32 Round(PPCdouble& d, u32 RN)
-	{
-		switch(RN)
-		{
-		case FPSCR_RN_NEAR:
-			if(d.frac & 0x7)
-			{
-				if((d.frac & 0x7) != 4 || d.frac & 0x8)
-				{
-					d.frac += 4;
-				}
-
-				return FPSCR_XX;
-			}
-		return 0;
-
-		case FPSCR_RN_ZERO:
-			if(d.frac & 0x7) return FPSCR_XX;
-		return 0;
-
-		case FPSCR_RN_PINF:
-			if(!d.sign && (d.frac & 0x7))
-			{
-				d.frac += 8;
-				return FPSCR_XX;
-			}
-		return 0;
-
-		case FPSCR_RN_MINF:
-			if(d.sign && (d.frac & 0x7))
-			{
-				d.frac += 8;
-				return FPSCR_XX;
-			}
-		return 0;
-		}
-
-		return 0;
-	}
-
 	static const u64 double_sign = 0x8000000000000000ULL;
 	static const u64 double_frac = 0x000FFFFFFFFFFFFFULL;
-	
-	static bool IsINF(double d);
-	static bool IsNaN(double d);
-	static bool IsQNaN(double d);
-	static bool IsSNaN(double d);
 
-	static int Cmp(double a, double b);
+	static bool IsINF(PPCdouble d);
+	static bool IsNaN(PPCdouble d);
+	static bool IsQNaN(PPCdouble d);
+	static bool IsSNaN(PPCdouble d);
+
+	static int Cmp(PPCdouble a, PPCdouble b);
 };
 
 union VPR_reg
@@ -721,7 +485,7 @@ class PPUThread
 	, public SysCalls
 {
 public:
-	double FPR[32]; //Floating Point Register
+	PPCdouble FPR[32]; //Floating Point Register
 	FPSCRhdr FPSCR; //Floating Point Status and Control Register
 	u64 GPR[32]; //General-Purpose Register
 	VPR_reg VPR[32];

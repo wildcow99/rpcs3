@@ -19,7 +19,6 @@ protected:
 	PPCThreadType m_type;
 	u64 m_arg;
 	u64 m_prio;
-	wxString m_name;
 	bool m_joinable;
 	bool m_joining;
 	Array<u64> argv_addr;
@@ -69,6 +68,11 @@ public:
 	}
 
 	wxString GetTypeString() const { return PPCThreadTypeToString(m_type); }
+
+	virtual wxString GetThreadName() const
+	{
+		return GetFName() + wxString::Format("[0x%08llx]", PC);
+	}
 
 public:
 	bool isBranch;
@@ -122,9 +126,6 @@ public:
 	virtual void Exec();
 	void ExecOnce();
 
-	void InitTls();
-	void FreeTls();
-
 	virtual void AddArgv(const wxString& arg) {}
 	
 protected:
@@ -141,4 +142,3 @@ private:
 };
 
 PPCThread* GetCurrentPPCThread();
-void InitPPCThreadTls();

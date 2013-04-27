@@ -109,9 +109,9 @@ LogWriter::LogWriter()
 
 void LogWriter::WriteToLog(wxString prefix, wxString value, wxString colour/*, wxColour bgcolour*/)
 {
-	if(PPCThread* thr = GetCurrentPPCThread())
+	if(ThreadBase* thr = GetCurrentNamedThread())
 	{
-		prefix = (prefix.IsEmpty() ? "" : prefix + " : ") + thr->GetFName() + wxString::Format("[0x%08llx]", thr->PC);
+		prefix = (prefix.IsEmpty() ? "" : prefix + " : ") + thr->GetThreadName();
 	}
 
 	if(m_logfile.IsOpened())

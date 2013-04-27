@@ -13,24 +13,23 @@ public:
 	wxMutex m_main_mutex;
 
 protected:
-	ThreadBase(bool detached = true, const wxString& name = "Unknown ThreadBase")
-		: m_detached(detached)
-		, m_name(name)
-		, m_executor(nullptr)
-	{
-	}
+	ThreadBase(bool detached = true, const wxString& name = "Unknown ThreadBase");
 
 public:
 	ThreadExec* m_executor;
 
 	virtual void Task()=0;
 
-	void Start();
-	void Stop(bool wait = true);
+	virtual void Start();
+	virtual void Stop(bool wait = true);
 
-	bool IsAlive();
-	bool TestDestroy();
+	virtual bool IsAlive() const;
+	virtual bool TestDestroy() const;
+	virtual wxString GetThreadName() const;
+	virtual void SetThreadName(const wxString& name);
 };
+
+ThreadBase* GetCurrentNamedThread();
 
 class ThreadExec : public wxThread
 {
@@ -71,6 +70,8 @@ public:
 		return (ExitCode)0;
 	}
 };
+
+//ThreadBase* GetCurrentThread();
 
 template<typename T> class MTPacketBuffer
 {

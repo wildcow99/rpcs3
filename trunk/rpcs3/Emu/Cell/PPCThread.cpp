@@ -2,23 +2,9 @@
 #include "PPCThread.h"
 #include "Gui/InterpreterDisAsm.h"
 
-static DWORD _tls_cur_ppc_thread = 0xffffffff;
-
 PPCThread* GetCurrentPPCThread()
 {
-	return (PPCThread*)::TlsGetValue(_tls_cur_ppc_thread);
-}
-
-void InitPPCThreadTls()
-{
-	if(_tls_cur_ppc_thread != 0xffffffff) return;
-
-	_tls_cur_ppc_thread = ::TlsAlloc();
-
-	if(_tls_cur_ppc_thread != 0xffffffff) return;
-
-	ConLog.Error("tls initialization failed.");
-	wxGetApp().Exit();
+	return (PPCThread*)GetCurrentNamedThread();
 }
 
 PPCThread::PPCThread(PPCThreadType type)
@@ -252,22 +238,9 @@ void PPCThread::ExecOnce()
 	NextPc();
 }
 
-void PPCThread::InitTls()
-{
-	if(::TlsSetValue(_tls_cur_ppc_thread, this)) return;
-
-	ConLog.Error("PPU thread tls initialization failed.");
-}
-
-void PPCThread::FreeTls()
-{
-	::TlsFree(_tls_cur_ppc_thread);
-}
-
 void PPCThread::Task()
 {
 	ConLog.Write("%s enter", PPCThread::GetFName());
-	InitTls();
 
 	try
 	{
@@ -292,6 +265,5 @@ void PPCThread::Task()
 		ConLog.Error("Exception: %s", e);
 	}
 
-	FreeTls();
 	ConLog.Write("%s leave", PPCThread::GetFName());
 }

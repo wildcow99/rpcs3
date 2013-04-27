@@ -193,35 +193,31 @@ void PPUThread::DoCode(const s32 code)
 	m_dec->Decode(code);
 }
 
-bool FPRdouble::IsINF(double d)
+bool FPRdouble::IsINF(PPCdouble d)
 {
 	return wxFinite(d) ? 1 : 0;
 }
 
-bool FPRdouble::IsNaN(double d)
+bool FPRdouble::IsNaN(PPCdouble d)
 {
 	return wxIsNaN(d) ? 1 : 0;
 }
 
-bool FPRdouble::IsQNaN(double d)
+bool FPRdouble::IsQNaN(PPCdouble d)
 {
-	return
-		((*(u64*)&d & 0x7FF8000000000000ULL) == 0x7FF8000000000000ULL) &&
-		((*(u64*)&d & 0x0007ffffffffffffULL) == DOUBLE_ZERO);
+	return d.GetType() == FPR_QNAN;
 }
 
-bool FPRdouble::IsSNaN(double d)
+bool FPRdouble::IsSNaN(PPCdouble d)
 {
-	return
-		((*(u64*)&d & DOUBLE_EXP) == DOUBLE_EXP) &&
-		((*(u64*)&d & DOUBLE_FRAC) != DOUBLE_ZERO) &&
-		((*(u64*)&d & 0x0008000000000000ULL) == DOUBLE_ZERO);
+	return d.GetType() == FPR_SNAN;
 }
 
-int FPRdouble::Cmp(double a, double b)
+int FPRdouble::Cmp(PPCdouble a, PPCdouble b)
 {
 	if(a < b) return CR_LT;
 	if(a > b) return CR_GT;
 	if(a == b) return CR_EQ;
+
 	return CR_SO;
 }

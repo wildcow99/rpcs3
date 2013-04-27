@@ -426,7 +426,7 @@ void InterpreterDisAsmFrame::Task()
 
 	bool dump_status = dump_enable;
 
-	CPU.InitTls();
+	//CPU.InitTls();
 
 	try
 	{
@@ -445,7 +445,7 @@ void InterpreterDisAsmFrame::Task()
 		ConLog.Error("Unhandled exception.");
 	}
 
-	CPU.FreeTls();
+	//CPU.FreeTls();
 
 	wxGetApp().SendDbgCommand(DID_PAUSE_THREAD, &CPU);
 }
