@@ -82,7 +82,7 @@ struct Callbacks2 : public Callbacks
 	void Register(u32 slot, u64 addr, u64 userdata)
 	{
 		Callbacks::Register(slot, addr, userdata);
-		m_callbacks.AddCpy(Callback2(slot, addr, userdata));
+		m_callbacks.Move(new Callback2(slot, addr, userdata));
 	}
 
 	void Handle(u64 a1, u64 a2)
@@ -103,7 +103,7 @@ struct Callbacks3 : public Callbacks
 	void Register(u32 slot, u64 addr, u64 userdata)
 	{
 		Callbacks::Register(slot, addr, userdata);
-		m_callbacks.AddCpy(Callback3(slot, addr, userdata));
+		m_callbacks.Move(new Callback3(slot, addr, userdata));
 	}
 
 	void Handle(u64 a1, u64 a2)

@@ -109,6 +109,7 @@ struct FragmentDecompilerThread : public wxThread
 		, m_size(size) 
 		, m_const_index(0)
 	{
+		m_size = 0;
 	}
 
 	wxString GetMask();

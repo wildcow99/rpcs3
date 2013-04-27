@@ -1,12 +1,28 @@
 #include "stdafx.h"
 #include "VFS.h"
 
+int sort_devices(const void* _a, const void* _b)
+{
+	const vfsDevice& a =  **(const vfsDevice**)_a;
+	const vfsDevice& b =  **(const vfsDevice**)_b;
+
+	if(a.GetPs3Path().Len() > b.GetPs3Path().Len()) return  1;
+	if(a.GetPs3Path().Len() < b.GetPs3Path().Len()) return -1;
+
+	return 0;
+}
+
 void VFS::Mount(const wxString& ps3_path, const wxString& local_path, vfsDevice* device)
 {
 	UnMount(ps3_path);
 
 	device->SetPath(ps3_path, local_path);
 	m_devices.Add(device);
+
+	if(m_devices.GetCount() > 1)
+	{
+		std::qsort(m_devices.GetPtr(), m_devices.GetCount(), sizeof(vfsDevice*), sort_devices);
+	}
 }
 
 void VFS::UnMount(const wxString& ps3_path)

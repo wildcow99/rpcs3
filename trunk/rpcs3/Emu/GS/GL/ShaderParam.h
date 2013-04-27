@@ -14,7 +14,7 @@ struct ParamItem
 	wxString name;
 	wxString location;
 
-	ParamItem(wxString _name, int _location)
+	ParamItem(const wxString& _name, int _location)
 		: name(_name)
 		, location(_location > -1 ? wxString::Format("layout (location = %d) ", _location) : "")
 	{
@@ -93,13 +93,13 @@ struct ParamArray
 
 		if(t)
 		{
-			if(!t->SearchName(name)) t->items.Add(new ParamItem(name, location));
+			if(!t->SearchName(name)) t->items.Move(new ParamItem(name, location));
 		}
 		else
 		{
 			const u32 num = params.GetCount();
-			params.Add(new ParamType(flag, type));
-			params[num].items.Add(new ParamItem(name, location));
+			params.Move(new ParamType(flag, type));
+			params[num].items.Move(new ParamItem(name, location));
 		}
 
 		return name;

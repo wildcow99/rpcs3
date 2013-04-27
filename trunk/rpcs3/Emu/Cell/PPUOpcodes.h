@@ -850,7 +850,7 @@ public:
 		ADD_OPCODE(FCFID,(OP_REG frd, OP_REG frb, bool rc));
 	END_OPCODES_GROUP(G_3f);
 
-	ADD_OPCODE(UNK,(const s32 code, const s32 opcode, const s32 gcode));
+	ADD_OPCODE(UNK,(const u32 code, const u32 opcode, const u32 gcode));
 };
 
 #undef START_OPCODES_GROUP

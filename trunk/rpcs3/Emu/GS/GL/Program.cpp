@@ -16,7 +16,7 @@ int Program::GetLocation(const wxString& name)
 		}
 	}
 	
-	u32 pos = m_locations.Add(new Location());
+	u32 pos = m_locations.Move(new Location());
 	m_locations[pos].name = name;
 
 	return m_locations[pos].loc = glGetUniformLocation(id, name);

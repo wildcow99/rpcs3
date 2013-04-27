@@ -82,7 +82,7 @@ protected:
 	}
 	void DisAsm_V3_UIMM(const wxString& op, OP_REG v0, OP_REG v1, OP_REG v2, OP_uIMM uimm)
 	{
-		Write(wxString::Format("%s v%d,v%d,v%d, #%x", FixOp(op), v0, v1, v2, uimm));
+		Write(wxString::Format("%s v%d,v%d,v%d,%u #%x", FixOp(op), v0, v1, v2, uimm, uimm));
 	}
 	void DisAsm_V3(const wxString& op, OP_REG v0, OP_REG v1, OP_REG v2)
 	{
@@ -90,7 +90,7 @@ protected:
 	}
 	void DisAsm_V2_UIMM(const wxString& op, OP_REG v0, OP_REG v1, OP_uIMM uimm)
 	{
-		Write(wxString::Format("%s v%d,v%d, #%x", FixOp(op), v0, v1, uimm));
+		Write(wxString::Format("%s v%d,v%d,%u #%x", FixOp(op), v0, v1, uimm, uimm));
 	}
 	void DisAsm_V2(const wxString& op, OP_REG v0, OP_REG v1)
 	{
@@ -98,7 +98,7 @@ protected:
 	}
 	void DisAsm_V1_SIMM(const wxString& op, OP_REG v0, OP_sIMM simm)
 	{
-		Write(wxString::Format("%s v%d, #%x", FixOp(op), v0, simm));
+		Write(wxString::Format("%s v%d,%d #%x", FixOp(op), v0, simm, simm));
 	}
 	void DisAsm_V1(const wxString& op, OP_REG v0)
 	{

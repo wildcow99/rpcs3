@@ -328,7 +328,17 @@ public:
 		return PRXMem.Free(addr);
 	}
 
-	u8& operator[] (const u64 vaddr) { return *GetMemFromAddr(vaddr); }
+	u8* operator + (const u64 vaddr)
+	{
+		u8* ret = GetMemFromAddr(vaddr);
+		if(!ret) throw wxString::Format("GetMemFromAddr(0x%llx)", vaddr);
+		return ret;
+	}
+
+	u8& operator[] (const u64 vaddr)
+	{
+		return *(*this + vaddr);
+	}
 };
 
 extern MemoryBase Memory;

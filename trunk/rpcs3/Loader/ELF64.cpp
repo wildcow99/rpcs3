@@ -92,9 +92,9 @@ bool ELF64Loader::LoadPhdrInfo(s64 offset)
 
 	for(u32 i=0; i<ehdr.e_phnum; ++i)
 	{
-		Elf64_Phdr phdr;
-		phdr.Load(elf64_f);
-		phdr_arr.AddCpy(phdr);
+		Elf64_Phdr* phdr = new Elf64_Phdr();
+		phdr->Load(elf64_f);
+		phdr_arr.Move(phdr);
 	}
 
 	return true;
@@ -113,9 +113,9 @@ bool ELF64Loader::LoadShdrInfo(s64 offset)
 	elf64_f.Seek(offset < 0 ? ehdr.e_shoff : offset);
 	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
-		Elf64_Shdr shdr;
-		shdr.Load(elf64_f);
-		shdr_arr.AddCpy(shdr);
+		Elf64_Shdr* shdr = new Elf64_Shdr();
+		shdr->Load(elf64_f);
+		shdr_arr.Move(shdr);
 	}
 
 	if(ehdr.e_shstrndx >= shdr_arr.GetCount())

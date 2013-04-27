@@ -326,39 +326,35 @@ struct PPCdouble
 
 	FPRType type;
 
-	u32 GetType()
+	u32 GetType() const
 	{
-		if(exp > 0 && exp < 0x7ff) return sign ? FPR_NN : FPR_PN;
-
-		if(frac)
+		switch(_fpclass(_double))
 		{
-			if(exp) return FPR_QNAN;
-
-			return sign ? FPR_INF : FPR_PINF;
+		case _FPCLASS_SNAN:		return FPR_SNAN;
+		case _FPCLASS_QNAN:		return FPR_QNAN;
+		case _FPCLASS_NINF:		return FPR_NINF;
+		case _FPCLASS_NN:		return FPR_NN;
+		case _FPCLASS_ND:		return FPR_ND;
+		case _FPCLASS_NZ:		return FPR_NZ;
+		case _FPCLASS_PZ:		return FPR_PZ;
+		case _FPCLASS_PD:		return FPR_PD;
+		case _FPCLASS_PN:		return FPR_PN;
+		case _FPCLASS_PINF:		return FPR_PINF;
 		}
 
-		return sign ? FPR_NZ : FPR_PZ;
+		throw wxString::Format("PPCdouble::GetType() -> unknown fpclass.");
 	}
 
-	u32 To32()
+	u32 To32() const
 	{
 		float res = _double;
 
 		return (u32&)res;
-		/*
-		if (exp > 896 || (!frac && !exp))
-		{
-			return ((_u64 >> 32) & 0xc0000000) | ((_u64 >> 29) & 0x3fffffff);
-		}
+	}
 
-		if (exp >= 874)
-		{
-			return ((0x80000000 | (frac >> 21)) >> (905 - exp)) | (_u64 >> 32) & 0x80000000;
-		}
-
-		//?
-		return ((_u64 >> 32) & 0xc0000000) | ((_u64 >> 29) & 0x3fffffff);
-		*/
+	u64 To64() const
+	{
+		return (u64&)_double;
 	}
 
 	u32 GetZerosCount()

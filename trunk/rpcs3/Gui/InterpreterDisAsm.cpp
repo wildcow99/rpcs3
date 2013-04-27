@@ -156,7 +156,7 @@ void InterpreterDisAsmFrame::Load(const wxString& path)
 
 void InterpreterDisAsmFrame::OnKeyDown(wxKeyEvent& event)
 {
-	if(wxGetActiveWindow() != this)
+	if(wxGetActiveWindow() != wxGetTopLevelParent(this))
 	{
 		event.Skip();
 		return;
@@ -272,7 +272,7 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 	PPCThread* thr = (PPCThread*)event.GetClientData();
 	event.Skip();
 
-	if(thr->GetId() != CPU.GetId()) return;
+	if(!thr || thr->GetId() != CPU.GetId()) return;
 
 	switch(event.GetId())
 	{
@@ -288,8 +288,8 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 	case DID_CREATE_THREAD:
 	case DID_PAUSE_THREAD:
 	case DID_STOP_THREAD:
-		m_btn_step->Enable();
-		m_btn_run->Enable();
+		m_btn_step->Enable(!Emu.IsReady());
+		m_btn_run->Enable(!Emu.IsReady());
 		m_btn_pause->Disable();
 
 		DoUpdate();

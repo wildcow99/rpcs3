@@ -140,7 +140,7 @@ public:
 //protected:
 	__forceinline void AddFunc(u32 id, s64 (*func)())
 	{
-		m_funcs_list.Add(ModuleFunc(id, func));
+		m_funcs_list.Move(new ModuleFunc(id, func));
 	}
 };
 

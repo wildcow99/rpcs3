@@ -17,7 +17,7 @@ AppConnector::~AppConnector()
 
 void AppConnector::Connect(int winid, int lastId, int eventType, wxObjectEventFunction func, wxObject* userData, wxEvtHandler* eventSink)
 {
-	m_connect_arr.Add(new ConnectInfo(winid, lastId, eventType, func, userData, eventSink));
+	m_connect_arr.Move(new ConnectInfo(winid, lastId, eventType, func, userData, eventSink));
 	wxGetApp().Connect(winid, lastId, eventType, func, userData, eventSink);
 }
 
