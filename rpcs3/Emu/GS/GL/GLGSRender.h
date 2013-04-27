@@ -212,16 +212,14 @@ private:
 
 extern gcmBuffer gcmBuffers[2];
 
-struct GLRSXThread : public wxThread
+struct GLRSXThread : public ThreadBase
 {
 	wxWindow* m_parent;
 	Stack<u32> call_stack;
 
 	GLRSXThread(wxWindow* parent);
 
-	virtual void OnExit();
-	void Start();
-	ExitCode Entry();
+	virtual void Task();
 };
 
 class GLGSRender

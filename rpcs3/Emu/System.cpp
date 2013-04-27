@@ -22,7 +22,6 @@ Emulator::Emulator()
 
 void Emulator::Init()
 {
-	InitPPCThreadTls();
 	//if(m_memory_viewer) m_memory_viewer->Close();
 	//m_memory_viewer = new MemoryViewerPanel(wxGetApp().m_MainFrame);
 }
