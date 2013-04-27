@@ -20,6 +20,11 @@ extern const wxEventType wxEVT_DBG_COMMAND;
 enum DbgCommand
 {
 	DID_FIRST_COMMAND = 0x500,
+
+	DID_START_EMU,
+	DID_STOP_EMU,
+	DID_PAUSE_EMU,
+	DID_RESUME_EMU,
 	DID_CREATE_THREAD,
 	DID_REMOVE_THREAD,
 	DID_RENAME_THREAD,
@@ -28,6 +33,8 @@ enum DbgCommand
 	DID_PAUSE_THREAD,
 	DID_RESUME_THREAD,
 	DID_EXEC_THREAD,
+
+	DID_LAST_COMMAND,
 };
 
 class Rpcs3App : public wxApp
@@ -39,7 +46,7 @@ public:
     virtual bool OnInit();
 	virtual void Exit();
 
-	void SendDbgCommand(DbgCommand id, PPCThread* thr);
+	void SendDbgCommand(DbgCommand id, PPCThread* thr=nullptr);
 };
 
 DECLARE_APP(Rpcs3App)

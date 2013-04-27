@@ -72,7 +72,7 @@ bool MemoryBlock::GetMemFFromAddr(void* dst, const u64 addr)
 
 u8* MemoryBlock::GetMemFromAddr(const u64 addr)
 {
-	if(!IsMyAddress(addr)) return NULL;
+	if(!IsMyAddress(addr) || IsNULL()) return nullptr;
 
 	return GetMem(FixAddr(addr));
 }
@@ -369,7 +369,7 @@ MemoryBlock* DynamicMemoryBlock::SetRange(const u64 start, const u32 size)
 
 void DynamicMemoryBlock::Delete()
 {
-	m_used_mem.ClearD();
+	m_used_mem.Clear();
 	m_max_size = 0;
 
 	MemoryBlock::Delete();
@@ -400,7 +400,7 @@ bool DynamicMemoryBlock::Alloc(u64 addr, u32 size)
 
 void DynamicMemoryBlock::AppendUsedMem(u64 addr, u32 size)
 {
-	m_used_mem.Add(new MemBlockInfo(addr, size));
+	m_used_mem.Move(new MemBlockInfo(addr, size));
 }
 
 u64 DynamicMemoryBlock::Alloc(u32 size)
@@ -441,7 +441,7 @@ bool DynamicMemoryBlock::Free(u64 addr)
 	{
 		if(addr == m_used_mem[i].addr)
 		{
-			m_used_mem.RemoveAtD(i);
+			m_used_mem.RemoveAt(i);
 			return true;
 		}
 	}

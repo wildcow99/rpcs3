@@ -533,7 +533,7 @@ private:
 		}
 		void VSLDOI(OP_REG vd, OP_REG va, OP_REG vb, OP_uIMM sh)
 		{
-			DisAsm_V3_UIMM("vsel", vd, va, vb, sh);
+			DisAsm_V3_UIMM("vsldoi", vd, va, vb, sh);
 		}
 		void VSLH(OP_REG vd, OP_REG va, OP_REG vb)
 		{
@@ -1806,7 +1806,7 @@ private:
 		}
 	END_OPCODES_GROUP(G_3f);
 
-	void UNK(const s32 code, const s32 opcode, const s32 gcode)
+	void UNK(const u32 code, const u32 opcode, const u32 gcode)
 	{
 		Write(wxString::Format("Unknown/Illegal opcode! (0x%08x : 0x%x : 0x%x)", code, opcode, gcode));
 	}

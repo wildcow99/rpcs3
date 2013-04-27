@@ -148,8 +148,9 @@ wxString FragmentDecompilerThread::BuildCode()
 wxThread::ExitCode FragmentDecompilerThread::Entry()
 {
 	mem32_t data(m_addr);
+	m_size = 0;
 
-	for(;;)
+	while(true)
 	{
 		dst.HEX = GetData(data[0]);
 		src0.HEX = GetData(data[1]);
@@ -319,6 +320,7 @@ void ShaderProgram::Delete()
 		parr.params[i].items.Clear();
 		parr.params[i].type.Clear();
 	}
+
 	parr.params.Clear();
 	shader.Clear();
 

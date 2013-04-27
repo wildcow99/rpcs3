@@ -9,6 +9,8 @@
 LogWriter ConLog;
 LogFrame* ConLogFrame;
 
+wxCriticalSection g_cs_conlog;
+
 static const uint max_item_count = 500;
 static const uint buffer_size = 1024 * 64;
 
@@ -117,7 +119,16 @@ void LogWriter::WriteToLog(wxString prefix, wxString value, wxString colour/*, w
 
 	if(!ConLogFrame) return;
 
-	while(LogBuffer.IsBusy()) Sleep(1);
+	wxCriticalSectionLocker lock(g_cs_conlog);
+
+	if(wxThread::IsMain())
+	{
+		while(LogBuffer.IsBusy()) wxYieldIfNeeded();
+	}
+	else
+	{
+		while(LogBuffer.IsBusy()) Sleep(1);
+	}
 
 	//if(LogBuffer.put == LogBuffer.get) LogBuffer.Flush();
 
@@ -197,8 +208,13 @@ LogFrame::LogFrame(wxWindow* parent)
 
 	m_log.SetColumnWidth(0, -1);
 
-	Connect( wxEVT_SIZE, wxSizeEventHandler(LogFrame::OnResize) );
-	Connect( m_log.GetId(), wxEVT_COMMAND_LIST_COL_BEGIN_DRAG, wxListEventHandler( LogFrame::OnColBeginDrag ));
+	wxBoxSizer& s_main = *new wxBoxSizer(wxVERTICAL);
+	s_main.Add(&m_log, 1, wxEXPAND);
+	SetSizer(&s_main);
+	Layout();
+
+	//Connect( wxEVT_SIZE, wxSizeEventHandler(LogFrame::OnResize) );
+	//Connect( m_log.GetId(), wxEVT_COMMAND_LIST_COL_BEGIN_DRAG, wxListEventHandler( LogFrame::OnColBeginDrag ));
 
 	Show();
 	ThreadBase::Start();
@@ -224,12 +240,17 @@ void LogFrame::Task()
 			Sleep(1);
 			continue;
 		}
+		else
+		{
+			wxThread::Yield();
+		}
 
 		const LogPacket item = LogBuffer.Pop();
 
 		while(m_log.GetItemCount() > max_item_count)
 		{
 			m_log.DeleteItem(0);
+			wxThread::Yield();
 		}
 
 		const int cur_item = m_log.GetItemCount();

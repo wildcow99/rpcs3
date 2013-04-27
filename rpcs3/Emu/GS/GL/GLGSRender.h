@@ -112,42 +112,32 @@ public:
 	{
 		if(!m_id || !m_offset) return;
 
+		ConLog.Write("start");
+		u32* alldata = new u32[m_width * m_height];
+
+		glBindTexture(GL_TEXTURE_2D, m_id);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, alldata);
+
 		u8* data = new u8[m_width * m_height * 3];
 		u8* alpha = new u8[m_width * m_height];
-		u8* src = Memory.GetMemFromAddr(m_offset);
-		u8* dst = data;
+
+		u8* src = (u8*)alldata;
+		u8* dst_d = data;
 		u8* dst_a = alpha;
-
-		switch(m_format & ~(0x20 | 0x40))
+		for(u32 i=0; i<m_width*m_height;i++)
 		{
-		case 0x81:
-			for(u32 y=0; y<m_height; ++y) for(u32 x=0; x<m_width; ++x)
-			{
-				*dst++ = *src;
-				*dst++ = *src;
-				*dst++ = *src;
-				*dst_a++ = *src;
-				src++;
-			}
-		break;
-
-		case 0x85:
-			for(u32 y=0; y<m_height; ++y) for(u32 x=0; x<m_width; ++x)
-			{
-				*dst++ = *src++;
-				*dst++ = *src++;
-				*dst++ = *src++;
-				*dst_a++ = *src++;
-			}
-		break;
-
-		default: ConLog.Error("Save tex error: Bad tex format (0x%x)", m_format); break;
+			*dst_d++ = *src++;
+			*dst_d++ = *src++;
+			*dst_d++ = *src++;
+			*dst_a++ = *src++;
 		}
 
+		ConLog.Write("end");
 		wxImage out;
 		out.Create(m_width, m_height, data, alpha);
 		out.SaveFile(name, wxBITMAP_TYPE_PNG);
 
+		free(alldata);
 		//free(data);
 		//free(alpha);
 	}

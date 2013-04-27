@@ -934,13 +934,12 @@ struct CompileProgram
 		return false;
 	}
 
-	bool GetArg(wxString& result, bool func = false)
+	int GetArg(wxString& result, bool func = false)
 	{
 		s64 from = -1;
 
-		for(;;)
+		for(char cur_char = NextChar(); !m_error; cur_char = NextChar())
 		{
-			const char cur_char = NextChar();
 			const bool skip = IsSkip(cur_char);
 			const bool commit = IsCommit(cur_char);
 			const bool endln = IsEndLn(cur_char);
@@ -950,7 +949,7 @@ struct CompileProgram
 
 			if(from == -1)
 			{
-				if(endln || commit || end) return false;
+				if(endln || commit || end) return 0;
 				if(!skip) from = p - 1;
 				continue;
 			}
@@ -958,7 +957,7 @@ struct CompileProgram
 			const bool text = m_asm[from] == '"';
 			const bool end_text = cur_char == '"';
 
-			if((text ? end_text : skip || commit || end) || endln)
+			if((text ? end_text : (skip || commit || end)) || endln)
 			{
 				if(text && p > 2 && m_asm[p - 2] == '\\' && (p <= 3 || m_asm[p - 3] != '\\'))
 				{
@@ -971,14 +970,13 @@ struct CompileProgram
 					m_error = true;
 				}
 
-				const s64 to = (endln || text ? p : p - 1) - from;
-				bool ret = true;
+				const s64 to = ((endln || text) ? p : p - 1) - from;
+				int ret = 1;
 
 				if(skip || text)
 				{
-					for(;;)
+					for(char cur_char = NextChar(); !m_error; cur_char = NextChar())
 					{
-						const char cur_char = NextChar();
 						const bool skip = IsSkip(cur_char);
 						const bool commit = IsCommit(cur_char);
 						const bool endln = IsEndLn(cur_char);
@@ -989,20 +987,20 @@ struct CompileProgram
 
 						if(commit)
 						{
-							ret = false;
 							EndLn();
+							ret = -1;
 							break;
 						}
 
 						if(endln)
 						{
-							ret = false;
 							p--;
 							break;
 						}
 
 						WriteError(wxString::Format("Bad symbol '%c'", cur_char));
 						m_error = true;
+						break;
 					}
 				}
 
@@ -1033,11 +1031,19 @@ struct CompileProgram
 				return ret;
 			}
 		}
+
+		return 0;
 	}
 
 	bool CheckEnd(bool show_err = true)
 	{
-		for(;;)
+		if(m_error)
+		{
+			NextLn();
+			return false;
+		}
+
+		while(true)
 		{
 			const char cur_char = NextChar();
 			const bool skip = IsSkip(cur_char);
@@ -1240,11 +1246,12 @@ struct CompileProgram
 		m_cur_arg = 0;
 
 		wxString str;
-		while(GetArg(str))
+		while(int r = GetArg(str))
 		{
-			Arg arg(str);
-			DetectArgInfo(arg);
-			m_args.AddCpy(arg);
+			Arg* arg = new Arg(str);
+			DetectArgInfo(*arg);
+			m_args.Add(arg);
+			if(r == -1) break;
 		}
 
 		m_end_args = m_args.GetCount() > 0;
@@ -1418,7 +1425,7 @@ struct CompileProgram
 	{
 		if(create)
 		{
-			m_branches.Add(new Branch(name, -1, addr));
+			m_branches.Move(new Branch(name, -1, addr));
 			return;
 		}
 
@@ -1474,7 +1481,7 @@ struct CompileProgram
 
 			case ARG_ERR:
 			{
-				m_branches.Add(new Branch(wxEmptyString, -1, 0));
+				m_branches.Move(new Branch(wxEmptyString, -1, 0));
 				dst_branch = &m_branches[m_branches.GetCount() - 1];
 			}
 			break;
@@ -1553,7 +1560,7 @@ struct CompileProgram
 				if(!founded)
 				{
 					const u32 addr = s_opd.sh_addr + s_opd.sh_size;
-					m_sp_string.Add(new SpData(src1, addr));
+					m_sp_string.Move(new SpData(src1, addr));
 					s_opd.sh_size += src1.Len() + 1;
 					*dst_branch = Branch(dst, -1, addr);
 				}
@@ -1853,7 +1860,7 @@ struct CompileProgram
 
 			if(!CheckEnd()) continue;
 
-			m_branches.Add(new Branch(name, a_id.value, 0));
+			m_branches.Move(new Branch(name, a_id.value, 0));
 			const u32 import = m_branches.GetCount() - 1;
 
 			bool founded = false;
@@ -1865,7 +1872,7 @@ struct CompileProgram
 				break;
 			}
 
-			if(!founded) modules.Add(new Module(module, import));
+			if(!founded) modules.Move(new Module(module, import));
 		}
 
 		u32 imports_count = 0;
@@ -2091,7 +2098,7 @@ struct CompileProgram
 
 				if(m_error) break;
 
-				m_branches.Add(new Branch(name, m_branch_pos));
+				m_branches.Move(new Branch(name, m_branch_pos));
 
 				CheckEnd();
 				continue;
@@ -2110,7 +2117,7 @@ struct CompileProgram
 			break;
 		}
 
-		if(!has_entry) m_branches.Add(new Branch("entry", 0));
+		if(!has_entry) m_branches.Move(new Branch("entry", 0));
 
 		if(m_analyze) m_error = false;
 		FirstChar();
@@ -2176,7 +2183,7 @@ struct CompileProgram
 					break;
 
 					case ARG_REG_R:
-						m_args.InsertCpy(0, Arg("cr0", 0, ARG_REG_CR));
+						m_args.Move(0, new Arg("cr0", 0, ARG_REG_CR));
 					break;
 					}
 				}
@@ -2193,13 +2200,13 @@ struct CompileProgram
 			case MASK_BI_BD:
 				if(!SetNextArgType(ARG_REG_CR, false))
 				{
-					m_args.InsertCpy(0, Arg("cr0", 0, ARG_REG_CR));
+					m_args.Move(0, new Arg("cr0", 0, ARG_REG_CR));
 				}
 				SetNextArgBranch(instr.smask & SMASK_AA);
 			break;
 
 			case MASK_SYS:
-				if(!SetNextArgType(ARG_IMM, false)) m_args.AddCpy(Arg("2", 2, ARG_IMM));
+				if(!SetNextArgType(ARG_IMM, false)) m_args.Move(new Arg("2", 2, ARG_IMM));
 			break;
 
 			case MASK_LL:

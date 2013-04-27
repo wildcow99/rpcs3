@@ -181,6 +181,7 @@ enum Status
 	Runned,
 	Paused,
 	Stopped,
+	Ready,
 };
 
 #include "Utilities/Thread.h"

@@ -75,9 +75,9 @@ bool ELF32Loader::LoadPhdrInfo()
 	elf32_f.Seek(ehdr.e_phoff);
 	for(uint i=0; i<ehdr.e_phnum; ++i)
 	{
-		Elf32_Phdr phdr;
-		phdr.Load(elf32_f);
-		phdr_arr.AddCpy(phdr);
+		Elf32_Phdr* phdr = new Elf32_Phdr();
+		phdr->Load(elf32_f);
+		phdr_arr.Move(phdr);
 	}
 
 	return true;
@@ -88,9 +88,9 @@ bool ELF32Loader::LoadShdrInfo()
 	elf32_f.Seek(ehdr.e_shoff);
 	for(u32 i=0; i<ehdr.e_shnum; ++i)
 	{
-		Elf32_Shdr shdr;
-		shdr.Load(elf32_f);
-		shdr_arr.AddCpy(shdr);
+		Elf32_Shdr* shdr = new Elf32_Shdr();
+		shdr->Load(elf32_f);
+		shdr_arr.Move(shdr);
 	}
 
 	if(ehdr.e_shstrndx >= shdr_arr.GetCount())

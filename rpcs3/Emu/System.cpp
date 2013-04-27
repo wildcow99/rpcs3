@@ -57,7 +57,7 @@ void Emulator::CheckStatus()
 	}
 	if(IsAllPaused)
 	{
-		ConLog.Warning("all paused!");
+		//ConLog.Warning("all paused!");
 		Pause();
 		return;
 	}
@@ -71,29 +71,15 @@ void Emulator::CheckStatus()
 	}
 	if(IsAllStoped)
 	{
-		ConLog.Warning("all stoped!");
+		//ConLog.Warning("all stoped!");
 		Pause(); //Stop();
 	}
 }
 
-void Emulator::Run()
+void Emulator::Load()
 {
-	if(IsRunned()) Stop();
-	if(IsPaused())
-	{
-		Resume();
-		return;
-	}
-
-	wxCriticalSectionLocker lock(m_cs_status);
-	//ConLog.Write("run...");
-	m_status = Runned;
-
-	m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
-	m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
-	m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
-
+	if(!wxFileExists(m_path)) return;
+	ConLog.Write("loading '%s'...", m_path);
 	Memory.Init();
 	GetInfo().Reset();
 
@@ -151,12 +137,44 @@ void Emulator::Run()
 
 	thread.Run();
 
+	wxGetApp().m_MainFrame->UpdateUI();
+	wxCriticalSectionLocker lock(m_cs_status);
+	m_status = Ready;
+}
+
+void Emulator::Run()
+{
+	if(!IsReady())
+	{
+		Load();
+		if(!IsReady()) return;
+	}
+
+	if(IsRunned()) Stop();
+	if(IsPaused())
+	{
+		Resume();
+		return;
+	}
+
+	wxCriticalSectionLocker lock(m_cs_status);
+	//ConLog.Write("run...");
+	m_status = Runned;
+
+	m_vfs.Mount("/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	m_vfs.Mount("/dev_hdd0/", wxGetCwd() + "\\dev_hdd0\\", new vfsLocalFile());
+	m_vfs.Mount("/app_home/", vfsDevice::GetRoot(m_path), new vfsLocalFile());
+	m_vfs.Mount(vfsDevice::GetRootPs3(m_path), vfsDevice::GetRoot(m_path), new vfsLocalFile());
+
+	for(uint i=0; i<m_vfs.m_devices.GetCount(); ++i) ConLog.Write("%s -> %s", m_vfs.m_devices[i].GetPs3Path(), m_vfs.m_devices[i].GetLocalPath());
+
 	//if(m_memory_viewer && m_memory_viewer->exit) safe_delete(m_memory_viewer);
 
 	//m_memory_viewer->SetPC(loader.GetEntry());
 	//m_memory_viewer->Show();
 	//m_memory_viewer->ShowPC();
 
+	wxGetApp().SendDbgCommand(DID_START_EMU);
 	wxGetApp().m_MainFrame->UpdateUI();
 
 	if(!m_dbg_console) m_dbg_console = new DbgConsole();
@@ -164,7 +182,7 @@ void Emulator::Run()
 	GetGSManager().Init();
 	GetCallbackManager().Init();
 
-	//if(Ini.CPUDecoderMode.GetValue() != 1) GetCPU().Exec();
+	GetCPU().Exec();
 }
 
 void Emulator::Pause()
@@ -174,6 +192,7 @@ void Emulator::Pause()
 
 	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Paused;
+	wxGetApp().SendDbgCommand(DID_PAUSE_EMU);
 	wxGetApp().m_MainFrame->UpdateUI();
 }
 
@@ -184,6 +203,7 @@ void Emulator::Resume()
 
 	wxCriticalSectionLocker lock(m_cs_status);
 	m_status = Runned;
+	wxGetApp().SendDbgCommand(DID_RESUME_EMU);
 	wxGetApp().m_MainFrame->UpdateUI();
 
 	CheckStatus();
@@ -200,6 +220,7 @@ void Emulator::Stop()
 	}
 
 	m_rsx_callback = 0;
+	wxGetApp().SendDbgCommand(DID_STOP_EMU);
 	wxGetApp().m_MainFrame->UpdateUI();
 
 	GetGSManager().Close();

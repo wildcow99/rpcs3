@@ -109,14 +109,16 @@ public:
 
 	void CheckStatus();
 
+	void Load();
 	void Run();
 	void Pause();
 	void Resume();
 	void Stop();
 
-	__forceinline bool IsRunned() const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Runned; }
-	__forceinline bool IsPaused() const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Paused; }
-	__forceinline bool IsStopped() const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Stopped; }
+	__forceinline bool IsRunned()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Runned; }
+	__forceinline bool IsPaused()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Paused; }
+	__forceinline bool IsStopped()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Stopped; }
+	__forceinline bool IsReady()	const { wxCriticalSectionLocker lock(m_cs_status); return m_status == Ready; }
 };
 
 extern Emulator Emu;

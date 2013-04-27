@@ -206,9 +206,8 @@ bool FPRdouble::IsNaN(double d)
 bool FPRdouble::IsQNaN(double d)
 {
 	return
-		((*(u64*)&d & DOUBLE_EXP) == DOUBLE_EXP) &&
-		((*(u64*)&d & 0x0007fffffffffffULL) == DOUBLE_ZERO) &&
-		((*(u64*)&d & 0x000800000000000ULL) == 0x000800000000000ULL);
+		((*(u64*)&d & 0x7FF8000000000000ULL) == 0x7FF8000000000000ULL) &&
+		((*(u64*)&d & 0x0007ffffffffffffULL) == DOUBLE_ZERO);
 }
 
 bool FPRdouble::IsSNaN(double d)

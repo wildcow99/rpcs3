@@ -169,7 +169,7 @@ void MainFrame::BootGame(wxCommandEvent& WXUNUSED(event))
 		return;
 	}
 
-	Emu.Run();
+	Emu.Load();
 
 	ConLog.Write("Game: boot done.");
 	return;
@@ -202,7 +202,7 @@ void MainFrame::BootElf(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 
 	Emu.SetElf(ctrl.GetPath());
-	Emu.Run();
+	Emu.Load();
 
 	ConLog.Write("Elf: boot done.");
 }
@@ -231,14 +231,18 @@ void MainFrame::BootSelf(wxCommandEvent& WXUNUSED(event))
 	Emu.Stop();
 
 	Emu.SetSelf(ctrl.GetPath());
-	Emu.Run();
+	Emu.Load();
 
 	ConLog.Write("SELF: boot done.");
 }
 
 void MainFrame::Pause(wxCommandEvent& WXUNUSED(event))
 {
-	if(Emu.IsPaused())
+	if(Emu.IsReady())
+	{
+		Emu.Run();
+	}
+	else if(Emu.IsPaused())
 	{
 		Emu.Resume();
 	}
@@ -422,7 +426,7 @@ void MainFrame::OnKeyDown(wxKeyEvent& event)
 	{
 		switch(event.GetKeyCode())
 		{
-		case 'C': case 'c': if(Emu.IsPaused()) Emu.Resume(); return;
+		case 'C': case 'c': if(Emu.IsPaused()) Emu.Resume(); else if(Emu.IsReady()) Emu.Run(); return;
 		case 'P': case 'p': if(Emu.IsRunned()) Emu.Pause(); return;
 		case 'S': case 's': if(!Emu.IsStopped()) Emu.Stop(); return;
 		case 'R': case 'r': if(!Emu.m_path.IsEmpty()) {Emu.Stop(); Emu.Run();} return;
@@ -439,7 +443,7 @@ void MainFrame::UpdateUI()
 	wxMenuItem& stop  = *menubar.FindItem( id_sys_stop );
 	wxMenuItem& send_exit  = *menubar.FindItem( id_sys_send_exit );
 
-	pause.SetText(Emu.IsRunned() ? "Pause\tCtrl + P" : "Resume\tCtrl + C");
+	pause.SetText(Emu.IsRunned() ? "Pause\tCtrl + P" : Emu.IsReady() ? "Start\tCtrl + C" : "Resume\tCtrl + C");
 	pause.Enable(!Emu.IsStopped());
 	stop.Enable(!Emu.IsStopped());
 	//send_exit.Enable(false);
