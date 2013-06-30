@@ -21,8 +21,13 @@ public:
 	virtual void Task()=0;
 
 	virtual void Start();
+	virtual void Resume();
+	virtual void Pause();
 	virtual void Stop(bool wait = true);
 
+	virtual bool Wait() const;
+	virtual bool IsRunning() const;
+	virtual bool IsPaused() const;
 	virtual bool IsAlive() const;
 	virtual bool TestDestroy() const;
 	virtual wxString GetThreadName() const;
@@ -40,7 +45,7 @@ public:
 	ThreadBase* m_parent;
 
 	ThreadExec(bool detached, ThreadBase* parent)
-		: wxThread(/*detached ? */wxTHREAD_DETACHED/* : wxTHREAD_JOINABLE*/)
+		: wxThread(detached ? wxTHREAD_DETACHED : wxTHREAD_JOINABLE)
 		, m_parent(parent)
 		, m_alive(true)
 	{

@@ -3,15 +3,23 @@
 
 //#define SYSCALLS_DEBUG
 
-#define declCPU const PPUThread& CPU = GetCurrentPPUThread
+#define declCPU PPUThread& CPU = GetCurrentPPUThread
+
+class func_caller
+{
+public:
+	virtual void operator()() = 0;
+};
+
+static func_caller *null_func = nullptr;
 
 //TODO
 struct ModuleFunc
 {
 	u32 id;
-	s64 (*func)();
+	func_caller* func;
 
-	ModuleFunc(u32 id, s64 (*func)())
+	ModuleFunc(u32 id, func_caller* func)
 		: id(id)
 		, func(func)
 	{
@@ -138,7 +146,7 @@ public:
 	}
 
 //protected:
-	__forceinline void AddFunc(u32 id, s64 (*func)())
+	__forceinline void AddFunc(u32 id, func_caller* func)
 	{
 		m_funcs_list.Move(new ModuleFunc(id, func));
 	}
@@ -147,14 +155,11 @@ public:
 static s64 null_function() { return 0; }
 
 bool IsLoadedFunc(u32 id);
-bool CallFunc(u32 id, s64& ret);
+bool CallFunc(u32 id);
 bool UnloadFunc(u32 id);
 void UnloadModules();
 Module* GetModuleByName(const wxString& name);
 Module* GetModuleById(u16 id);
-
-extern ArrayF<ModuleFunc> g_modules_funcs_list;
-extern ArrayF<Module> g_modules_list;
 
 class SysCallBase //Module
 {
@@ -438,8 +443,6 @@ extern u64 sys_time_get_timebase_frequency();
 #define SC_ARGS_10 SC_ARGS_9,CPU.GPR[12]
 #define SC_ARGS_11 SC_ARGS_10,CPU.GPR[13]
 #define SC_ARGS_12 SC_ARGS_11,CPU.GPR[14]
-
-typedef s64(*SC_FUNC)();
 
 extern bool dump_enable;
 class PPUThread;

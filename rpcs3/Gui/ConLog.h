@@ -35,8 +35,6 @@ public:
 	bool Close(bool force = false);
 
 private:
-	virtual void OnColBeginDrag(wxListEvent& event);
-	virtual void OnResize(wxSizeEvent& event);
 	virtual void Task();
 
 	void OnQuit(wxCloseEvent& event);

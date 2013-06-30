@@ -324,12 +324,23 @@ struct PPCdouble
 		};
 	};
 
+	FPRType type;
+	
 	operator double&() { return _double; }
 	operator const double&() const { return _double; }
 
-	FPRType GetType() const
+	PPCdouble& operator = (const PPCdouble& r)
 	{
-		switch(_fpclass(_double))
+		_u64 = r._u64;
+		type = UpdateType();
+		return *this;
+	}
+
+	FPRType UpdateType() const
+	{
+		const int fpc = _fpclass(_double);
+
+		switch(fpc)
 		{
 		case _FPCLASS_SNAN:		return FPR_SNAN;
 		case _FPCLASS_QNAN:		return FPR_QNAN;
@@ -343,7 +354,12 @@ struct PPCdouble
 		case _FPCLASS_PINF:		return FPR_PINF;
 		}
 
-		throw wxString::Format("PPCdouble::GetType() -> unknown fpclass.");
+		throw wxString::Format("PPCdouble::UpdateType() -> unknown fpclass (0x%04x).", fpc);
+	}
+
+	FPRType GetType() const
+	{
+		return type;
 	}
 
 	u32 To32() const
@@ -441,7 +457,7 @@ union VPR_reg
 	u8  _u8[16];
 	s8  _s8[16];
 	float _f[4];
-	float _d[2];
+	double _d[2];
 
 	VPR_reg() { Clear(); }
 
@@ -544,9 +560,11 @@ public:
 	u64 LR;		//SPR 0x008 : Link Register
 	u64 CTR;	//SPR 0x009 : Count Register
 
-	u64 USPRG0;	//SPR 0x100 : User-SPR General-Purpose Register 0
-
-	u64 SPRG[8]; //SPR 0x100 - 0x107 : SPR General-Purpose Registers
+	union
+	{
+		u64 USPRG0;	//SPR 0x100 : User-SPR General-Purpose Register 0
+		u64 SPRG[8]; //SPR 0x100 - 0x107 : SPR General-Purpose Registers
+	};
 
 	//TBR : Time-Base Registers
 	union

@@ -339,12 +339,12 @@ enum
 	NV3089_IMAGE_IN						= 0x0000C40C,
 };
 
-static const wxString getMethodName(const u32 id)
+static const wxString GetMethodName(const u32 id)
 {
 	struct MethodName
 	{
 		const u32 id;
-		const wxString name;
+		const wxString& name;
 	} static const METHOD_NAME_LIST[] = {
 		{ NV4097_NO_OPERATION , "NoOperation" } ,
 		{ NV4097_NOTIFY , "Notify" } ,

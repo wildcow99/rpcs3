@@ -192,7 +192,7 @@ wxString VertexDecompilerThread::BuildCode()
 	return wxString::Format(prot, p, main);
 }
 
-wxThread::ExitCode VertexDecompilerThread::Entry()
+void VertexDecompilerThread::Task()
 {
 	for(u32 i=0;;)
 	{
@@ -214,20 +214,20 @@ wxThread::ExitCode VertexDecompilerThread::Entry()
 		case 0x04: AddScaCode("inversesqrt(" + GetSRC(2, true) + ")"); break; // RSQ
 		case 0x05: AddScaCode("exp(" + GetSRC(2, true) + ")"); break; // EXP
 		case 0x06: AddScaCode("log(" + GetSRC(2, true) + ")"); break; // LOG
-		case 0x07: break; // LIT
-		case 0x08: break; // BRA
-		case 0x09: break; // BRI : works differently (BRI o[1].x(TR) L0;)
-		case 0x0a: break; // CAL : works same as BRI
-		case 0x0b: break; // CLI : works same as BRI
-		case 0x0c: break; // RET : works like BRI but shorter (RET o[1].x(TR);)
+		//case 0x07: break; // LIT
+		//case 0x08: break; // BRA
+		//case 0x09: break; // BRI : works differently (BRI o[1].x(TR) L0;)
+		//case 0x0a: break; // CAL : works same as BRI
+		//case 0x0b: break; // CLI : works same as BRI
+		//case 0x0c: break; // RET : works like BRI but shorter (RET o[1].x(TR);)
 		case 0x0d: AddScaCode("log2(" + GetSRC(2, true) + ")"); break; // LG2
 		case 0x0e: AddScaCode("exp2(" + GetSRC(2, true) + ")"); break; // EX2
 		case 0x0f: AddScaCode("sin(" + GetSRC(2, true) + ")"); break; // SIN
 		case 0x10: AddScaCode("cos(" + GetSRC(2, true) + ")"); break; // COS
-		case 0x11: break; // BRB : works differently (BRB o[1].x !b0, L0;)
-		case 0x12: break; // CLB : works same as BRB
-		case 0x13: break; // PSH : works differently (PSH o[1].x A0;)
-		case 0x14: break; // POP : works differently (POP o[1].x;)
+		//case 0x11: break; // BRB : works differently (BRB o[1].x !b0, L0;)
+		//case 0x12: break; // CLB : works same as BRB
+		//case 0x13: break; // PSH : works differently (PSH o[1].x A0;)
+		//case 0x14: break; // POP : works differently (POP o[1].x;)
 
 
 		default:
@@ -273,8 +273,6 @@ wxThread::ExitCode VertexDecompilerThread::Entry()
 
 	m_shader = BuildCode();
 	main = wxEmptyString;
-
-	return (ExitCode)0;
 }
 
 VertexProgram::VertexProgram()
@@ -288,8 +286,13 @@ VertexProgram::~VertexProgram()
 	if(m_decompiler_thread)
 	{
 		Wait();
-		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
-		safe_delete(m_decompiler_thread);
+		if(m_decompiler_thread->IsAlive())
+		{
+			m_decompiler_thread->Stop();
+		}
+
+		delete m_decompiler_thread;
+		m_decompiler_thread = nullptr;
 	}
 
 	Delete();
@@ -303,13 +306,17 @@ void VertexProgram::Decompile()
 	if(m_decompiler_thread)
 	{
 		Wait();
-		if(m_decompiler_thread->IsAlive()) m_decompiler_thread->Delete();
-		safe_delete(m_decompiler_thread);
+		if(m_decompiler_thread->IsAlive())
+		{
+			m_decompiler_thread->Stop();
+		}
+
+		delete m_decompiler_thread;
+		m_decompiler_thread = nullptr;
 	}
 
 	m_decompiler_thread = new VertexDecompilerThread(data, shader, parr);
-	m_decompiler_thread->Create();
-	m_decompiler_thread->Run();
+	m_decompiler_thread->Start();
 #endif
 }
 

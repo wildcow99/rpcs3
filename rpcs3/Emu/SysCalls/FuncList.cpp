@@ -3578,7 +3578,7 @@ s64 SysCalls::DoFunc(const u32 id)
 	case 0x2c847572: FUNC_LOG_ERROR("TODO: _sys_process_atexitspawn");
 	case 0x2d36462b:
 		//FUNC_LOG_ERROR("TODO: _sys_strlen");
-		ConLog.Write("sys_strlen(addr=0x%x(%s))", SC_ARGS_1, &Memory[SC_ARGS_1]);
+		ConLog.Write("sys_strlen(addr=0x%x(%s))", SC_ARGS_1, Memory.ReadString(SC_ARGS_1));
 		return strlen((const char*)&Memory[SC_ARGS_1]);
 	case 0x2f85c0ef: return sys_lwmutex_create(SC_ARGS_2);//FUNC_LOG_ERROR("TODO: sys_lwmutex_create");
 	case 0x3172759d: FUNC_LOG_ERROR("TODO: sys_game_get_temperature");
