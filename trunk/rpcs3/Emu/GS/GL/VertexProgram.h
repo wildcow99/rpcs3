@@ -1,7 +1,7 @@
 #pragma once
 #include "ShaderParam.h"
 
-struct VertexDecompilerThread : public wxThread
+struct VertexDecompilerThread : public ThreadBase
 {
 	union D0
 	{
@@ -113,7 +113,7 @@ struct VertexDecompilerThread : public wxThread
 	ParamArray& m_parr;
 
 	VertexDecompilerThread(Array<u32>& data, wxString& shader, ParamArray& parr)
-		: wxThread(wxTHREAD_JOINABLE)
+		: ThreadBase(false, "Vertex Shader Decompiler Thread")
 		, m_data(data)
 		, m_shader(shader)
 		, m_parr(parr)
@@ -128,7 +128,7 @@ struct VertexDecompilerThread : public wxThread
 	void AddScaCode(wxString code, bool src_mask = true);
 	wxString BuildCode();
 
-	ExitCode Entry();
+	virtual void Task();
 };
 
 struct VertexProgram
@@ -151,7 +151,13 @@ struct VertexProgram
 	Array<u32> data;
 	ParamArray parr;
 
-	void Wait() { if(m_decompiler_thread && m_decompiler_thread->IsRunning()) m_decompiler_thread->Wait(); }
+	void Wait()
+	{
+		if(m_decompiler_thread && m_decompiler_thread->IsRunning())
+		{
+			m_decompiler_thread->Wait();
+		}
+	}
 	void Decompile();
 	void Compile();
 	void Delete();

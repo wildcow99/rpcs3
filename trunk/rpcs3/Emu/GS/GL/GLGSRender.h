@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/GS/GSRender.h"
+#include "Emu/GS/RSXThread.h"
 #include "wx/glcanvas.h"
 #include "GLBuffers.h"
 #include "Program.h"
@@ -116,7 +117,7 @@ public:
 		u32* alldata = new u32[m_width * m_height];
 
 		glBindTexture(GL_TEXTURE_2D, m_id);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, alldata);
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, alldata);
 
 		u8* data = new u8[m_width * m_height * 3];
 		u8* alpha = new u8[m_width * m_height];
@@ -225,6 +226,7 @@ struct GLRSXThread : public ThreadBase
 class GLGSRender
 	: public wxWindow
 	, public GSRender
+	, public ExecRSXCMDdata
 {
 private:
 	GLRSXThread* m_rsx_thread;
@@ -239,6 +241,8 @@ private:
 	Program m_program;
 	int m_fp_buf_num;
 	int m_vp_buf_num;
+	int m_draw_array_count;
+	int m_draw_mode;
 	ProgramBuffer m_prog_buffer;
 
 	GLvao m_vao;
@@ -262,8 +266,13 @@ private:
 	virtual void Init(const u32 ioAddress, const u32 ioSize, const u32 ctrlAddress, const u32 localAddress);
 	virtual void Draw();
 	virtual void Close();
+	bool LoadProgram();
 
 public:
 	void DoCmd(const u32 fcmd, const u32 cmd, mem32_t& args, const u32 count);
 	void CloseOpenGL();
+
+	virtual void ExecCMD();
+	virtual void Reset();
+	void Init();
 };

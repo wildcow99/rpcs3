@@ -85,16 +85,11 @@ void PPCThread::SetId(const u32 id)
 	m_id = id;
 	ID& thread = Emu.GetIdManager().GetIDData(m_id);
 	thread.m_name = GetName();
-
-	if(Ini.CPUDecoderMode.GetValue() != 1) return;
-	//DisAsmFrame = new InterpreterDisAsmFrame(GetFName(), this);
-	//(*(InterpreterDisAsmFrame*)DisAsmFrame).Show();
 }
 
 void PPCThread::SetName(const wxString& name)
 {
 	m_name = name;
-	//if(DisAsmFrame) (*(InterpreterDisAsmFrame*)DisAsmFrame).SetTitle(GetFName());
 }
 
 void PPCThread::NextBranchPc()

@@ -206,15 +206,10 @@ LogFrame::LogFrame(wxWindow* parent)
 	m_log.InsertColumn(1, "Log");
 	m_log.SetBackgroundColour(wxColour("Black"));
 
-	m_log.SetColumnWidth(0, -1);
-
 	wxBoxSizer& s_main = *new wxBoxSizer(wxVERTICAL);
 	s_main.Add(&m_log, 1, wxEXPAND);
 	SetSizer(&s_main);
 	Layout();
-
-	//Connect( wxEVT_SIZE, wxSizeEventHandler(LogFrame::OnResize) );
-	//Connect( m_log.GetId(), wxEVT_COMMAND_LIST_COL_BEGIN_DRAG, wxListEventHandler( LogFrame::OnColBeginDrag ));
 
 	Show();
 	ThreadBase::Start();
@@ -259,26 +254,12 @@ void LogFrame::Task()
 		m_log.SetItem(cur_item, 1, item.m_text);
 		m_log.SetItemTextColour(cur_item, item.m_colour);
 		m_log.SetColumnWidth(0, -1);
+		m_log.SetColumnWidth(1, -1);
 
 		::SendMessage((HWND)m_log.GetHWND(), WM_VSCROLL, SB_BOTTOM, 0);
 	}
 
 	LogBuffer.Flush();
-}
-
-void LogFrame::OnColBeginDrag(wxListEvent& event)
-{
-	event.Veto();
-}
-
-void LogFrame::OnResize(wxSizeEvent& event)
-{
-	const wxSize size( GetClientSize() );
-
-	m_log.SetSize( size );
-	m_log.SetColumnWidth(1, size.GetWidth() - 4 - m_log.GetColumnWidth(0));
-
-	event.Skip();
 }
 
 void LogFrame::OnQuit(wxCloseEvent& event)

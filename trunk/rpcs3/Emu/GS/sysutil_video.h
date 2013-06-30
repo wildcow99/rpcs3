@@ -14,7 +14,6 @@ enum VideoErrorCode
 	CELL_VIDEO_OUT_ERROR_VALUE_IS_NOT_SET			= 0x8002b228,
 };
 
-
 enum CellVideoOut
 {
 	CELL_VIDEO_OUT_PRIMARY,
@@ -166,22 +165,22 @@ struct CellVideoOutDisplayMode
 
 struct CellVideoOutResolution
 {
-	u16	width;
-	u16	height;
+	u16 width;
+	u16 height;
 };
 
 struct CellVideoOutDeviceInfo
 {
-	u8	portType;
-	u8	colorSpace;
-	u16	latency;
-	u8	availableModeCount;
-	u8	state;
-	u8	rgbOutputRange;
-	u8	reserved[5];
-	CellVideoOutColorInfo	colorInfo;
-	CellVideoOutDisplayMode	availableModes[32];
-	CellVideoOutKSVList		ksvList;
+	u8 portType;
+	u8 colorSpace;
+	u16 latency;
+	u8 availableModeCount;
+	u8 state;
+	u8 rgbOutputRange;
+	u8 reserved[5];
+	CellVideoOutColorInfo colorInfo;
+	CellVideoOutDisplayMode availableModes[32];
+	CellVideoOutKSVList ksvList;
 };
 
 struct CellVideoOutState
@@ -194,11 +193,11 @@ struct CellVideoOutState
 
 struct CellVideoOutConfiguration
 {
-	u8	resolutionId;
-	u8	format;
-	u8	aspect;
-	u8	reserved[9];
-	u32	pitch;
+	u8 resolutionId;
+	u8 format;
+	u8 aspect;
+	u8 reserved[9];
+	u32 pitch;
 };
 
 enum CellVideoOutEvent
@@ -237,10 +236,41 @@ static const CellVideoOutResolution ResolutionTable[] =
 
 inline static u32 ResolutionIdToNum(u32 id)
 {
-	return id <= 5 ? (id >= 4 ? id - 1 : id) : (id > 13 ? 0 : id - 5);
+	static const u32 res[] = 
+	{
+		0,	//0
+		1,	//1
+		2,	//2
+		0,	//3
+		3,	//4
+		4,	//5
+		0,	//6
+		0,	//7
+		0,	//8
+		0,	//9
+		5,	//10
+		6,	//11
+		7,	//12
+		8,	//13
+	};
+
+	return id <= 13 ? res[id] : 0;
 }
 
 inline static u32 ResolutionNumToId(u32 num)
 {
-	return num <= 4 ? (num >= 3 ? num + 1 : num) : num + 5;
+	static const u32 res[] = 
+	{
+		0,
+		1,
+		2,
+		4,
+		5,
+		10,
+		11,
+		12,
+		13,
+	};
+
+	return num <= 8 ? res[num] : 0;
 }

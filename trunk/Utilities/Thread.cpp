@@ -21,12 +21,57 @@ void ThreadBase::Start()
 	m_executor = new ThreadExec(m_detached, this);
 }
 
+void ThreadBase::Resume()
+{
+	if(m_executor)
+	{
+		m_executor->Resume();
+	}
+}
+
+void ThreadBase::Pause()
+{
+	if(m_executor)
+	{
+		m_executor->Pause();
+	}
+}
+
 void ThreadBase::Stop(bool wait)
 {
 	if(!m_executor) return;
 	ThreadExec* exec = m_executor;
 	m_executor = nullptr;
-	exec->Stop(wait);
+
+	if(!m_detached)
+	{
+		if(wait)
+		{
+			exec->Wait();
+		}
+
+		exec->Stop(false);
+		delete exec;
+	}
+	else
+	{
+		exec->Stop(wait);
+	}
+}
+
+bool ThreadBase::Wait() const
+{
+	return m_executor != nullptr && m_executor->Wait() != (wxThread::ExitCode)-1;
+}
+
+bool ThreadBase::IsRunning() const
+{
+	return m_executor != nullptr && m_executor->IsRunning();
+}
+
+bool ThreadBase::IsPaused() const
+{
+	return m_executor != nullptr && m_executor->IsPaused();
 }
 
 bool ThreadBase::IsAlive() const

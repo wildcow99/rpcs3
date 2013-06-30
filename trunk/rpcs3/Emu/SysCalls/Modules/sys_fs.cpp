@@ -8,19 +8,19 @@ struct _sys_fs_init
 {
 	_sys_fs_init()
 	{
-		sys_fs.AddFunc(0x718bf5f8, SC_FUNC_SW_UW_SW_UW_UW_UD<cellFsOpen>);
-		sys_fs.AddFunc(0x4d5ff8e2, SC_FUNC_SW_UW_UW_UD_UW<cellFsRead>);
-		sys_fs.AddFunc(0xecdcf2ab, SC_FUNC_SW_UW_UW_UD_UW<cellFsWrite>);
-		sys_fs.AddFunc(0x2cb51f0d, SC_FUNC_SW_UW<cellFsClose>);
-		sys_fs.AddFunc(0x3f61245c, SC_FUNC_SW_UW_UW<cellFsOpendir>);
-		sys_fs.AddFunc(0x5c74903d, SC_FUNC_SW_UW_UW_UW<cellFsReaddir>);
-		sys_fs.AddFunc(0xff42dcc3, SC_FUNC_SW_UW<cellFsClosedir>);
-		sys_fs.AddFunc(0x7de6dced, SC_FUNC_SW_UW_UW<cellFsStat>);
-		sys_fs.AddFunc(0xef3efa34, SC_FUNC_SW_UW_UW<cellFsFstat>);
-		sys_fs.AddFunc(0xba901fe6, SC_FUNC_SW_UW_UW<cellFsMkdir>);
-		sys_fs.AddFunc(0xf12eecc8, SC_FUNC_SW_UW_UW<cellFsRename>);
-		sys_fs.AddFunc(0x2796fdf3, SC_FUNC_SW_UW<cellFsRmdir>);
-		sys_fs.AddFunc(0x7f4677a8, SC_FUNC_SW_UW<cellFsUnlink>);
-		sys_fs.AddFunc(0xa397d042, SC_FUNC_SW_UW_SD_UW_UW<cellFsLseek>);
+		sys_fs.AddFunc(0x718bf5f8, bind_func(cellFsOpen));
+		sys_fs.AddFunc(0x4d5ff8e2, bind_func(cellFsRead));
+		sys_fs.AddFunc(0xecdcf2ab, bind_func(cellFsWrite));
+		sys_fs.AddFunc(0x2cb51f0d, bind_func(cellFsClose));
+		sys_fs.AddFunc(0x3f61245c, bind_func(cellFsOpendir));
+		sys_fs.AddFunc(0x5c74903d, bind_func(cellFsReaddir));
+		sys_fs.AddFunc(0xff42dcc3, bind_func(cellFsClosedir));
+		sys_fs.AddFunc(0x7de6dced, bind_func(cellFsStat));
+		sys_fs.AddFunc(0xef3efa34, bind_func(cellFsFstat));
+		sys_fs.AddFunc(0xba901fe6, bind_func(cellFsMkdir));
+		sys_fs.AddFunc(0xf12eecc8, bind_func(cellFsRename));
+		sys_fs.AddFunc(0x2796fdf3, bind_func(cellFsRmdir));
+		sys_fs.AddFunc(0x7f4677a8, bind_func(cellFsUnlink));
+		sys_fs.AddFunc(0xa397d042, bind_func(cellFsLseek));
 	}
 } sys_fs_init;

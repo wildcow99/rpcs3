@@ -294,6 +294,11 @@ void InterpreterDisAsmFrame::HandleCommand(wxCommandEvent& event)
 
 		DoUpdate();
 	break;
+
+	case DID_STOP_EMU:
+	case DID_PAUSE_EMU:
+		DoUpdate();
+	break;
 	}
 }
 
